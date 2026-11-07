@@ -611,6 +611,14 @@
     .mode-copy strong { display: block; color: var(--ink); font-size: 10px; font-weight: 650; }
     .mode-copy p { margin-top: 2px; color: var(--muted); font-size: 8.5px; line-height: 1.55; }
     .mode-copy em { color: var(--brand); font-style: normal; }
+    .realm-guide {
+      margin: 7px 2px 0;
+      color: var(--faint);
+      font-size: 8px;
+      line-height: 1.6;
+      letter-spacing: 0.01em;
+    }
+    .realm-guide b { color: var(--brand); font-weight: 600; }
     .points-card { margin-top: 10px; }
     .card {
       margin-top: 10px;
@@ -897,15 +905,20 @@
     }
     .game-stats {
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
       margin-top: 7px;
       overflow-x: auto;
       scrollbar-width: none;
     }
     .game-stats::-webkit-scrollbar { display: none; }
-    .statbar { flex: 1 0 88px; min-width: 0; }
-    .statbar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 5px; color: var(--muted); font-size: 8px; }
-    .statbar-head b { color: var(--ink); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .statbar { flex: 1 1 0; min-width: 0; }
+    .statbar-head { display: flex; min-width: 0; align-items: baseline; justify-content: space-between; gap: 5px; color: var(--muted); font-size: 8px; }
+    .statbar-head span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .statbar-head b { flex: none; color: var(--ink); font-size: 11px; font-variant-numeric: tabular-nums; }
     .track { height: 4px; margin-top: 3px; overflow: hidden; border-radius: 99px; background: var(--line); }
     .track i { display: block; height: 100%; border-radius: inherit; background: var(--good); }
     .track i[data-low="true"] { background: var(--bad); }
@@ -913,6 +926,24 @@
     .statbar:nth-child(3) .track i { background: var(--attr-family); }
     .statbar:nth-child(2) .track i[data-low="true"],
     .statbar:nth-child(3) .track i[data-low="true"] { background: var(--bad); }
+    .lifespan-row {
+      display: flex;
+      flex: 0 0 100%;
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      align-items: center;
+      gap: 7px;
+      margin-top: 8px;
+      padding-top: 7px;
+      border-top: 1px dashed var(--line);
+      color: var(--muted);
+      font-size: 8px;
+    }
+    .lifespan-row > span { flex: none; color: var(--attr-family); }
+    .lifespan-row .track { flex: 1 1 auto; min-width: 0; height: 3px; }
+    .lifespan-row .track i { background: linear-gradient(90deg, var(--attr-family), var(--rarity-legend)); }
+    .lifespan-row b { flex: none; max-width: 45%; overflow: hidden; color: var(--ink); font-weight: 600; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
     .age-line { display: flex; align-items: baseline; gap: 7px; margin-top: 8px; }
     .age-line b { color: var(--brand); font-family: var(--serif); font-size: 28px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
     .age-line span { color: var(--muted); font-size: 9px; }
@@ -926,6 +957,7 @@
       border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
     }
     .entry-age { padding-top: 1px; color: var(--faint); font-size: 9px; text-align: right; font-variant-numeric: tabular-nums; }
+    .entry-age small { display: block; margin-top: 1px; color: var(--brand); font-size: 7px; }
     .entry-body { min-width: 0; }
     .entry-tag { display: inline-flex; align-items: center; min-height: 16px; margin-bottom: 2px; padding: 0 5px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); font-size: 7px; }
     .entry-tag.twist { border-color: color-mix(in srgb, var(--warn) 30%, var(--line)); color: var(--warn); }
@@ -3387,7 +3419,7 @@
       youth: { label: '问道', chapter: '问道 · 下山的路', from: 18, to: 29 },
       adult: { label: '历练', chapter: '历练 · 剑与因果', from: 30, to: 49 },
       middle: { label: '观心', chapter: '观心 · 云海无声', from: 50, to: 64 },
-      elder: { label: '残阳', chapter: '残阳 · 天道在上', from: 65, to: 140 },
+      elder: { label: '残阳', chapter: '残阳 · 天道在上', from: 65, to: 12000 },
     }
 
     const WASTELAND_STAGES = {
@@ -3649,7 +3681,7 @@
         title: '山中无甲子',
         description: '你在山里住得太久，久到忘了外面换过几个朝代。你只记得今年那棵松树又高了一点。',
         tone: 'great',
-        when: run => run.age >= 100 && !run.flags.daoPartner,
+        when: run => run.age >= 200 && !run.flags.daoPartner,
       },
       {
         id: 'cult_chicken',
@@ -3684,7 +3716,7 @@
         title: '转生成灵石',
         description: '你死后变成了一块灵石，被一个炼气期弟子买走。他每天对着你许愿，你只想让他别再啃你了。',
         tone: 'normal',
-        when: run => run.age >= 100 && run.peakWealth >= 100,
+        when: run => run.age >= 300 && run.peakWealth >= 100,
       },
       {
         id: 'cult_concert',
@@ -3705,7 +3737,7 @@
         title: '天道候补',
         description: '你还没飞升，但天道已经给你留了一个候补席位。你坐在云上等通知，等得胡子都白了。',
         tone: 'great',
-        when: run => (run.flags.realmIndex || 0) >= 5 && run.age >= 100,
+        when: run => (run.flags.realmIndex || 0) >= 8 && run.age >= 1000,
       },
       {
         id: 'cult_sit',
@@ -5223,6 +5255,109 @@
           ])
         },
       },
+      {
+        id: 'c_century_walk',
+        stage: 'elder',
+        repeatable: true,
+        weight: 0.9,
+        when: s => (s.flags.realmIndex || 0) >= 2,
+        resolve() {
+          return {
+            tone: 'normal',
+            text: '你下山走了一趟。凡人的城镇已经换了几代人，茶馆里还在说修仙者的故事，只是故事里的名字你一个都不认识。你买了两斤栗子，坐在路边吃完，才慢慢走回山上。',
+            effects: { int: 1, mood: 4 },
+          }
+        },
+      },
+      {
+        id: 'c_market_high',
+        stage: 'elder',
+        repeatable: true,
+        weight: 0.8,
+        when: s => (s.flags.realmIndex || 0) >= 2,
+        resolve() {
+          return {
+            tone: 'good',
+            text: '你在坊市里逛了半日，没买那些吹得天花乱坠的法宝，只收了几味炼丹用的旧料。摊主以为你不识货，你却知道，真正稀缺的东西从来不在柜台上。',
+            effects: { wealth: 8, int: 1, mood: 2 },
+          }
+        },
+      },
+      {
+        id: 'c_old_friend',
+        stage: 'elder',
+        repeatable: true,
+        weight: 0.75,
+        when: s => (s.flags.realmIndex || 0) >= 3,
+        resolve() {
+          return {
+            tone: 'bad',
+            text: '一位旧友坐化了。你收到消息时正在闭关，等赶到时，山上只剩一座新坟。你站了一会儿，把带来的酒倒了一半，另一半自己喝了。',
+            effects: { mood: -5, int: 1 },
+          }
+        },
+      },
+      {
+        id: 'c_heart_demon_high',
+        stage: 'elder',
+        repeatable: true,
+        weight: 0.65,
+        when: s => (s.flags.realmIndex || 0) >= 3,
+        resolve() {
+          return {
+            tone: 'bad',
+            text: '闭关到第七年，心魔又来了。它不吵，也不闹，只在你耳边轻轻说：你其实不必活得这么累。你没有回答，只是把洞府的禁制又加了一层。',
+            effects: { mood: -7, health: -3 },
+          }
+        },
+      },
+      {
+        id: 'c_tribulation_high',
+        stage: 'elder',
+        repeatable: true,
+        weight: 0.6,
+        when: s => (s.flags.realmIndex || 0) >= 4,
+        resolve(s) {
+          const survive = s.attrs.body >= 10 || s.health >= 55
+          return {
+            tone: survive ? 'strange' : 'bad',
+            text: survive
+              ? '一场没有预兆的天劫落在洞府外。你撑开护山大阵，硬扛了过去。雷光散尽后，山门里的年轻弟子看你的眼神又多了几分敬畏。'
+              : '天劫来得太快。你的法宝碎了两件，肉身也受了重伤，只能靠元婴勉强稳住。你终于明白，活得久并不等于不会死。',
+            effects: survive
+              ? { health: -8, int: 1, mood: 2 }
+              : { health: -32, mood: -8, cause: '天劫' },
+          }
+        },
+      },
+      {
+        id: 'c_sect_decay',
+        stage: 'elder',
+        repeatable: true,
+        weight: 0.6,
+        when: s => (s.flags.realmIndex || 0) >= 4 && s.flags.sect,
+        resolve() {
+          return {
+            tone: 'normal',
+            text: '你熟悉的那个宗门已经换了几任掌门。新掌门见到你时很恭敬，却不再问你任何事。你没有生气，只是把洞府往山里又挪了十里。',
+            effects: { mood: -3, wealth: 5, int: 1 },
+          }
+        },
+      },
+      {
+        id: 'c_lone_wisdom',
+        stage: 'elder',
+        repeatable: true,
+        weight: 0.7,
+        when: s => (s.flags.realmIndex || 0) >= 3 && !s.flags.daoPartner,
+        resolve() {
+          return {
+            tone: 'normal',
+            text: '你渐渐明白，修仙界最贵的不是法宝，是寿元；最难得的不是机缘，是活到机缘出现的那一天。你不再轻易为人出头，也不再轻易相信“同门”两个字。',
+            effects: { int: 2, mood: 3, flags: { cautious: true } },
+          }
+        },
+      },
     ]
 
     const CULTIVATION_MILESTONES = [
@@ -5233,40 +5368,44 @@
             return {
               tone: 'milestone',
               text: '仙门开山收徒，你被一位长老一眼看中。测灵石上亮起纯净的白光，周围有人低声说：“天灵根。”从那天起，你有了山门，也有了要背负的东西。',
-              effects: { int: 1, mood: 10, health: 5, flags: { sect: '青云宗', sectTier: 'elite', realmIndex: 1, realm: '练气', realmName: '练气' } },
+              effects: { int: 1, mood: 10, health: 5, lifespanAbsolute: 120, flags: { sect: '青云宗', sectTier: 'elite', realmIndex: 1, realm: '炼气期', realmName: '炼气期' } },
             }
           }
           if (s.attrs.looks >= 4) {
             return {
               tone: 'milestone',
-              text: '你通过入门考核，成了青云宗的外门弟子。牌子上刻着你的名字，字很小，但你看了很多遍。',
-              effects: { int: 1, mood: 5, health: 3, flags: { sect: '青云宗', sectTier: 'outer', realmIndex: 1, realm: '练气', realmName: '练气' } },
+              text: '你通过入门考核，成了青云宗的外门弟子。牌子上刻着你的名字，字很小，但你看了很多遍。外门发的第一份月例只有三块下品灵石，你却把它收得很仔细。',
+              effects: { int: 1, mood: 5, health: 3, lifespanAbsolute: 120, flags: { sect: '青云宗', sectTier: 'outer', realmIndex: 1, realm: '炼气期', realmName: '炼气期' } },
             }
           }
           return {
             tone: 'milestone',
-            text: '测灵石没有为你亮起。你没能进入仙门，只能带着一本旧功法下山。山门在身后关上时，你没有回头。',
-            effects: { mood: -2, int: 1, flags: { sect: null, realmIndex: 1, realm: '练气', realmName: '练气', independent: true } },
+            text: '测灵石没有为你亮起。你没能进入仙门，只能带着一本旧功法下山。山门在身后关上时，你没有回头。散修没有月例，没有师长，也没有人替你收尸；你只能把每一块灵石都花在刀刃上。',
+            effects: { mood: -2, int: 1, lifespanAbsolute: 120, flags: { sect: null, realmIndex: 1, realm: '炼气期', realmName: '炼气期', independent: true } },
           }
         },
       },
       {
         age: 25,
+        retry: true,
+        when: s => (s.flags.realmIndex || 0) >= 1,
         resolve(s) {
-          return cultivationBreakthrough(s, '筑基', [
+          return cultivationBreakthrough(s, '筑基期', [
             '你在洞府里闭关了三个月。最后那天，山门外忽然起了一阵很轻的雾，你睁开眼，感觉天地比从前宽了一层。',
-            '筑基那天没有异象，只有你自己知道，有些东西已经不一样了。',
+            '筑基那天没有异象，只有你自己知道，有些东西已经不一样了。你终于有资格在一些小宗门里被人叫一声“师叔”。',
           ], [
-            '你冲击筑基失败，经脉里像塞了一团烧红的铁丝。你吐出一口血，把这次的失败记在心里。',
+            '你冲击筑基失败，经脉里像塞了一团烧红的铁丝。你吐出一口血，把这次的失败记在心里。筑基丹很贵，下一次未必还买得起。',
           ])
         },
       },
       {
         age: 40,
+        retry: true,
+        when: s => (s.flags.realmIndex || 0) >= 2,
         resolve(s) {
-          return cultivationBreakthrough(s, '金丹', [
+          return cultivationBreakthrough(s, '结丹期', [
             '金丹在丹田里缓缓成形。那一刻你听见自己的心跳，像一面很远很远的鼓。',
-            '你结丹了。山门为你放了三天烟火，你却只想找个安静的地方睡一觉。',
+            '你结丹了。山门为你放了三天烟火，你却只想找个安静的地方睡一觉。你知道，从今天起，自己终于不再是一枚随时可以舍弃的棋子。',
           ], [
             '结丹失败。你保住了修为，却失去了一次难得的机会。此后很长一段时间，你都不愿再提这件事。',
           ])
@@ -5274,8 +5413,10 @@
       },
       {
         age: 60,
+        retry: true,
+        when: s => (s.flags.realmIndex || 0) >= 3,
         resolve(s) {
-          return cultivationBreakthrough(s, '元婴', [
+          return cultivationBreakthrough(s, '元婴期', [
             '元婴出窍的那一刻，你看见了自己。那个小小的、透明的自己坐在丹田里，睁着眼看你。',
             '你踏入元婴。寿元又长了一截，可你开始记不清一些旧事，连母亲的脸都变得模糊。',
           ], [
@@ -5285,8 +5426,10 @@
       },
       {
         age: 85,
+        retry: true,
+        when: s => (s.flags.realmIndex || 0) >= 4,
         resolve(s) {
-          return cultivationBreakthrough(s, '化神', [
+          return cultivationBreakthrough(s, '化神期', [
             '你化神了。天地在你眼里不再只是山水，而是一张缓慢流动的网。你伸手碰了碰，网没有破。',
             '化神之后，你很久没有下山。有一天你忽然想起小时候的院子，却发现已经想不起门朝哪边开。',
           ], [
@@ -5295,22 +5438,68 @@
         },
       },
       {
-        age: 110,
+        age: 180,
+        retry: true,
         when: s => (s.flags.realmIndex || 0) >= 5,
         resolve(s) {
-          const success = Math.random() < cultivationChance(s, 6)
-          if (success) {
-            return {
-              tone: 'milestone',
-              text: '九重雷劫落下，你没有躲。最后一道雷光散尽时，天门在你头顶打开。你回头看了一眼人间，山门、旧友、那个曾经在河边捡玉简的孩子，都已经很远。你一步跨了进去。',
-              effects: { mood: 20, health: 20, luck: 2, flags: { ascended: true, realmIndex: 6, realm: '飞升', realmName: '飞升' }, finalCause: '飞升', ascend: true },
-            }
-          }
-          return {
-            tone: 'bad',
-            text: '最后一道天雷落下时，你的道心出现了裂缝。你没能飞升，也没能全身而退。雷光散尽后，山上只剩一柄断剑。',
-            effects: { health: -50, mood: -20, cause: '天劫' },
-          }
+          return cultivationBreakthrough(s, '炼虚期', [
+            '炼虚那天，你第一次真正看清了空间。原来天地之间有那么多细小的裂缝，像一张旧纸上的纹路。',
+            '你踏入了炼虚。山门里已经没有比你辈分更高的人，连掌门见你都要先拱手。',
+          ], [
+            '炼虚失败。你的元婴在丹田里裂开一道细纹，你花了很久才把它压回去。',
+          ])
+        },
+      },
+      {
+        age: 350,
+        retry: true,
+        when: s => (s.flags.realmIndex || 0) >= 6,
+        resolve(s) {
+          return cultivationBreakthrough(s, '合体期', [
+            '元婴与肉身重新合一。你站在洞府中央，第一次觉得“我”这个字有了确切的重量。',
+            '你合体了。从此灵界的气息不再只是传说，你能感觉到它在天外缓慢流动。',
+          ], [
+            '合体失败。你的肉身与元婴互相排斥，足足三年才重新稳住。',
+          ])
+        },
+      },
+      {
+        age: 700,
+        retry: true,
+        when: s => (s.flags.realmIndex || 0) >= 7,
+        resolve(s) {
+          return cultivationBreakthrough(s, '大乘期', [
+            '大乘成了。你不再需要向任何人证明什么，连天雷落下时都显得比从前安静。',
+            '你踏入大乘。凡间的王朝换了几十个，你认识的故人只剩石碑上的名字。',
+          ], [
+            '大乘失败。你的道心出现了一道很深的裂缝，此后每一次闭关都能听见心魔在裂缝里说话。',
+          ])
+        },
+      },
+      {
+        age: 1200,
+        retry: true,
+        when: s => (s.flags.realmIndex || 0) >= 8,
+        resolve(s) {
+          return cultivationBreakthrough(s, '渡劫期', [
+            '你开始准备渡劫。飞剑、法宝、丹药、阵法，每一样都要用命去换。你把洞府封死，只留了一盏灯。',
+            '你踏入渡劫期。天穹深处有雷声在等你，但你并不着急抬头。',
+          ], [
+            '渡劫失败。天雷劈碎了你的肉身，你靠元婴勉强逃出，夺舍了一具还算合适的躯壳。',
+          ])
+        },
+      },
+      {
+        age: 2000,
+        retry: true,
+        when: s => (s.flags.realmIndex || 0) >= 9,
+        resolve(s) {
+          return cultivationBreakthrough(s, '真仙', [
+            '九重雷劫落下，你没有躲。最后一道雷光散尽时，天门在你头顶打开。',
+            '你渡过了飞升之劫。天门后面不是仙境，只是另一片更冷、更远的天地。',
+          ], [
+            '最后一道天雷落下时，你的道心出现了裂缝。你没能飞升，也没能全身而退。雷光散尽后，山上只剩一柄断剑。',
+          ])
         },
       },
     ]
@@ -5465,6 +5654,9 @@
         { text: '你每天在同一个时辰醒来，做同一件事：烧水、煮茶、看一会儿山。', effects: { mood: 2, health: 1 } },
         { text: '山门里的钟声还是从前的钟声。你听着听着，忽然想起自己第一次听见它时的样子。', effects: { mood: 2 } },
         { text: '你把洞府里的东西一件一件送人。送完之后，屋子空了很多，心也空了一点。', effects: { mood: 1, int: 1 } },
+        { text: '你开始把寿元看得比法宝重。法宝碎了还能再找，寿元少了却没人能替你补。', effects: { int: 1, mood: 1 } },
+        { text: '你在山下看见凡人的王朝又换了一个年号。茶馆里的人还在讲修仙者的故事，你听了一会儿，没有纠正他们。', effects: { int: 1, mood: 2 } },
+        { text: '你把功法翻到最后一页，发现上面只写着四个字：活着，别死。你看了很久，觉得这大概是整本书里最有用的一句话。', effects: { int: 1, mood: 2 } },
       ],
     }
 
@@ -8580,8 +8772,9 @@
         name: '修仙世界',
         en: 'Cultivation',
         icon: 'mountain',
-        tagline: '灵根决定起点，雷劫决定终点。',
-        description: '从凡尘到天门。测灵根、拜山门、结金丹、渡雷劫，看看你能不能走到传说里。',
+        tagline: '灵根定起点，寿元定归途，天劫定生死。',
+        description: '按《凡人修仙传》的规矩来：测灵根、入山门或做散修，从炼气、筑基、结丹、元婴，一路走到化神、炼虚、合体、大乘、渡劫。没有白来的机缘，每一步都要用灵石、丹药、心性和寿元去换。',
+        lore: '凡人流的规矩：灵根决定起点，资源决定速度，寿元决定你能赌几次。财侣法地，步步为营；能忍、能藏、能跑，比一时意气活得更久。',
         attrs: CULTIVATION_ATTRS,
         stages: CULTIVATION_STAGES,
         vitals: CULTIVATION_VITALS,
@@ -8595,9 +8788,9 @@
         endings: CULTIVATION_ENDINGS,
         grades: CULTIVATION_GRADES,
         aging: {
-          start: 80,
-          mid: 100,
-          late: 120,
+          start: 70,
+          mid: 90,
+          late: 110,
           riskThreshold: 20,
           riskChance: 0.06,
           riskCause: '心魔',
@@ -8696,8 +8889,9 @@
     const WORLD_BY_ID = Object.fromEntries(WORLDS.map(world => [world.id, world]))
     const TOTAL_ENDINGS = WORLDS.reduce((total, world) => total + world.endings.length, 0)
     const COMEDY_TOTAL = COMEDY_ACHIEVEMENTS.length
-    const REALM_NAMES = ['凡人', '练气', '筑基', '金丹', '元婴', '化神', '飞升']
-    const REALM_LIFESPAN = { 2: 25, 3: 45, 4: 70, 5: 100, 6: 0 }
+    const REALM_NAMES = ['凡人', '炼气期', '筑基期', '结丹期', '元婴期', '化神期', '炼虚期', '合体期', '大乘期', '渡劫期', '真仙']
+    const REALM_LIFESPAN = [100, 120, 250, 500, 1000, 2000, 3000, 5000, 10000, 12000, 999999]
+    const REALM_YEAR_STEPS = [1, 1, 3, 8, 20, 40, 60, 100, 200, 200, 500]
 
     // __DATA_END__
 
@@ -8776,6 +8970,12 @@
       if (age < 50) return 0.24
       if (age < 65) return 0.26
       return 0.3
+    }
+
+    function cultivationYears(run) {
+      if (run.age < 18) return 1
+      const realm = run.flags.realmIndex || 0
+      return REALM_YEAR_STEPS[realm] || 1
     }
 
     function defaultRecord() {
@@ -9053,7 +9253,7 @@
         startWealth = Math.max(0, Math.round((attrs.family * 3 + rnd(8)) * aggregate.wealthMul + aggregate.wealth))
         health = clamp(65 + attrs.body * 4 + aggregate.health, 25, 100)
         mood = clamp(55 + rnd(11) - 5 + aggregate.mood, 15, 100)
-        deathAge = clamp(65 + attrs.body * 4 + rnd(17) - 8 + aggregate.lifespan, 40, 160)
+        deathAge = clamp(70 + attrs.body * 2 + rnd(17) - 6 + aggregate.lifespan, 55, 120)
       } else if (world.id === 'wasteland') {
         startWealth = Math.max(0, Math.round((3 + attrs.family * 3 + rnd(8)) * aggregate.wealthMul + aggregate.wealth))
         health = clamp(55 + attrs.body * 4 + aggregate.health, 25, 100)
@@ -9116,6 +9316,7 @@
         worldId: world.id,
         age: 0,
         stage: 'child',
+        lastYears: 1,
         alive: true,
         deathAge,
         cause: null,
@@ -9148,7 +9349,10 @@
       return {
         ...run,
         attrs: { ...run.attrs },
-        flags: { ...run.flags },
+        flags: {
+          ...run.flags,
+          ...(run.flags._milestones ? { _milestones: { ...run.flags._milestones } } : {}),
+        },
         log: run.log.slice(),
         seen: run.seen.slice(),
         achievements: run.achievements ? run.achievements.slice() : [],
@@ -9157,7 +9361,8 @@
     }
 
     function pushEntry(run, entry) {
-      run.log = run.log.concat({ ...entry, id: run.seq })
+      const span = entry.kind === 'event' && (run.lastYears || 1) > 1 ? run.lastYears : null
+      run.log = run.log.concat({ ...entry, span, id: run.seq })
       run.seq += 1
     }
 
@@ -9207,8 +9412,15 @@
 
     function chooseMilestone(run) {
       const world = worldOf(run)
+      const cultivation = world.id === 'cultivation'
+      const marks = cultivation && run.flags._milestones ? run.flags._milestones : {}
       for (const milestone of world.milestones) {
-        if (milestone.age !== run.age) continue
+        if (cultivation) {
+          if (run.age < milestone.age) continue
+          if (marks[milestone.age]) continue
+        } else if (milestone.age !== run.age) {
+          continue
+        }
         if (milestone.when && !milestone.when(run)) continue
         return milestone
       }
@@ -9245,7 +9457,11 @@
         run.luck = clamp((run.luck || 0) + effects.luck, -2, 5)
       }
       if (typeof effects.lifespan === 'number') {
-        run.deathAge = clamp(run.deathAge + effects.lifespan, run.age + 1, 160)
+        const lifespanCap = worldOf(run).id === 'cultivation' ? 12000 : 160
+        run.deathAge = clamp(run.deathAge + effects.lifespan, run.age + 1, lifespanCap)
+      }
+      if (typeof effects.lifespanAbsolute === 'number') {
+        run.deathAge = Math.max(run.deathAge, effects.lifespanAbsolute)
       }
       if (effects.fatal) {
         run.health = 0
@@ -9307,59 +9523,101 @@
     }
 
     function cultivationChance(run, target) {
-      const base = 0.08
-        + run.attrs.int * 0.035
-        + run.attrs.looks * 0.02
-        + run.attrs.body * 0.008
-        + (run.luck || 0) * 0.03
+      const base = 0.18
+        + run.attrs.int * 0.028
+        + run.attrs.looks * 0.008
+        + run.attrs.body * 0.006
+        + (run.luck || 0) * 0.035
         + (run.flags.breakthroughBonus || 0)
-        - target * 0.055
-      return clamp(base, 0.04, 0.9)
+        - target * 0.032
+      return clamp(base, 0.03, 0.88)
     }
 
     function cultivationBreakthrough(run, targetName, successLines, failLines) {
       const realm = run.flags.realmIndex || 0
-      if (realm >= 5) {
+      if (realm >= 10) {
         return {
           tone: 'normal',
-          text: '你已经站在化神境的门口。再往上，只剩雷劫和天门。你抬头看了看云，没有急着走。',
+          text: '你已经站在真仙的位置上，再往上没有路，只有更高的天。',
           effects: { mood: 3 },
         }
       }
-      const target = Math.min(5, realm + 1)
+      const target = Math.min(10, realm + 1)
       const expected = REALM_NAMES[target]
-      const onTrack = expected === targetName
+      const aliases = {
+        '练气': '炼气期',
+        '炼气': '炼气期',
+        '筑基': '筑基期',
+        '金丹': '结丹期',
+        '结丹': '结丹期',
+        '元婴': '元婴期',
+        '化神': '化神期',
+        '炼虚': '炼虚期',
+        '合体': '合体期',
+        '大乘': '大乘期',
+        '渡劫': '渡劫期',
+        '真仙': '真仙',
+      }
+      const onTrack = targetName === expected || aliases[targetName] === expected
       const success = Math.random() < cultivationChance(run, target)
       const genericSuccess = [
         '这一次闭关没有惊天动地的异象。你只是在一个普通的清晨睁开眼，发现经脉里的灵气比从前宽了一条河。',
         '你失败了两次，第三次终于成功。突破的那一刻，你想起很多年前在山门前扫地的自己。',
+        '瓶颈像一层旧纸，终于被你在某个无人知道的夜里捅破。你没有告诉任何人。',
       ]
       const genericFail = [
         '你冲击瓶颈失败，经脉里像塞了一团烧红的铁丝。你吐出一口血，把这次失败记在心里。',
         '瓶颈纹丝不动。你从闭关中醒来，发现自己又老了一点。',
+        '你差一点就成了。差的那一点，让你在洞府里坐了很久。',
       ]
       const line = success
         ? pick(onTrack ? successLines : genericSuccess)
         : pick(onTrack ? failLines : genericFail)
       if (success) {
         const gains = target === 2
-          ? { health: 10, int: 1, body: 1, lifespan: 25, mood: 5 }
+          ? { health: 10, int: 1, body: 1, mood: 5 }
           : target === 3
-            ? { health: 15, int: 1, looks: 1, lifespan: 45, mood: 8 }
+            ? { health: 15, int: 1, looks: 1, mood: 8 }
             : target === 4
-              ? { health: 20, int: 1, lifespan: 70, mood: 10 }
-              : { health: 25, int: 2, lifespan: 100, mood: 12 }
+              ? { health: 20, int: 1, mood: 10 }
+              : target === 5
+                ? { health: 25, int: 2, mood: 12 }
+                : target === 6
+                  ? { health: 30, int: 2, mood: 14 }
+                  : target === 7
+                    ? { health: 35, int: 2, mood: 16 }
+                    : target === 8
+                      ? { health: 40, int: 3, mood: 20 }
+                      : target === 9
+                        ? { health: 45, int: 3, mood: 25 }
+                        : { health: 60, int: 4, mood: 30 }
+        const lifespan = REALM_LIFESPAN[target]
+        run.deathAge = target === 10
+          ? Math.max(run.deathAge, 999999)
+          : Math.max(run.deathAge, lifespan, run.age + 20) + (run.flags.lifespanBonus || 0)
+        const flags = {
+          realmIndex: target,
+          realmName: expected,
+          realm: expected,
+          realmStage: target,
+          breakthroughBonus: 0,
+        }
+        if (target === 10) {
+          flags.ascended = true
+          flags.realm = '真仙'
+          flags.realmName = '真仙'
+        }
         return {
-          tone: 'milestone',
-          text: line + (onTrack ? '' : '\n\n你踏入了' + expected + '。'),
+          tone: target >= 8 ? 'legend' : 'milestone',
+          text: line
+            + (onTrack ? '' : '\n\n你踏入了' + expected + '。')
+            + (target === 10
+              ? '\n\n你踏入了真仙。天门在你身后缓缓合上。'
+              : '\n\n你的寿元上限延至' + lifespan + '年。'),
           effects: {
             ...gains,
-            flags: {
-              realmIndex: target,
-              realmName: expected,
-              realm: expected,
-              breakthroughBonus: 0,
-            },
+            flags,
+            ...(target === 10 ? { ascend: true, finalCause: '飞升' } : {}),
           },
         }
       }
@@ -9367,7 +9625,7 @@
         tone: 'bad',
         text: line + '\n\n你的境界仍停留在' + (REALM_NAMES[realm] || '凡人') + '。',
         effects: {
-          health: -(10 + target * 2),
+          health: -(10 + target * 3),
           mood: -5,
           flags: {
             breakthroughBonus: clamp((run.flags.breakthroughBonus || 0) + 0.06, 0, 0.3),
@@ -9379,7 +9637,9 @@
     function addYear(run) {
       const world = worldOf(run)
       const previousStage = run.stage
-      run.age += 1
+      const years = world.id === 'cultivation' ? cultivationYears(run) : 1
+      run.age += years
+      run.lastYears = years
       run.causeThisYear = null
       const stage = stageFor(run.age)
       if (stage !== previousStage) {
@@ -9419,6 +9679,8 @@
         })
       } else if (current) {
         let result
+        const realmBefore = run.flags.realmIndex || 0
+        const ascendedBefore = !!run.flags.ascended
         try {
           result = current.resolve(run)
         } catch (error) {
@@ -9443,6 +9705,11 @@
         })
         if (source !== 'milestone' && !current.repeatable) run.seen.push(current.id)
         run.lastEventId = current.id
+        if (source === 'milestone' && world.id === 'cultivation') {
+          const marks = run.flags._milestones || (run.flags._milestones = {})
+          const progressed = (run.flags.realmIndex || 0) > realmBefore || (!ascendedBefore && run.flags.ascended)
+          if (!current.retry || progressed) marks[current.age] = true
+        }
       } else {
         pushEntry(run, {
           kind: 'event',
@@ -9459,10 +9726,19 @@
       }
 
       const aging = world.aging
-      if (run.age > aging.start) {
+      let agingStart = aging.start
+      let agingMid = aging.mid
+      let agingLate = aging.late
+      if (world.id === 'cultivation') {
+        agingStart = Math.max(70, run.deathAge - 50)
+        agingMid = Math.max(agingStart + 10, run.deathAge - 30)
+        agingLate = Math.max(agingMid + 5, run.deathAge - 12)
+      }
+      if (run.age > agingStart) {
         const healthBeforeAging = run.health
-        const decline = run.age < aging.mid ? 1 : run.age < aging.late ? 2 : 3
-        run.health = clamp(run.health - decline, 0, 100)
+        const decline = run.age < agingMid ? 1 : run.age < agingLate ? 2 : 3
+        const spanFactor = world.id === 'cultivation' ? Math.max(1, Math.min(3, Math.round(years / 8))) : 1
+        run.health = clamp(run.health - decline * spanFactor, 0, 100)
         const actual = healthBeforeAging - run.health
         if (actual > 0) {
           const last = run.log[run.log.length - 1]
@@ -9726,7 +10002,9 @@
     }
 
     function computeScore(run, achievements) {
-      const longevity = Math.min(run.age, 130) * 2.1
+      const longevity = run.worldId === 'cultivation'
+        ? Math.min(340, Math.round(Math.log10(Math.max(1, run.age) + 1) * 110))
+        : Math.min(run.age, 130) * 2.1
       const wealthScore = Math.min(250, Math.round(Math.log10(Math.max(0, run.peakWealth) + 1) * 62))
       const moodScore = Math.round(run.mood * 1.6)
       const healthScore = Math.round(run.health * 0.8)
@@ -9752,6 +10030,7 @@
       if (run.flags.ascended) return '雷云散尽，天门开过。你回头看了一眼人间，然后走进了传说。'
       if (run.flags.demon && run.attrs.int >= 15) return '正道没有你的名字，魔道却记了你很久。'
       if (run.flags.swordHeart && run.attrs.int >= 15) return '你这一生只做了一件事：把剑练成了自己的样子。'
+      if ((run.flags.realmIndex || 0) >= 7) return '你活成了别人口中的老怪物。后来的人只在典籍里见过你的名字，和一句“不可招惹”。'
       if ((run.flags.realmIndex || 0) >= 4) return '你活得比很多朝代都久，最后把一身修为还给了天地。'
       if (run.flags.daoPartner) return '有人陪你走过云海，也陪你熬过漫长的闭关。'
       if (run.peakWealth >= 200) return '你的洞府里留下了很多灵石，山门外却只留下一段模糊的传闻。'
@@ -9817,6 +10096,9 @@
       }
       if (run.age < 18) return '你还没来得及真正踏上仙途。山门前的石阶很长，你只走完了最开始的那几级。'
       if (run.age < 50) return '你没能等到下一次突破。洞府外的桃花开了又谢，最后是路过的弟子替你关上了门。'
+      if ((run.flags.realmIndex || 0) >= 6) {
+        return '你活了很久，久到凡间的王朝换了几十个，久到你自己都记不清第一次筑基时是什么天气。最后你坐在洞府中，看着窗外的云慢慢散去。'
+      }
       if ((run.flags.realmIndex || 0) >= 4) {
         return '你活了很久，久到很多故人都成了山门里的牌位。最后你坐在洞府中，看着窗外的云慢慢散去。'
       }
@@ -10442,6 +10724,12 @@
 
     const worlds = WORLDS.map(item => '<button class="world-chip" data-action="choose-world" data-world="' + item.id + '" data-active="' + (item.id === world.id ? 'true' : 'false') + '">'
       + '<i>' + (WORLD_GLYPHS[item.id] || '◆') + '</i><b>' + esc(item.name) + '</b><span>' + esc(item.tagline) + '</span></button>').join('');
+    const loreHtml = world.lore
+      ? '<div class="mode-banner" data-active="true"><span class="mode-mark">凡</span><div class="mode-copy"><strong>凡人流的规矩</strong><p>' + esc(world.lore) + '</p></div></div>'
+      : '';
+    const realmGuide = world.id === 'cultivation'
+      ? '<div class="realm-guide"><b>寿元阶梯</b> · 凡人约百岁 / 炼气120 / 筑基250 / 结丹500 / 元婴1000 / 化神2000 / 炼虚3000 / 合体5000 / 大乘1万 / 渡劫1.2万</div>'
+      : '';
 
     const attrs = world.attrs.map(attr => {
       const value = state.draft.alloc[attr.key] || 0;
@@ -10483,6 +10771,8 @@
       + '<div class="topbar"><div class="topbar-left"><button class="icon-btn" data-action="home" aria-label="返回开始界面">‹</button><div class="topbar-copy"><b>准备这一生</b><span>' + esc(world.name) + ' · 十点投胎 · 十选五</span></div></div><div class="topbar-actions">' + musicButton() + '<span class="mode-chip">' + (state.legacy ? '继承' : '重开') + '</span></div></div>'
       + '<div class="setup-head"><div><h1>投胎之前</h1><p>把十点押在你想成为的样子上。</p></div><span class="mode-chip">' + esc(world.en) + '</span></div>'
       + '<div class="world-scroll">' + worlds + '</div>'
+      + loreHtml
+      + realmGuide
       + legacyHtml
       + '<section class="card points-card">'
       + '<div class="card-head"><div><h2>分配属性</h2><p>' + esc(world.description) + '</p></div><div class="points-left">' + remaining + '<span>剩余点数</span></div></div>'
@@ -10510,10 +10800,24 @@
     const health = Math.max(0, Math.min(100, run.health));
     const mood = Math.max(0, Math.min(100, run.mood));
     const wealthText = world.vitals.wealth + ' ' + formatMoney(run, run.wealth);
+    const lifespanPct = run.worldId === 'cultivation'
+      ? run.flags.ascended
+        ? 100
+        : Math.min(100, Math.max(0, (run.age / Math.max(1, run.deathAge)) * 100))
+      : 0;
+    const lifespanText = run.flags.ascended || run.deathAge >= 99999
+      ? '飞升'
+      : run.deathAge >= 10000
+        ? (run.deathAge / 10000).toFixed(1).replace(/\.0$/, '') + '万'
+        : String(Math.round(run.deathAge));
+    const lifespanHtml = run.worldId === 'cultivation'
+      ? '<div class="lifespan-row"><span>寿元</span><div class="track"><i style="width:' + lifespanPct + '%"></i></div><b>' + Math.round(run.age) + ' / ' + lifespanText + '</b></div>'
+      : '';
     return '<div class="game-stats">'
       + '<div class="statbar"><div class="statbar-head"><span>' + esc(world.vitals.health) + '</span><b>' + Math.round(health) + '</b></div><div class="track"><i style="width:' + health + '%" data-low="' + (health < 30 ? 'true' : 'false') + '"></i></div></div>'
       + '<div class="statbar"><div class="statbar-head"><span>' + esc(world.vitals.mood) + '</span><b>' + Math.round(mood) + '</b></div><div class="track"><i style="width:' + mood + '%" data-low="' + (mood < 30 ? 'true' : 'false') + '"></i></div></div>'
       + '<div class="statbar"><div class="statbar-head"><span>' + esc(wealthText) + '</span><b>' + esc(wealthLabel(run, run.wealth)) + '</b></div><div class="track"><i style="width:100%"></i></div></div>'
+      + lifespanHtml
       + '</div>';
   }
 
@@ -10539,7 +10843,7 @@
       }
       const tag = entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '';
       html += '<div class="entry" data-tone="' + esc(entry.tone || 'normal') + '">'
-        + '<div class="entry-age">' + entry.age + ' 岁</div>'
+        + '<div class="entry-age">' + entry.age + ' 岁' + (entry.span ? '<small>+' + entry.span + '年</small>' : '') + '</div>'
         + '<div class="entry-body">' + (tag ? '<span class="entry-tag ' + (entry.isTwist ? 'twist' : '') + '">' + tag + '</span>' : '')
         + '<div class="entry-text">' + esc(entry.text) + '</div>' + deltaHtml(entry) + '</div></div>';
     }
@@ -10584,6 +10888,8 @@
     const world = worldOf(run);
     const stage = world.stages[run.stage] || world.stages.child;
     const death = !run.alive;
+    const nextYears = run.worldId === 'cultivation' ? cultivationYears(run) : 1;
+    const advanceLabel = nextYears > 1 ? '推进 ' + nextYears + ' 年' : '继续 · ' + (run.age + 1) + ' 岁';
     return '<div class="screen game' + (death ? ' no-advance' : '') + '">'
       + '<header class="game-head"><div class="game-head-row">'
       + '<div class="game-head-left"><span class="topbar-brand" data-world="' + esc(run.worldId) + '">' + esc(world.name.slice(0, 1)) + '</span><div class="game-head-title"><b>' + esc(world.name) + '</b><span>' + esc(stage.label) + ' · RUN ' + String(run.no).padStart(2, '0') + '</span></div>' + (run.legacy ? '<span class="mode-chip">继承</span>' : '') + '</div>'
@@ -10594,7 +10900,7 @@
       + '<div class="game-chips"><span class="run-chip">' + esc(world.dossier[0]) + '：' + esc(educationLabel(run)) + '</span><span class="run-chip">' + esc(world.dossier[1]) + '：' + esc(jobLabel(run)) + '</span></div>'
       + '</header>'
       + '<main class="log">' + logHtml(run) + (run.ending ? endingHtml(run) : '') + '</main>'
-      + (death ? '' : '<div class="game-controls" style="padding-bottom:calc(9px + var(--safe-bottom))"><button class="btn btn-ghost" data-action="toggle-auto" data-auto="' + (state.auto ? 'true' : 'false') + '"><span class="auto-dot"></span>' + (state.auto ? '暂停自动' : '自动播放') + '</button><button class="btn btn-primary" data-action="advance">继续 · ' + (run.age + 1) + ' 岁</button></div>')
+      + (death ? '' : '<div class="game-controls" style="padding-bottom:calc(9px + var(--safe-bottom))"><button class="btn btn-ghost" data-action="toggle-auto" data-auto="' + (state.auto ? 'true' : 'false') + '"><span class="auto-dot"></span>' + (state.auto ? '暂停自动' : '自动播放') + '</button><button class="btn btn-primary" data-action="advance">' + advanceLabel + '</button></div>')
       + '</div>';
   }
 
