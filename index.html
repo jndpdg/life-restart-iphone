@@ -10325,29 +10325,30 @@
     toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1900);
   }
 
-  const MUSIC_BEAT = 60 / 62;
+  const MUSIC_BEAT = 60 / 84;
   const MUSIC_BAR = MUSIC_BEAT * 4;
   const MUSIC_PROGRESSION = [
-    { bass: 73.42, notes: [146.83, 174.61, 220.00, 329.63] },
-    { bass: 116.54, notes: [146.83, 174.61, 220.00, 233.08] },
+    { bass: 130.81, notes: [261.63, 329.63, 392.00, 493.88] },
+    { bass: 123.47, notes: [293.66, 392.00, 493.88, 587.33] },
+    { bass: 110.00, notes: [261.63, 329.63, 392.00, 440.00] },
     { bass: 87.31, notes: [220.00, 261.63, 329.63, 349.23] },
-    { bass: 130.81, notes: [164.81, 196.00, 261.63, 293.66] },
-    { bass: 73.42, notes: [146.83, 174.61, 220.00, 261.63] },
-    { bass: 116.54, notes: [146.83, 174.61, 233.08, 293.66] },
-    { bass: 98.00, notes: [233.08, 293.66, 392.00, 440.00] },
-    { bass: 110.00, notes: [293.66, 329.63, 440.00, 587.33] },
+    { bass: 130.81, notes: [261.63, 329.63, 392.00, 493.88] },
+    { bass: 82.41, notes: [196.00, 246.94, 293.66, 329.63] },
+    { bass: 87.31, notes: [220.00, 261.63, 329.63, 349.23] },
+    { bass: 98.00, notes: [246.94, 293.66, 329.63, 392.00] },
   ];
-  const MUSIC_SCALE = [293.66, 349.23, 392.00, 440.00, 523.25, 587.33];
+  const MUSIC_SCALE = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
   const MUSIC_PATTERNS = [
-    [0, 2, 3, 1],
-    [1, 3, 4, 2],
-    [2, 3, 4, 5],
-    [0, 1, 2, 3],
-    [3, 2, 1, 0],
-    [1, 2, 4, 3],
-    [4, 3, 2, 1],
-    [2, 1, 3, 0],
+    [0, 2, 4, 5],
+    [2, 4, 5, 4],
+    [4, 3, 2, 0],
+    [2, 3, 4, 2],
+    [5, 4, 3, 2],
+    [0, 2, 3, 5],
+    [4, 5, 4, 2],
+    [2, 0, 1, 2],
   ];
+  const MUSIC_ARPEGGIO = [0, 1, 2, 3, 2, 1, 2, 3];
 
   function makeImpulse(ctx) {
     const seconds = 2.8;
@@ -10369,7 +10370,7 @@
     try {
       const ctx = new AudioCtor();
       const master = ctx.createGain();
-      master.gain.value = 0.14;
+      master.gain.value = 0.15;
       const compressor = ctx.createDynamicsCompressor();
       compressor.threshold.value = -20;
       compressor.knee.value = 20;
@@ -10386,17 +10387,17 @@
       const convolver = ctx.createConvolver();
       convolver.buffer = makeImpulse(ctx);
       const reverbWet = ctx.createGain();
-      reverbWet.gain.value = 0.28;
+      reverbWet.gain.value = 0.24;
       bus.connect(convolver);
       convolver.connect(reverbWet);
       reverbWet.connect(master);
 
       const delay = ctx.createDelay(1);
-      delay.delayTime.value = 0.39;
+      delay.delayTime.value = 0.32;
       const feedback = ctx.createGain();
-      feedback.gain.value = 0.23;
+      feedback.gain.value = 0.2;
       const delayWet = ctx.createGain();
-      delayWet.gain.value = 0.16;
+      delayWet.gain.value = 0.14;
       bus.connect(delay);
       delay.connect(feedback);
       feedback.connect(delay);
@@ -10411,9 +10412,9 @@
       noise.loop = true;
       const noiseFilter = ctx.createBiquadFilter();
       noiseFilter.type = 'lowpass';
-      noiseFilter.frequency.value = 620;
+      noiseFilter.frequency.value = 800;
       const noiseGain = ctx.createGain();
-      noiseGain.gain.value = 0.006;
+      noiseGain.gain.value = 0.0035;
       noise.connect(noiseFilter);
       noiseFilter.connect(noiseGain);
       noiseGain.connect(bus);
@@ -10444,11 +10445,11 @@
     const ctx = music.ctx;
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 1380;
+    filter.frequency.value = 1800;
     filter.Q.value = 0.35;
     const envelope = ctx.createGain();
     envelope.gain.setValueAtTime(0.0001, when);
-    envelope.gain.exponentialRampToValueAtTime(gain, when + 1.8);
+    envelope.gain.exponentialRampToValueAtTime(gain, when + 1.3);
     envelope.gain.exponentialRampToValueAtTime(0.0001, when + duration);
     const panner = typeof ctx.createStereoPanner === 'function' ? ctx.createStereoPanner() : null;
     if (panner) panner.pan.value = pan;
@@ -10481,7 +10482,7 @@
     filter.frequency.value = 260;
     const envelope = ctx.createGain();
     envelope.gain.setValueAtTime(0.0001, when);
-    envelope.gain.exponentialRampToValueAtTime(0.075, when + 0.16);
+    envelope.gain.exponentialRampToValueAtTime(0.06, when + 0.14);
     envelope.gain.exponentialRampToValueAtTime(0.0001, when + duration);
     osc.connect(filter);
     filter.connect(envelope);
@@ -10498,12 +10499,12 @@
     osc.frequency.value = freq;
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2400, when);
-    filter.frequency.exponentialRampToValueAtTime(900, when + 0.9);
+    filter.frequency.setValueAtTime(3800, when);
+    filter.frequency.exponentialRampToValueAtTime(1400, when + 0.7);
     const envelope = ctx.createGain();
     envelope.gain.setValueAtTime(0.0001, when);
-    envelope.gain.exponentialRampToValueAtTime(gain, when + 0.012);
-    envelope.gain.exponentialRampToValueAtTime(0.0001, when + 1.1);
+    envelope.gain.exponentialRampToValueAtTime(gain, when + 0.01);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, when + 1.25);
     const panner = typeof ctx.createStereoPanner === 'function' ? ctx.createStereoPanner() : null;
     if (panner) panner.pan.value = pan;
     osc.connect(filter);
@@ -10522,13 +10523,17 @@
     if (!music) return;
     const chord = MUSIC_PROGRESSION[index % MUSIC_PROGRESSION.length];
     chord.notes.forEach((freq, noteIndex) => {
-      padVoice(freq, when + noteIndex * 0.025, MUSIC_BAR + 1.4, 0.031, noteIndex % 2 === 0 ? -0.18 : 0.18, noteIndex % 2 === 0 ? -4 : 4);
+      padVoice(freq, when + noteIndex * 0.03, MUSIC_BAR + 1.2, 0.024, noteIndex % 2 === 0 ? -0.16 : 0.16, noteIndex % 2 === 0 ? -3 : 3);
     });
-    bassVoice(chord.bass, when, MUSIC_BAR * 0.96);
+    bassVoice(chord.bass, when, MUSIC_BAR * 0.9);
+    MUSIC_ARPEGGIO.forEach((noteIndex, step) => {
+      const freq = chord.notes[noteIndex % chord.notes.length];
+      pluckVoice(freq, when + step * (MUSIC_BEAT / 2), 0.034, step % 2 === 0 ? -0.2 : 0.2);
+    });
     const pattern = MUSIC_PATTERNS[index % MUSIC_PATTERNS.length];
     pattern.forEach((noteIndex, step) => {
       if (noteIndex < 0) return;
-      pluckVoice(MUSIC_SCALE[noteIndex], when + 0.82 + step * 0.82, 0.095, step % 2 === 0 ? -0.12 : 0.12);
+      pluckVoice(MUSIC_SCALE[noteIndex], when + 0.48 + step * 0.68, 0.075, step % 2 === 0 ? -0.1 : 0.1);
     });
   }
 
