@@ -3730,7 +3730,7 @@
         title: '走火入魔',
         description: '道心终究没有压住心魔。你在自己的识海里迷了路，再也没能走出来。',
         tone: 'tragic',
-        when: run => run.cause === '心魔' || run.mood <= 15,
+        when: run => run.cause === '心魔' || (run.flags.heartDemon && run.mood <= 12),
       },
       {
         id: 'cult_tribulation',
@@ -3800,7 +3800,7 @@
         title: '飞升成鸡',
         description: '天门开了一条缝，你挤了进去，出来时已经是一只会说人话的鸡。仙界食堂从此多了一道名菜。',
         tone: 'strange',
-        when: run => run.age >= 80 && run.attrs.looks >= 15,
+        when: run => run.age >= 60 && run.attrs.looks >= 8,
       },
       {
         id: 'cult_lawsuit',
@@ -3814,14 +3814,14 @@
         title: '和心魔领证',
         description: '你和心魔吵了很多年，最后决定把关系合法化。洞房花烛夜，它一直在你耳边说“你其实可以更坏一点”。',
         tone: 'strange',
-        when: run => run.mood <= 30 && (run.flags.realmIndex || 0) >= 3,
+        when: run => run.mood <= 45 && (run.flags.realmIndex || 0) >= 3,
       },
       {
         id: 'cult_franchise',
         title: '山门连锁店',
         description: '你把宗门开成了连锁店，统一 VI、统一心法、统一早课。祖师爷托梦说想退股。',
         tone: 'good',
-        when: run => run.flags.sect && run.peakWealth >= 200,
+        when: run => run.flags.sect && run.peakWealth >= 150,
       },
       {
         id: 'cult_rock',
@@ -4024,7 +4024,7 @@
         title: '金丹卡喉',
         description: '你的金丹结是结成了，但位置不太对。每次运功都像噎着一颗滚烫的枣核，同门说你这是“前无古人”。',
         tone: 'strange',
-        when: run => (run.flags.realmIndex || 0) === 3 && run.mood <= 35,
+        when: run => (run.flags.realmIndex || 0) === 3 && run.mood <= 65,
       },
       {
         id: 'cult_nascent_joke',
@@ -5828,7 +5828,7 @@
       {
         age: 2000,
         retry: true,
-        when: s => (s.flags.realmIndex || 0) >= 9,
+        when: s => (s.flags.realmIndex || 0) >= 9 && !s.flags.ascensionFailed,
         resolve(s) {
           return cultivationBreakthrough(s, '真仙', [
             '九重雷劫落下，你没有躲。最后一道雷光散尽时，天门在你头顶打开。',
@@ -10757,6 +10757,7 @@
         if (cultivation) {
           if (run.age < milestone.age) continue
           if (marks[milestone.age]) continue
+          if (run.flags.stalledRealm && ((run.flags.realmIndex || 0) + 1) === run.flags.stalledRealm) continue
         } else if (milestone.age !== run.age) {
           continue
         }
@@ -10862,6 +10863,8 @@
       return deltas
     }
 
+    const CULTIVATION_STALL_CHANCE = 0.32
+
     function cultivationChance(run, target) {
       const base = 0.18
         + run.attrs.int * 0.028
@@ -10870,6 +10873,7 @@
         + (run.luck || 0) * 0.035
         + (run.flags.breakthroughBonus || 0)
         - target * 0.032
+      if (target === 10) return clamp(base * 0.28, 0.05, 0.22)
       return clamp(base, 0.03, 0.88)
     }
 
@@ -10961,14 +10965,24 @@
           },
         }
       }
+      const stallChance = target === 1 ? 0 : target <= 4 ? 0.52 : CULTIVATION_STALL_CHANCE
+      const stalled = target === 10 || Math.random() < stallChance
       return {
         tone: 'bad',
-        text: line + '\n\n你的境界仍停留在' + (REALM_NAMES[realm] || '凡人') + '。',
+        text: line
+          + '\n\n你的境界仍停留在' + (REALM_NAMES[realm] || '凡人') + '。'
+          + (target === 10
+            ? '\n\n天门没有再开。你留在了渡劫期。'
+            : stalled
+              ? '\n\n这一次失败没有再来。你在' + (REALM_NAMES[realm] || '凡人') + '止步了。'
+              : ''),
         effects: {
-          health: -(10 + target * 3),
-          mood: -5,
+          health: target === 10 ? -24 : -(10 + target * 3),
+          mood: target === 10 ? -14 : -5,
           flags: {
             breakthroughBonus: clamp((run.flags.breakthroughBonus || 0) + 0.06, 0, 0.3),
+            ...(target === 10 ? { ascensionFailed: true } : {}),
+            ...(stalled ? { stalledRealm: target } : {}),
           },
         },
       }
@@ -11519,11 +11533,7 @@
               : !run.flags.daoPartner
                 ? 'cult_ascend_alone'
                 : 'cult_ascend'
-          : run.cause === '天劫'
-            ? 'cult_tribulation'
-            : run.cause === '心魔'
-              ? 'cult_deviation'
-              : null
+          : null
         : run.worldId === 'wasteland'
           ? run.cause === '感染'
             ? 'waste_zombie'
@@ -11544,7 +11554,7 @@
       const specific = pool.filter(ending => !ending.isDefault)
       const candidates = specific.length > 0 ? specific : pool
       if (candidates.length === 0) return world.endings[world.endings.length - 1]
-      const toneWeight = { legend: 4, great: 2, normal: 1, tragic: 2 }
+      const toneWeight = { legend: 4, great: 2, normal: 1, tragic: 2, strange: 2.2, good: 1.5 }
       const weights = candidates.map(ending => toneWeight[ending.tone] || 1)
       const total = weights.reduce((sum, value) => sum + value, 0)
       let roll = Math.random() * total
