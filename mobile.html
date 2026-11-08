@@ -13324,8 +13324,46 @@
       return REALM_YEAR_STEPS[realm] || 1
     }
 
-    function defaultRecord() {
+    function emptyModeRecord() {
       return { runs: 0, best: 0, last: null, unlocked: [], unlockedAchievements: [], replay: null }
+    }
+
+    function normalizeModeRecord(parsed) {
+      if (!parsed || typeof parsed !== 'object') return emptyModeRecord()
+      return {
+        runs: Number.isFinite(parsed.runs) ? Math.max(0, Math.floor(parsed.runs)) : 0,
+        best: Number.isFinite(parsed.best) ? Math.max(0, Math.floor(parsed.best)) : 0,
+        last: parsed.last && typeof parsed.last === 'object' ? parsed.last : null,
+        unlocked: Array.isArray(parsed.unlocked)
+          ? parsed.unlocked.filter(id => typeof id === 'string')
+          : [],
+        unlockedAchievements: Array.isArray(parsed.unlockedAchievements)
+          ? parsed.unlockedAchievements.filter(id => typeof id === 'string')
+          : [],
+        replay: parsed.replay && Array.isArray(parsed.replay.log) && parsed.replay.log.some(entry => entry && typeof entry.text === 'string')
+          ? {
+            ...parsed.replay,
+            log: parsed.replay.log.filter(entry => entry && typeof entry.text === 'string'),
+          }
+          : null,
+      }
+    }
+
+    function defaultRecord() {
+      return { version: 2, modes: { interactive: emptyModeRecord(), text: emptyModeRecord() } }
+    }
+
+    function modeRecord(record, mode) {
+      const key = mode === 'text' ? 'text' : 'interactive'
+      if (record && record.modes && record.modes[key]) return record.modes[key]
+      if (key === 'interactive' && record && !record.modes) return normalizeModeRecord(record)
+      return emptyModeRecord()
+    }
+
+    function withModeRecord(record, mode, nextModeRecord) {
+      const key = mode === 'text' ? 'text' : 'interactive'
+      const base = record && record.modes ? record : defaultRecord()
+      return { version: 2, modes: { ...base.modes, [key]: nextModeRecord } }
     }
 
     function readRecord() {
@@ -13334,22 +13372,26 @@
         if (!raw) return defaultRecord()
         const parsed = JSON.parse(raw)
         if (!parsed || typeof parsed !== 'object') return defaultRecord()
+        if (parsed.modes && typeof parsed.modes === 'object') {
+          return {
+            version: 2,
+            modes: {
+              interactive: normalizeModeRecord(parsed.modes.interactive),
+              text: normalizeModeRecord(parsed.modes.text),
+            },
+          }
+        }
+        if (!parsed.runs && !parsed.best && !parsed.last && !parsed.replay
+          && !Array.isArray(parsed.unlocked) && !Array.isArray(parsed.unlockedAchievements)) {
+          return defaultRecord()
+        }
+        const legacy = normalizeModeRecord(parsed)
         return {
-          runs: Number.isFinite(parsed.runs) ? Math.max(0, Math.floor(parsed.runs)) : 0,
-          best: Number.isFinite(parsed.best) ? Math.max(0, Math.floor(parsed.best)) : 0,
-          last: parsed.last && typeof parsed.last === 'object' ? parsed.last : null,
-          unlocked: Array.isArray(parsed.unlocked)
-            ? parsed.unlocked.filter(id => typeof id === 'string')
-            : [],
-          unlockedAchievements: Array.isArray(parsed.unlockedAchievements)
-            ? parsed.unlockedAchievements.filter(id => typeof id === 'string')
-            : [],
-          replay: parsed.replay && Array.isArray(parsed.replay.log) && parsed.replay.log.some(entry => entry && typeof entry.text === 'string')
-            ? {
-              ...parsed.replay,
-              log: parsed.replay.log.filter(entry => entry && typeof entry.text === 'string'),
-            }
-            : null,
+          version: 2,
+          modes: {
+            interactive: legacy,
+            text: normalizeModeRecord(parsed),
+          },
         }
       } catch {
         return defaultRecord()
@@ -14491,6 +14533,7 @@
     function computeComedyAchievements(run) {
       return ALL_ACHIEVEMENTS
         .filter(item => {
+          if (item.ending) return false
           try { return item.when(run) } catch { return false }
         })
         .map(item => ({
@@ -15244,12 +15287,12 @@
   }
 
   function homeHtml() {
-    const record = state.record;
-    const unlockedAch = new Set(record.unlockedAchievements || []);
+    const bucket = modeRecord(state.record, state.playMode);
+    const unlockedAch = new Set(bucket.unlockedAchievements || []);
     const achCount = ALL_ACHIEVEMENTS.filter(item => unlockedAch.has(item.id)).length;
     const achPct = Math.round((achCount / Math.max(1, ACHIEVEMENT_TOTAL)) * 100);
-    const endingCount = Array.isArray(record.unlocked) ? record.unlocked.length : 0;
-    const replay = record.replay;
+    const endingCount = Array.isArray(bucket.unlocked) ? bucket.unlocked.length : 0;
+    const replay = bucket.replay;
     const achPageSize = 60
     const achPageCount = Math.max(1, Math.ceil(ACHIEVEMENT_TOTAL / achPageSize))
     const achPage = Math.min(Math.max(0, state.achPage || 0), achPageCount - 1)
@@ -15283,10 +15326,10 @@
       + '<button data-action="set-mode" data-mode="interactive" data-active="' + (state.playMode === 'interactive' ? 'true' : 'false') + '"><b>互动模式</b><span>在命运岔路停下来，自己选</span></button>'
       + '<button data-action="set-mode" data-mode="text" data-active="' + (state.playMode === 'text' ? 'true' : 'false') + '"><b>纯文本模式</b><span>自动替你选，只负责读故事</span></button>'
       + '</div>'
-      + '<p class="play-mode-hint">' + (state.playMode === 'text' ? '纯文本模式：不再弹出选择框，命运会替你掷骰。' : '互动模式：遇到岔路会停下来，选项由你的属性决定。') + '</p>'
+      + '<p class="play-mode-hint">' + (state.playMode === 'text' ? '纯文本模式：不再弹出选择框，命运会替你掷骰。' : '互动模式：遇到岔路会停下来，选项由你的属性决定。') + ' 结局、成就与回放按模式独立记录。' + '</p>'
       + '<div class="stat-grid">'
-      + '<div class="stat"><b>' + (record.runs || 0) + '</b><span>活过</span></div>'
-      + '<div class="stat"><b>' + (record.best || 0) + '</b><span>最高评分</span></div>'
+      + '<div class="stat"><b>' + (bucket.runs || 0) + '</b><span>活过</span></div>'
+      + '<div class="stat"><b>' + (bucket.best || 0) + '</b><span>最高评分</span></div>'
       + '<div class="stat"><b>' + endingCount + ' / ' + TOTAL_ENDINGS + '</b><span>结局图鉴</span></div>'
       + '<div class="stat"><b>' + achCount + ' / ' + ACHIEVEMENT_TOTAL + '</b><span>成就</span></div>'
       + '</div>'
@@ -15600,15 +15643,17 @@
     const run = state.run;
     if (!run || !run.ending || run._recorded) return;
     const ending = run.ending;
-    const unlocked = Array.from(new Set([...(state.record.unlocked || []), ending.id]));
-    const previousAchievements = Array.isArray(state.record.unlockedAchievements) ? state.record.unlockedAchievements : [];
+    const mode = run.playMode === 'text' ? 'text' : 'interactive';
+    const bucket = modeRecord(state.record, mode);
+    const unlocked = Array.from(new Set([...(bucket.unlocked || []), ending.id]));
+    const previousAchievements = Array.isArray(bucket.unlockedAchievements) ? bucket.unlockedAchievements : [];
     const previousSet = new Set(previousAchievements);
     const earned = ending.achievements
       .filter(item => (item.fun || item.persistent) && !previousSet.has(item.id))
       .map(item => item.id);
-    state.record = {
-      ...state.record,
-      best: Math.max(state.record.best || 0, run.score || 0),
+    const nextBucket = {
+      ...bucket,
+      best: Math.max(bucket.best || 0, run.score || 0),
       last: {
         age: run.age,
         score: run.score || 0,
@@ -15624,6 +15669,7 @@
       unlockedAchievements: previousAchievements.concat(earned),
       replay: buildReplaySnapshot(run),
     };
+    state.record = withModeRecord(state.record, mode, nextBucket);
     writeRecord(state.record);
     run._recorded = true;
   }
@@ -15688,12 +15734,14 @@
 
   function startLife() {
     if (!canStart()) return;
-    const nextNumber = (state.record.runs || 0) + 1;
-    state.record = { ...state.record, runs: nextNumber };
+    const mode = state.playMode;
+    const bucket = modeRecord(state.record, mode);
+    const nextNumber = (bucket.runs || 0) + 1;
+    state.record = withModeRecord(state.record, mode, { ...bucket, runs: nextNumber });
     writeRecord(state.record);
     const legacy = state.legacy;
     state.run = createRun(state.draft.alloc, selectedTalents(), state.draft.worldId, nextNumber, legacy);
-    state.run.playMode = state.playMode;
+    state.run.playMode = mode;
     state.legacy = null;
     state.view = 'game';
     stopAuto();
@@ -15734,10 +15782,11 @@
   }
 
   function openReplay() {
+    const bucket = modeRecord(state.record, state.playMode);
     const entries = state.run && state.run.log
       ? state.run.log
-      : state.record.replay && state.record.replay.log
-        ? state.record.replay.log
+      : bucket.replay && bucket.replay.log
+        ? bucket.replay.log
         : null;
     if (!entries || entries.length === 0) {
       showToast('还没有可以回放的人生');
