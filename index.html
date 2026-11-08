@@ -441,6 +441,20 @@
       -webkit-line-clamp: 2;
     }
     .ach-actions { margin-top: 10px; }
+    .ach-pager {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 9px;
+    }
+    .ach-pager span {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+    .ach-pager .btn:disabled { opacity: .35; }
     .replay-card {
       display: flex;
       align-items: center;
@@ -4940,8 +4954,7 @@
       { id: 'chaos_lowint', title: '傻人有傻福', desc: '你不太聪明，但命运似乎懒得欺负你。', when: run => run.attrs.int <= 3 && run.age >= 60 },
     ]
 
-    const ALL_ACHIEVEMENTS = COMEDY_ACHIEVEMENTS.concat(EXTRA_ACHIEVEMENTS, CHAOS_ACHIEVEMENTS)
-    const ACHIEVEMENT_TOTAL = ALL_ACHIEVEMENTS.length
+    const BASE_ACHIEVEMENTS = COMEDY_ACHIEVEMENTS.concat(EXTRA_ACHIEVEMENTS, CHAOS_ACHIEVEMENTS)
     const COMEDY_IDS = new Set(COMEDY_ACHIEVEMENTS.map(item => item.id))
 
     const CULTIVATION_TALENTS = [
@@ -11925,6 +11938,68 @@
     const TOTAL_ENDINGS = WORLDS.reduce((total, world) => total + world.endings.length, 0)
     const COMEDY_TOTAL = COMEDY_ACHIEVEMENTS.length
 
+    const MILESTONE_ACHIEVEMENTS = (() => {
+      const list = []
+      const add = (id, title, desc, when) => list.push({ id, title, desc, when })
+      for (let n = 1; n <= 100; n++) {
+        add('mile_age_' + n, '第 ' + n + ' 年', '你活到了第 ' + n + ' 年。', run => run.age === n)
+        add('mile_wealth_' + n, '身家 ' + n, '你的巅峰身家达到 ' + n + '。', run => run.peakWealth >= n)
+        add('mile_run_' + n, '第 ' + n + ' 次投胎', '你已经重开了 ' + n + ' 次。', run => (run.no || 0) >= n)
+      }
+      const attrs = [['looks', '颜值'], ['int', '智力'], ['body', '体质'], ['family', '家境']]
+      attrs.forEach(pair => {
+        for (let n = 1; n <= 25; n++) {
+          add('mile_attr_' + pair[0] + '_' + n, pair[1] + ' ' + n, '你的' + pair[1] + '达到 ' + n + '。', run => (run.attrs[pair[0]] || 0) >= n)
+        }
+      })
+      WORLDS.forEach(world => {
+        Object.keys(world.stages).forEach(stageKey => {
+          const stage = world.stages[stageKey]
+          add('mile_stage_' + world.id + '_' + stageKey, '抵达 · ' + world.name + ' · ' + stage.label, '你走到了' + world.name + '的「' + stage.label + '」。', run => run.worldId === world.id && run.stage === stageKey)
+        })
+      })
+      const causes = ['寿终正寝', '寿元耗尽', '魔力枯竭', '生命耗尽', '油尽灯枯', '疾病', '感染', '天劫', '心魔', '牺牲', '数据删除', '离谱意外', '飞升', '走火入魔', '意外', '老死', '失踪', '饿死', '被杀', '雷劫']
+      causes.forEach((cause, index) => {
+        add('mile_cause_' + index, '死因 · ' + cause, '你以「' + cause + '」结束了这一生。', run => run.cause === cause)
+      })
+      const flags = [
+        ['married', '已婚'], ['partner', '有伴'], ['daoPartner', '道侣'],
+        ['children', '有后代'], ['pet', '养宠'], ['spiritBeast', '灵兽'],
+        ['beastfriend', '兽友'], ['familiar', '魔宠'], ['dragon', '龙'],
+        ['dragonRider', '龙骑士'], ['ascended', '飞升'], ['demon', '魔道'],
+        ['swordHeart', '剑心'], ['sectMaster', '掌门'], ['alchemist', '丹师'],
+        ['infected', '感染'], ['mutant', '变异'], ['uploaded', '上传'],
+        ['corpEmployee', '公司人'], ['idol', '偶像'], ['artist', '艺术家'],
+        ['captain', '舰长'], ['firstContact', '第一次接触'], ['colonist', '殖民者'],
+      ]
+      flags.forEach((pair, index) => {
+        add('mile_flag_' + index, '印记 · ' + pair[1], '你的人生里出现了「' + pair[1] + '」。',
+          run => pair[0] === 'children' ? (run.flags.children || 0) > 0 : Boolean(run.flags[pair[0]]))
+      })
+      const worldAges = [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 200]
+      WORLDS.forEach((world, worldIndex) => {
+        const marks = worldIndex < 2 ? worldAges.concat([250]) : worldAges
+        marks.forEach(n => {
+          add('mile_world_age_' + world.id + '_' + n, world.name + ' · ' + n + ' 岁',
+            '你在' + world.name + '活到了 ' + n + ' 岁。',
+            run => run.worldId === world.id && run.age >= n)
+        })
+      })
+      return list
+    })()
+
+    const ENDING_ACHIEVEMENTS = WORLDS.flatMap(world => world.endings.map(ending => ({
+      id: 'ach_end_' + world.id + '_' + ending.id,
+      title: '结局 · ' + ending.title,
+      desc: '抵达「' + ending.title + '」。',
+      when: run => Boolean(run.ending && run.ending.id === ending.id),
+      fun: Boolean(ending.comedy),
+      ending: true,
+    })))
+
+    const ALL_ACHIEVEMENTS = BASE_ACHIEVEMENTS.concat(MILESTONE_ACHIEVEMENTS, ENDING_ACHIEVEMENTS)
+    const ACHIEVEMENT_TOTAL = ALL_ACHIEVEMENTS.length
+
     const CHOICE_NODES = {
       modern: [
         {
@@ -14401,8 +14476,23 @@
           id: item.id,
           label: item.title,
           desc: item.desc,
-          fun: COMEDY_IDS.has(item.id),
+          fun: COMEDY_IDS.has(item.id) || Boolean(item.fun),
           persistent: true,
+        }))
+    }
+
+    function computeEndingAchievements(run) {
+      return ENDING_ACHIEVEMENTS
+        .filter(item => {
+          try { return item.when(run) } catch { return false }
+        })
+        .map(item => ({
+          id: item.id,
+          label: item.title,
+          desc: item.desc,
+          fun: Boolean(item.fun),
+          persistent: true,
+          ending: true,
         }))
     }
 
@@ -14671,8 +14761,6 @@
       const funAchievements = computeComedyAchievements(run)
       const score = computeScore(run, achievements)
       const grade = world.grades.find(item => score >= item.min) || world.grades[world.grades.length - 1]
-      const finalAchievements = achievements.concat(funAchievements)
-      run.achievements = finalAchievements
       run.score = score
       const endingDef = determineEnding(run)
       run.ending = {
@@ -14683,10 +14771,14 @@
         comedy: Boolean(endingDef.comedy),
         grade,
         score,
-        achievements: finalAchievements,
+        achievements: [],
         epitaph: computeEpitaph(run),
         worldId: run.worldId,
       }
+      const endingAchievements = computeEndingAchievements(run)
+      const finalAchievements = achievements.concat(funAchievements, endingAchievements)
+      run.achievements = finalAchievements
+      run.ending.achievements = finalAchievements
     }
 
     // __LOGIC_END__
@@ -14729,6 +14821,7 @@
     playMode: storedPlayMode(),
     replay: null,
     showAllAchievements: false,
+    achPage: 0,
     pendingScroll: 'top',
   };
 
@@ -15136,8 +15229,13 @@
     const achPct = Math.round((achCount / Math.max(1, ACHIEVEMENT_TOTAL)) * 100);
     const endingCount = Array.isArray(record.unlocked) ? record.unlocked.length : 0;
     const replay = record.replay;
-    const list = state.showAllAchievements ? ALL_ACHIEVEMENTS : ALL_ACHIEVEMENTS.slice(0, 8);
-    const achHtml = list.map(item => achievementCard(item, unlockedAch.has(item.id))).join('');
+    const achPageSize = 60
+    const achPageCount = Math.max(1, Math.ceil(ACHIEVEMENT_TOTAL / achPageSize))
+    const achPage = Math.min(Math.max(0, state.achPage || 0), achPageCount - 1)
+    const list = state.showAllAchievements
+      ? ALL_ACHIEVEMENTS.slice(achPage * achPageSize, (achPage + 1) * achPageSize)
+      : ALL_ACHIEVEMENTS.slice(0, 8)
+    const achHtml = list.map(item => achievementCard(item, unlockedAch.has(item.id))).join('')
     const legacyHtml = state.legacy
       ? '<div class="legacy-note">继承待用 · ' + esc(state.legacy.label || '上一世的天赋') + ' +' + (state.legacy.amount || 2) + ' · 初始资源 +' + (state.legacy.wealth || 10) + '</div>'
       : '';
@@ -15177,6 +15275,9 @@
       + '<div class="panel-head"><div><span class="kicker">ACHIEVEMENTS</span><h2>成就收藏</h2></div><em>' + achCount + ' / ' + ACHIEVEMENT_TOTAL + '</em></div>'
       + '<div class="panel-progress"><i style="width:' + achPct + '%"></i></div>'
       + '<div class="ach-list' + (state.showAllAchievements ? ' scroll' : '') + '">' + achHtml + '</div>'
+      + (state.showAllAchievements
+        ? '<div class="ach-pager"><button class="btn btn-ghost btn-small" data-action="ach-prev"' + (achPage <= 0 ? ' disabled' : '') + '>上一页</button><span>第 ' + (achPage + 1) + ' / ' + achPageCount + ' 页</span><button class="btn btn-ghost btn-small" data-action="ach-next"' + (achPage >= achPageCount - 1 ? ' disabled' : '') + '>下一页</button></div>'
+        : '')
       + '<div class="ach-actions"><button class="btn btn-ghost btn-small btn-block" data-action="toggle-ach">' + (state.showAllAchievements ? '收起成就' : '查看全部 ' + ACHIEVEMENT_TOTAL + ' 个成就') + '</button></div>'
       + '</section>'
       + '<section class="panel">'
@@ -15339,10 +15440,13 @@
       [world.dossier[2], familyLine(run)],
       ['最终' + world.vitals.wealth, formatMoney(run, run.wealth)],
     ].map(pair => '<div class="ending-stat"><span>' + esc(pair[0]) + '</span><b>' + esc(pair[1]) + '</b></div>').join('');
-    const achievements = ending.achievements.map(item => {
-      const kind = item.fun ? 'comedy' : item.id.indexOf('chaos_') === 0 ? 'chaos' : item.persistent ? 'collection' : 'life';
+    const orderedAchievements = ending.achievements.slice().sort((a, b) => (b.ending ? 1 : 0) - (a.ending ? 1 : 0) || (b.fun ? 1 : 0) - (a.fun ? 1 : 0));
+    const shownAchievements = orderedAchievements.slice(0, 12);
+    const hiddenAchievements = Math.max(0, orderedAchievements.length - shownAchievements.length);
+    const achievements = shownAchievements.map(item => {
+      const kind = item.fun ? 'comedy' : item.id.indexOf('chaos_') === 0 ? 'chaos' : item.ending ? 'ending' : item.persistent ? 'collection' : 'life';
       return '<span class="ach-chip" data-kind="' + kind + '" data-fun="' + (item.fun ? 'true' : 'false') + '">' + esc(item.label) + '</span>';
-    }).join('');
+    }).join('') + (hiddenAchievements > 0 ? '<span class="ach-chip ach-more" data-kind="collection">+' + hiddenAchievements + ' 项</span>' : '');
     return '<section class="ending">'
       + '<div class="ending-top"><div><span class="ending-kicker">ENDING · ' + esc(world.name) + (ending.comedy ? ' · 喜剧' : '') + '</span><h2>' + esc(ending.title) + '</h2></div><div class="score-ring"><b>' + ending.score + '</b><span>SCORE</span></div></div>'
       + '<p class="ending-desc">' + esc(ending.description) + '</p>'
@@ -15728,7 +15832,9 @@
       case 'replay-next': replayStep(1); break;
       case 'replay-first': if (state.replay) { state.replay.index = 0; render(); } break;
       case 'replay-toggle': toggleReplayAuto(); break;
-      case 'toggle-ach': state.showAllAchievements = !state.showAllAchievements; render(); break;
+      case 'toggle-ach': state.showAllAchievements = !state.showAllAchievements; state.achPage = 0; render(); break;
+      case 'ach-prev': state.achPage = Math.max(0, (state.achPage || 0) - 1); render(); break;
+      case 'ach-next': state.achPage = Math.min(Math.max(0, Math.ceil(ACHIEVEMENT_TOTAL / 60) - 1), (state.achPage || 0) + 1); render(); break;
       case 'refresh-system':
         state.record = readRecord();
         state.pendingScroll = 'preserve';
