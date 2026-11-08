@@ -964,6 +964,7 @@
     .entry-body { min-width: 0; }
     .entry-tag { display: inline-flex; align-items: center; min-height: 16px; margin-bottom: 2px; padding: 0 5px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); font-size: 7px; }
     .entry-tag.twist { border-color: color-mix(in srgb, var(--warn) 30%, var(--line)); color: var(--warn); }
+    .entry-tag.choice { border-color: color-mix(in srgb, var(--brand) 32%, var(--line)); color: var(--brand); }
     .entry-text { color: var(--ink); font-family: var(--serif); font-size: 14px; line-height: 1.8; }
     .entry[data-tone="good"] .entry-tag { color: var(--good); }
     .entry[data-tone="bad"] .entry-tag { color: var(--bad); }
@@ -1126,6 +1127,47 @@
     .replay-entry p { color: var(--ink); font-family: var(--serif); font-size: 14px; line-height: 1.9; }
     .replay-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
     .replay-controls .btn { flex: 1 1 42%; min-height: 38px; font-size: 10px; }
+    .choice-modal { align-items: center; }
+    .choice-sheet {
+      width: 100%;
+      max-width: 560px;
+      max-height: 88vh;
+      max-height: 88dvh;
+      overflow-y: auto;
+      padding: 18px;
+      border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--line));
+      border-radius: 17px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .choice-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .choice-kicker { color: var(--brand); font-size: 8px; font-weight: 650; letter-spacing: 0.14em; }
+    .choice-head h2 { margin-top: 3px; color: var(--ink); font-family: var(--serif); font-size: 24px; font-weight: 500; }
+    .choice-head p { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.7; }
+    .choice-options { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+    .choice-option {
+      display: block;
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-left: 3px solid color-mix(in srgb, var(--brand) 60%, var(--line));
+      border-radius: 9px;
+      background: color-mix(in srgb, var(--panel-2) 68%, transparent);
+      text-align: left;
+    }
+    .choice-option:active { transform: scale(0.99); }
+    .choice-option:disabled { opacity: 0.46; }
+    .choice-option[data-available="true"] { border-color: color-mix(in srgb, var(--brand) 30%, var(--line)); }
+    .choice-option-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .choice-option b { color: var(--ink); font-size: 12px; font-weight: 650; }
+    .choice-option em { flex: none; color: var(--brand); font-size: 8px; font-style: normal; }
+    .choice-option p { margin-top: 3px; color: var(--muted); font-size: 9px; line-height: 1.55; }
+    .choice-reqs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .choice-req { padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 7.5px; }
+    .choice-req[data-ok="false"] { border-color: color-mix(in srgb, var(--bad) 30%, var(--line)); color: var(--bad); }
+    .choice-risk { display: block; margin-top: 5px; color: var(--warn); font-size: 8px; }
+    .choice-locked { display: block; margin-top: 6px; color: var(--bad); font-size: 8px; }
+    .choice-note { margin-top: 11px; color: var(--faint); font-size: 8px; line-height: 1.6; text-align: center; }
     .toast {
       position: fixed;
       bottom: calc(96px + var(--safe-bottom));
@@ -1182,6 +1224,7 @@
   <script>
     const STORAGE_KEY = 'dsh.life-restart.record.v1';
     const TOTAL_POINTS = 10
+    const ATTR_MAX = 40
 
     const ATTRS = [
       {
@@ -8910,6 +8953,923 @@
     const WORLD_BY_ID = Object.fromEntries(WORLDS.map(world => [world.id, world]))
     const TOTAL_ENDINGS = WORLDS.reduce((total, world) => total + world.endings.length, 0)
     const COMEDY_TOTAL = COMEDY_ACHIEVEMENTS.length
+
+    const CHOICE_NODES = {
+      modern: [
+        {
+          id: 'modern_fork_18',
+          at: 18,
+          chance: 0.9,
+          title: '志愿表上的三个名字',
+          prompt: '十八岁那年，你面前摆着三条路。每一条都通向不同的人生，而你只能先选一条。',
+          options: [
+            {
+              id: 'steady',
+              label: '选一个稳妥的专业',
+              desc: '不惊艳，但大概率不会出错。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你填了一个父母都满意的专业。开学那天，校园里人很多，你忽然想：如果当初填了另一个名字，会不会是另一种人生？',
+                  effects: { int: 2, wealth: 5, flags: { choiceStable: true } },
+                }
+              },
+            },
+            {
+              id: 'dream',
+              label: '追一个不太靠谱的梦',
+              desc: '需要一点天生的本钱。',
+              requires: { looks: 6 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你选了那个所有人都说“不现实”的方向。第一次有人认真看你的作品时，你比拿到录取通知书那天还高兴。',
+                  effects: { looks: 2, mood: 9, flags: { artist: true, choiceDream: true } },
+                }
+              },
+            },
+            {
+              id: 'founder',
+              label: '拿着家里的钱试一次',
+              desc: '有家底的人，才有资格把失败当学费。',
+              requires: { family: 6 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你用家里的关系拉起了一个小团队。第一次开会时，所有人都在等你说话，你才发现“老板”两个字并不轻松。',
+                  effects: { wealth: 15, int: 2, mood: 4, flags: { entrepreneur: true } },
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: 'modern_fork_38',
+          at: 38,
+          chance: 0.85,
+          title: '中年的岔路',
+          prompt: '你已经在一条路上走了很久。现在，另一条路忽然出现在你面前。',
+          options: [
+            {
+              id: 'promote',
+              label: '留下来，继续往上爬',
+              desc: '稳定、体面，但代价是时间和身体。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你留了下来，换来一个更高的职位和更少的睡眠。薪水涨了，体检报告上的箭头也多了。',
+                  effects: { wealth: 20, health: -4, mood: -2 },
+                }
+              },
+            },
+            {
+              id: 'own',
+              label: '自己出来做一件事',
+              desc: '需要足够的判断力和启动资金。',
+              requires: { int: 14, wealth: 60 },
+              risk: '成败看运气，失败会伤筋动骨。',
+              resolve(run) {
+                const success = Math.random() < clamp(0.42 + run.attrs.int * 0.018, 0.3, 0.78)
+                return success
+                  ? {
+                    tone: 'good',
+                    text: '你出来单干了。第一年很难，第二年勉强活下来，第三年忽然接到了那个足以改变局面的单子。',
+                    effects: { wealth: 40, mood: 8, int: 2, flags: { entrepreneur: true, choiceRisk: true } },
+                  }
+                  : {
+                    tone: 'bad',
+                    text: '你出来单干了。账上的钱烧得比预想中快，最后你关掉办公室，把钥匙还给房东，一个人在楼下坐了很久。',
+                    effects: { wealth: -25, mood: -8, health: -3, int: 1, flags: { choiceRisk: true } },
+                  }
+              },
+            },
+            {
+              id: 'family',
+              label: '把时间还给家里',
+              desc: '需要有一个能接住你的家。',
+              requires: { family: 6 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你推掉了那个升职机会，开始按时回家吃饭。孩子的家长会你第一次没有缺席，伴侣说，你最近像个人了。',
+                  effects: { mood: 12, health: 2, flags: { married: true, partner: true, choiceFamily: true } },
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: 'modern_fork_60',
+          at: 60,
+          chance: 0.8,
+          title: '晚年要留下什么',
+          prompt: '你开始认真想一个问题：这一生最后会留下什么？',
+          options: [
+            {
+              id: 'teach',
+              label: '把会的东西教给别人',
+              desc: '需要足够多的经验。',
+              requires: { int: 10 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你开始带年轻人。他们的问题很幼稚，你却回答得很认真。某天你忽然发现，自己说话的语气越来越像当年那个老教授。',
+                  effects: { int: 3, mood: 8, flags: { volunteer: true, kind: true, teacher: true } },
+                }
+              },
+            },
+            {
+              id: 'roam',
+              label: '趁还走得动，去远处看看',
+              desc: '身体要撑得住。',
+              requires: { body: 8 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你买了一张很远的车票。窗外的风景换了又换，你第一次觉得，人生并不只有一种交卷方式。',
+                  effects: { body: 2, mood: 10, health: -2, flags: { traveler: true } },
+                }
+              },
+            },
+            {
+              id: 'settle',
+              label: '留在熟悉的地方，慢慢过日子',
+              desc: '不折腾，也是一种答案。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你留在了原来的城市。每天买菜、散步、和邻居点头，日子安静得像一杯放凉了的茶。',
+                  effects: { mood: 5, health: 4, children: 1, flags: { settled: true } },
+                }
+              },
+            },
+          ],
+        },
+      ],
+      cultivation: [
+        {
+          id: 'cult_fork_18',
+          at: 18,
+          chance: 0.9,
+          title: '仙途第一步',
+          prompt: '山门、散修、世家，三条路都写着“修仙”，可它们的规矩完全不同。',
+          options: [
+            {
+              id: 'sect',
+              label: '拜入宗门，按规矩来',
+              desc: '有靠山，也有要守的规矩。',
+              requires: { looks: 4 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你正式拜入山门。领到弟子牌那天，你把它翻来覆去看了很久。从今天起，你有了靠山，也有了一群随时可能把你推出去的人。',
+                  effects: { int: 2, mood: 4, health: 3, flags: { sect: '青云宗', sectTier: 'outer', choiceSect: true } },
+                }
+              },
+            },
+            {
+              id: 'solo',
+              label: '做散修，谁也不欠',
+              desc: '需要足够清醒的头脑。',
+              requires: { int: 8 },
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你没有拜山门，带着一本旧功法下了山。散修没有月例，也没有人替你收尸。你把“活着”两个字写在了洞府门口。',
+                  effects: { int: 3, mood: 3, wealth: 8, flags: { sect: null, independent: true, choiceSolo: true } },
+                }
+              },
+            },
+            {
+              id: 'clan',
+              label: '借家族的势，走得更快',
+              desc: '有家世的人，起跑线本来就不一样。',
+              requires: { family: 6 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '家族替你打点好了一切。你住进更好的洞府，拿到更完整的功法，也听见了更多关于“家族利益”的话。',
+                  effects: { wealth: 25, int: 2, mood: 4, flags: { sect: '青云宗', sectTier: 'elite', choiceClan: true } },
+                }
+              },
+            },
+            {
+              id: 'servant',
+              label: '先在外门做个杂役',
+              desc: '没有靠山，也没有天赋，只能慢慢熬。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你留在外门做杂役。没人教你上乘功法，但你每天都能摸到藏经阁最外层的书。你把每一本都记在心里，等一个不知道会不会来的机会。',
+                  effects: { int: 1, mood: 2, wealth: 5, flags: { sect: '青云宗', sectTier: 'outer', choiceServant: true } },
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: 'cult_fork_45',
+          at: 45,
+          chance: 0.85,
+          when: s => (s.flags.realmIndex || 0) >= 1,
+          title: '秘境入口',
+          prompt: '一座废弃秘境在雨夜里开了口。同行的人说里面有大机缘，也有人说，上次进去的人一个都没回来。',
+          options: [
+            {
+              id: 'team',
+              label: '与同门结伴，稳一点',
+              desc: '分到的少，但活着回来的机会大。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你们在秘境里走了七天，最后只带回一些不算珍稀的灵草。分账时有人不满，但至少所有人都活着出来了。',
+                  effects: { wealth: 12, mood: 3, health: 2, flags: { choiceTeam: true } },
+                }
+              },
+            },
+            {
+              id: 'solo',
+              label: '独自深入，赌一次',
+              desc: '需要够强的神识和体魄。',
+              requires: { int: 10, body: 8 },
+              risk: '可能重伤，也可能拿到真正的机缘。',
+              resolve(run) {
+                const success = Math.random() < clamp(0.38 + run.attrs.int * 0.02 + (run.luck || 0) * 0.03, 0.25, 0.72)
+                return success
+                  ? {
+                    tone: 'good',
+                    text: '你绕开了所有人，从一条塌了一半的甬道潜进去。最深处的石台上只有一枚玉简，你把它收进怀里时，手一直在抖。',
+                    effects: { wealth: 25, int: 2, mood: 6, flags: { breakthroughBonus: 0.08, choiceSolo: true } },
+                  }
+                  : {
+                    tone: 'bad',
+                    text: '你在秘境深处触发了禁制。逃出来时，储物袋空了一半，经脉里像塞了一把碎冰。你活下来了，但接下来几年都不好过。',
+                    effects: { health: -15, mood: -5, wealth: -10, flags: { choiceWounded: true } },
+                  }
+              },
+            },
+            {
+              id: 'decline',
+              label: '不去，回洞府继续修炼',
+              desc: '机缘错过就错过，命只有一条。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你没有进秘境，留在洞府里打坐。后来听说那批人死了大半，你烧水的手停了一下，又继续倒茶。',
+                  effects: { mood: 5, health: 3, int: 1, flags: { cautious: true } },
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: 'cult_fork_100',
+          at: 100,
+          chance: 0.82,
+          when: s => (s.flags.realmIndex || 0) >= 2,
+          title: '大道三千',
+          prompt: '你终于走到一个需要选“道”的路口。剑、丹、魔，每一条都能走远，也都可能走偏。',
+          options: [
+            {
+              id: 'sword',
+              label: '以剑证道',
+              desc: '需要足够高的悟性。',
+              requires: { int: 16 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你封了丹炉，把洞府里所有与剑无关的东西都送了出去。从那天起，你每天只做一件事：出剑，收剑，再出剑。',
+                  effects: { int: 2, mood: 5, flags: { swordHeart: true, choiceSword: true } },
+                }
+              },
+            },
+            {
+              id: 'alchemy',
+              label: '以丹入道',
+              desc: '需要悟性，也需要足够的灵石。',
+              requires: { int: 14, wealth: 80 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你把半生积蓄换成了一屋子的灵草和丹方。第一炉成丹时，药香顺着山风飘出很远，连你自己都愣了一下。',
+                  effects: { int: 2, wealth: 10, mood: 6, flags: { alchemist: true, choiceAlchemy: true } },
+                }
+              },
+            },
+            {
+              id: 'demon',
+              label: '走一条没人敢走的路',
+              desc: '需要够硬的身体，或者够狠的心。',
+              requires: { body: 14 },
+              resolve() {
+                return {
+                  tone: 'strange',
+                  text: '你开始修炼一门被正道列为禁术的功法。夜里打坐时，你听见识海深处有人笑了一声。你没有睁眼，只是把禁制又加了一层。',
+                  effects: { body: 2, mood: 8, health: -4, flags: { demon: true, choiceDemon: true } },
+                }
+              },
+            },
+            {
+              id: 'seclude',
+              label: '暂时不选，继续闭关',
+              desc: '看不清的路，先不走。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你把三枚玉简都收了起来，继续闭关。外面的风声很大，但你决定等自己再强一点，再决定往哪条路上走。',
+                  effects: { int: 1, mood: 3, health: 2, flags: { cautious: true } },
+                }
+              },
+            },
+          ],
+        },
+      ],
+      wasteland: [
+        {
+          id: 'waste_fork_18',
+          at: 18,
+          chance: 0.9,
+          title: '铁门外的第一份选择',
+          prompt: '避难所要派一支小队出去。你可以留下，也可以跟着走。',
+          options: [
+            {
+              id: 'shelter',
+              label: '留在避难所，守住后方',
+              desc: '安全，但看不到更大的世界。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你留了下来，每天修管道、分罐头、照顾比我更小的人。你没有见过废土，却成了别人活下去的一部分。',
+                  effects: { body: 1, mood: 4, companions: 1, flags: { farmer: true, choiceShelter: true } },
+                }
+              },
+            },
+            {
+              id: 'scavenge',
+              label: '跟着小队出去拾荒',
+              desc: '需要一点机敏。',
+              requires: { int: 8 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你第一次走出铁门。外面的天比想象中低，风里全是铁锈味。你捡回了一箱还能用的零件，也第一次看见死人。',
+                  effects: { wealth: 15, int: 2, health: -4, flags: { scavenger: true, choiceScavenge: true } },
+                }
+              },
+            },
+            {
+              id: 'fight',
+              label: '加入护卫队，拿枪',
+              desc: '身体要够硬。',
+              requires: { body: 8 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你领到了一把旧枪。第一次开枪时，后坐力震得你肩膀发麻，但你打中了。从那天起，你开始学着不把后背留给任何人。',
+                  effects: { body: 2, health: 5, mood: 3, flags: { marksman: true, choiceFight: true } },
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: 'waste_fork_38',
+          at: 38,
+          chance: 0.85,
+          title: '据点的方向',
+          prompt: '据点周围出现了新的尸潮。有人主张救人，有人主张趁乱抢地盘，也有人只想把墙修高一点。',
+          options: [
+            {
+              id: 'save',
+              label: '带人出去，把能救的救回来',
+              desc: '需要够强的身体和够稳的心。',
+              requires: { body: 14 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你带着几个人冲进了尸潮。回来时少了两个同伴，多了十几个哭得说不出话的幸存者。没有人鼓掌，但有人给你留了一碗热汤。',
+                  effects: { companions: 2, mood: 8, health: -5, flags: { savior: true, baseLeader: true, choiceSave: true } },
+                }
+              },
+            },
+            {
+              id: 'raid',
+              label: '趁乱抢下隔壁的物资',
+              desc: '需要够狠，也需要够强。',
+              requires: { body: 16 },
+              resolve() {
+                return {
+                  tone: 'strange',
+                  text: '你带人洗了隔壁的仓库。没有死太多人，但从此以后，附近的人提起你的名字都会压低声音。你得到了物资，也得到了一双夜里睡不安稳的眼睛。',
+                  effects: { wealth: 25, mood: -5, flags: { tyrant: true, choiceRaid: true } },
+                }
+              },
+            },
+            {
+              id: 'build',
+              label: '不出去，把墙和净水系统修好',
+              desc: '需要一点技术。',
+              requires: { int: 8 },
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你没有出去。那几天你带着人修好了水泵和一段外墙。后来尸潮绕过了据点，没有人知道是不是这堵墙的功劳。',
+                  effects: { wealth: 10, int: 2, mood: 3, flags: { engineer: true, baseLeader: true, choiceBuild: true } },
+                }
+              },
+            },
+            {
+              id: 'withdraw',
+              label: '带着自己的人撤到后方',
+              desc: '不抢，也不救，先保住现有的一切。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你带着自己的人撤到了后方。有人说你胆小，你没有反驳。后来前线死了很多人，你带来的人一个都没少。',
+                  effects: { mood: 2, health: 3, companions: 1, flags: { cautious: true, choiceWithdraw: true } },
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: 'waste_fork_58',
+          at: 58,
+          chance: 0.8,
+          title: '最后的火种',
+          prompt: '据点要迁走了。你可以跟着走，也可以留下；还可以把最后一批人送出去，自己关门。',
+          options: [
+            {
+              id: 'stay',
+              label: '留下守灯',
+              desc: '总要有人留在原地。',
+              resolve() {
+                return {
+                  tone: 'great',
+                  text: '你留了下来，每天夜里点亮那盏灯。后来有人从远处看见它，知道这里还有活人，于是走了过来。',
+                  effects: { mood: 6, companions: 1, flags: { warden: true, choiceStay: true } },
+                }
+              },
+            },
+            {
+              id: 'leave',
+              label: '跟着队伍去新的地方',
+              desc: '身体要撑得住长途。',
+              requires: { body: 8 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你跟着车队走了很多天。新据点比旧的小，但墙是新的，水是干净的。你把旧钥匙埋在了门口。',
+                  effects: { mood: 8, health: -3, flags: { traveler: true, choiceLeave: true } },
+                }
+              },
+            },
+            {
+              id: 'family',
+              label: '把最后一批人送走，自己留下',
+              desc: '需要有人值得你这么做。',
+              resolve() {
+                return {
+                  tone: 'great',
+                  text: '你把孩子和几个年轻人送上了车。门关上的那一刻，你听见他们在里面拍门，你没有回头。',
+                  effects: { mood: 10, children: 1, flags: { martyr: true, choiceMartyr: true } },
+                }
+              },
+            },
+          ],
+        },
+      ],
+      magic: [
+        {
+          id: 'magic_fork_16',
+          at: 16,
+          chance: 0.9,
+          title: '分院帽的迟疑',
+          prompt: '分院帽停在你头上很久，久到台下开始窃窃私语。它说，你身上有三条路。',
+          options: [
+            {
+              id: 'study',
+              label: '按部就班地学',
+              desc: '不冒进，至少能毕业。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你选了最稳妥的课表。图书馆的旧椅子被你坐出了形，教授开始记住你的名字。',
+                  effects: { int: 2, mood: 5, flags: { choiceStudy: true } },
+                }
+              },
+            },
+            {
+              id: 'forbidden',
+              label: '去碰禁书区',
+              desc: '需要足够强的理解力。',
+              requires: { int: 10 },
+              resolve() {
+                return {
+                  tone: 'strange',
+                  text: '你半夜溜进禁书区。那本书没有书名，翻开第一页时，你听见有人在很远的地方叫你的名字。',
+                  effects: { int: 3, mood: -4, flags: { forbiddenMagic: true, choiceForbidden: true } },
+                }
+              },
+            },
+            {
+              id: 'social',
+              label: '先交朋友，再谈魔法',
+              desc: '需要一点讨人喜欢的本事。',
+              requires: { looks: 6 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你把更多时间花在公共休息室。后来你发现，很多难办的实验，都是靠朋友的朋友解决的。',
+                  effects: { looks: 2, mood: 8, flags: { allies: true, choiceSocial: true } },
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: 'magic_fork_32',
+          at: 32,
+          chance: 0.85,
+          title: '龙与论文',
+          prompt: '学院后山出现了一条受伤的龙。它没有攻击你，只是抬头看了你一眼。',
+          options: [
+            {
+              id: 'ride',
+              label: '帮它，然后试着骑上去',
+              desc: '身体和胆量都要够。',
+              requires: { body: 8 },
+              risk: '龙不一定领情。',
+              resolve() {
+                const success = Math.random() < 0.58
+                return success
+                  ? {
+                    tone: 'legend',
+                    text: '你替它拔掉了背上的黑刺。它低吼了一声，伏下身子。你爬上去，它带着你飞过了整座学院，风把你的论文吹得满天都是。',
+                    effects: { body: 2, mood: 12, flags: { dragonRider: true, dragon: true, choiceDragon: true } },
+                  }
+                  : {
+                    tone: 'bad',
+                    text: '你靠近时，它忽然甩尾。你被扫出十几米，醒来时已经在医务室。龙已经走了，只留下一道被烧焦的树痕。',
+                    effects: { health: -12, mood: -4, flags: { choiceDragonFail: true } },
+                  }
+              },
+            },
+            {
+              id: 'research',
+              label: '把这件事写成论文',
+              desc: '需要足够的学术能力。',
+              requires: { int: 10 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你记录了龙的出现、伤口和行为。论文发表后引起很大争议，但没有人能否认，你确实看见了别人没看见的东西。',
+                  effects: { int: 3, mood: 6, flags: { professor: true, choiceResearch: true } },
+                }
+              },
+            },
+            {
+              id: 'flee',
+              label: '悄悄退走，假装没看见',
+              desc: '活下来比什么都重要。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你退回了树林，没有告诉任何人。后来学院封锁了后山，你在课堂上听见别人兴奋地讨论龙，低头翻了一页书。',
+                  effects: { mood: 3, health: 2, int: 1, flags: { cautious: true } },
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: 'magic_fork_55',
+          at: 55,
+          chance: 0.8,
+          title: '塔顶的位置',
+          prompt: '老院长要退休了。塔顶那间办公室空了出来，很多人都在看那个位置。',
+          options: [
+            {
+              id: 'headmaster',
+              label: '接下院长之位',
+              desc: '需要足够高的学术声望。',
+              requires: { int: 16 },
+              resolve() {
+                return {
+                  tone: 'great',
+                  text: '你坐进了那间办公室。窗外是整座学院，桌上堆着永远签不完的文件。你第一次明白，权力不是魔法，是很多人的麻烦。',
+                  effects: { mood: 8, int: 2, flags: { headmaster: true, choiceHeadmaster: true } },
+                }
+              },
+            },
+            {
+              id: 'travel',
+              label: '把位置让出去，去远方',
+              desc: '身体要能支撑长途旅行。',
+              requires: { body: 8 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你没有接那把椅子。你收拾了几本书，骑着一匹不太听话的马离开了学院。后来有人在南方的岛上见过你。',
+                  effects: { mood: 10, health: -2, flags: { traveler: true, choiceTravel: true } },
+                }
+              },
+            },
+            {
+              id: 'teach',
+              label: '留在学院，只做一名教授',
+              desc: '需要足够的耐心。',
+              requires: { int: 10 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你拒绝了院长的位置，继续教书。很多年后，你的学生里有人成了院长，回来时还是会先敲你的门。',
+                  effects: { int: 2, mood: 6, flags: { professor: true, teacher: true, choiceTeacher: true } },
+                }
+              },
+            },
+            {
+              id: 'retire',
+              label: '辞去职位，安静退休',
+              desc: '塔顶的位置留给别人。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你没有去争那个位置，也没有留下。你搬到了学院最偏的一间小屋，种花、看书，偶尔有学生来敲门。',
+                  effects: { mood: 5, health: 3, flags: { retired: true, choiceRetire: true } },
+                }
+              },
+            },
+          ],
+        },
+      ],
+      cyber: [
+        {
+          id: 'cyber_fork_18',
+          at: 18,
+          chance: 0.9,
+          title: '第一块义体',
+          prompt: '诊所里摆着三样东西：一张健康证明、一块二手义体、一台来路不明的终端。',
+          options: [
+            {
+              id: 'clinic',
+              label: '先保住这具原装身体',
+              desc: '不酷，但不用还款。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你拿了健康证明，走出诊所。街上的霓虹照在旧衣服上，你忽然觉得，原装身体也没什么不好。',
+                  effects: { body: 2, health: 5, mood: 4, flags: { choiceClinic: true } },
+                }
+              },
+            },
+            {
+              id: 'chrome',
+              label: '装上那块二手义体',
+              desc: '需要一笔钱。',
+              requires: { wealth: 30 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你躺上手术台。醒来时，右臂比原来更稳，也更冷。镜子里的自己看起来像一件刚出厂的货，你花了好几天才习惯。',
+                  effects: { wealth: -20, body: 3, mood: 3, flags: { chrome: '二手军用义体', choiceChrome: true } },
+                }
+              },
+            },
+            {
+              id: 'hack',
+              label: '拿走那台终端',
+              desc: '需要一点技术。',
+              requires: { int: 8 },
+              resolve() {
+                return {
+                  tone: 'strange',
+                  text: '你把终端塞进背包。当天夜里，屏幕自己亮了起来，跳出一行字：你终于来了。',
+                  effects: { int: 2, wealth: 10, mood: 3, flags: { hacker: true, choiceHack: true } },
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: 'cyber_fork_36',
+          at: 36,
+          chance: 0.85,
+          title: '公司电梯',
+          prompt: '你站在一部只能往上走的电梯里。楼层数字每跳一次，你身上的债务和权限就变一次。',
+          options: [
+            {
+              id: 'corp',
+              label: '继续往上，进公司核心',
+              desc: '需要足够的技术和忍耐。',
+              requires: { int: 10 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你进了核心层。工位更大，权限更高，窗户外面第一次没有广告。你签了一份更长的合同，没有细看最后一页。',
+                  effects: { wealth: 30, mood: -4, flags: { employed: true, job: '公司核心', choiceCorp: true } },
+                }
+              },
+            },
+            {
+              id: 'street',
+              label: '在下一层出去，回到街上',
+              desc: '需要够硬的身体。',
+              requires: { body: 8 },
+              resolve() {
+                return {
+                  tone: 'strange',
+                  text: '你在第 47 层走出电梯，把工牌扔进了回收口。街上的人不认识你，但有人递给你一杯酒，说欢迎回来。',
+                  effects: { mood: 8, companions: 1, flags: { crew: true, streetRep: 1, choiceStreet: true } },
+                }
+              },
+            },
+            {
+              id: 'underground',
+              label: '黑进电梯，去不存在的楼层',
+              desc: '需要足够高的技术。',
+              requires: { int: 14 },
+              resolve() {
+                return {
+                  tone: 'strange',
+                  text: '你改写了电梯的楼层表。门打开时，外面是一间没有窗户的机房，墙上写着：这里没有员工，只有数据。',
+                  effects: { int: 2, mood: 5, flags: { uploaded: true, choiceUnderground: true } },
+                }
+              },
+            },
+            {
+              id: 'grind',
+              label: '留在普通工位，继续熬',
+              desc: '不升职，也不失业。',
+              resolve() {
+                return {
+                  tone: 'normal',
+                  text: '你没有按任何一层，电梯又回到了工位。屏幕亮着，待办事项还是那么多。你坐下，戴上耳机，继续把今天熬完。',
+                  effects: { wealth: 8, mood: -2, health: -3, flags: { employed: true, choiceGrind: true } },
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: 'cyber_fork_58',
+          at: 58,
+          chance: 0.8,
+          title: '上传之前',
+          prompt: '你的身体已经撑不了太久。公司给你两个选择：换一具新身体，或者把意识上传。',
+          options: [
+            {
+              id: 'upload',
+              label: '把意识上传',
+              desc: '需要足够高的技术理解。',
+              requires: { int: 16 },
+              resolve() {
+                return {
+                  tone: 'legend',
+                  text: '你躺进上传舱。最后一秒，你看见自己的手在玻璃上留下一个模糊的印子。然后世界变成了一片没有边界的白。',
+                  effects: { mood: 10, health: -5, flags: { uploaded: true, choiceUpload: true } },
+                }
+              },
+            },
+            {
+              id: 'stay',
+              label: '换一具身体，继续做人',
+              desc: '需要钱，也需要运气。',
+              requires: { wealth: 60 },
+              resolve() {
+                return {
+                  tone: 'good',
+                  text: '你换了一具新身体。醒来时，窗外的雨声比记忆里更清楚。你摸了摸自己的脸，知道这张脸不会再有皱纹了。',
+                  effects: { wealth: -40, body: 3, health: 8, flags: { cityLegend: true, choiceStay: true } },
+                }
+              },
+            },
+            {
+              id: 'erase',
+              label: '把档案删掉，消失',
+              desc: '让所有人找不到你。',
+              resolve() {
+                return {
+                  tone: 'strange',
+                  text: '你删掉了自己的名字、账户和所有记录。城市里少了一个人，街头多了一个没有过去的身影。',
+                  effects: { mood: 8, wealth: -10, flags: { legend: true, cityLegend: true, choiceErase: true } },
+                }
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    function choiceRequirementEntries(run, option) {
+      const req = option && option.requires
+      if (!req || typeof req !== 'object') return []
+      const world = worldOf(run)
+      const entries = []
+      Object.keys(req).forEach(key => {
+        const value = req[key]
+        if (key === 'wealth') {
+          entries.push({ key, label: world.vitals.wealth, value, ok: run.wealth >= value, text: world.vitals.wealth + ' ≥ ' + value + world.vitals.wealthUnit })
+        } else if (key === 'health') {
+          entries.push({ key, label: world.vitals.health, value, ok: run.health >= value, text: world.vitals.health + ' ≥ ' + value })
+        } else if (key === 'mood') {
+          entries.push({ key, label: world.vitals.mood, value, ok: run.mood >= value, text: world.vitals.mood + ' ≥ ' + value })
+        } else if (key === 'realm') {
+          entries.push({ key, label: '境界', value, ok: (run.flags.realmIndex || 0) >= value, text: '境界 ≥ ' + (REALM_NAMES[value] || '凡人') })
+        } else if (key === 'luck') {
+          entries.push({ key, label: '运气', value, ok: (run.luck || 0) >= value, text: '运气 ≥ ' + value })
+        } else if (key === 'flag') {
+          entries.push({ key, label: '经历', value, ok: Boolean(run.flags[value]), text: '需要经历：' + value })
+        } else {
+          const attr = world.attrs.find(item => item.key === key)
+          if (!attr) return
+          entries.push({ key, label: attr.name, value, ok: (run.attrs[key] || 0) >= value, text: attr.name + ' ≥ ' + value })
+        }
+      })
+      return entries
+    }
+
+    function canChooseOption(run, option) {
+      if (!run || !option) return false
+      return choiceRequirementEntries(run, option).every(item => item.ok)
+    }
+
+    function choiceRequirementText(run, option) {
+      return choiceRequirementEntries(run, option).map(item => item.text)
+    }
+
+    function maybeOfferChoice(run) {
+      if (!run || !run.alive || run.pendingChoice) return null
+      const nodes = CHOICE_NODES[run.worldId] || []
+      const seen = run.flags._choiceSeen || {}
+      const eligible = nodes.filter(node => {
+        if (seen[node.id]) return false
+        if (run.age < node.at) return false
+        if (node.when && !node.when(run)) return false
+        return true
+      })
+      if (eligible.length === 0) return null
+      const node = pick(eligible)
+      if (Math.random() > (node.chance == null ? 0.85 : node.chance)) return null
+      run.pendingChoice = {
+        id: node.id,
+        title: node.title,
+        prompt: node.prompt,
+        options: node.options.map(option => ({
+          id: option.id,
+          label: option.label,
+          desc: option.desc,
+          risk: option.risk || '',
+          requires: option.requires || null,
+          requireText: option.requireText || '',
+          resolve: option.resolve,
+        })),
+      }
+      return run.pendingChoice
+    }
+
+    function resolveChoice(source, optionId) {
+      if (!source || !source.pendingChoice) return source
+      const next = cloneRun(source)
+      const pending = next.pendingChoice
+      const option = pending && pending.options.find(item => item.id === optionId)
+      if (!option || !canChooseOption(next, option)) return source
+      const before = snapshotNumbers(next)
+      let result
+      try {
+        result = option.resolve(next)
+      } catch {
+        result = {
+          tone: 'normal',
+          text: '你做出了选择。很多年后回头看，这一天并没有什么特别，但路确实从这里拐了一个弯。',
+          effects: { mood: 2 },
+        }
+      }
+      applyEffects(next, result.effects)
+      const deltas = numberDeltas(before, next)
+      next.flags._choiceSeen = { ...(next.flags._choiceSeen || {}), [pending.id]: option.id }
+      next.flags.lastChoice = option.id
+      next.pendingChoice = null
+      pushEntry(next, {
+        kind: 'event',
+        age: next.age,
+        text: result.text,
+        tone: result.tone || 'normal',
+        deltas,
+        isChoice: true,
+        choiceLabel: pending.title,
+      })
+      if (next.ascending) {
+        finishLife(next, { silent: true })
+        return next
+      }
+      if (next.health <= 0) {
+        next.causeThisYear = next.causeThisYear || '抉择的代价'
+        finishLife(next)
+      }
+      return next
+    }
+
     const REALM_NAMES = ['凡人', '炼气期', '筑基期', '结丹期', '元婴期', '化神期', '炼虚期', '合体期', '大乘期', '渡劫期', '真仙']
     const REALM_LIFESPAN = [100, 120, 250, 500, 1000, 2000, 3000, 5000, 10000, 12000, 999999]
     const REALM_YEAR_STEPS = [1, 1, 3, 8, 20, 40, 60, 100, 200, 200, 500]
@@ -9206,11 +10166,11 @@
       const aggregate = aggregateTalents(talents)
       const attrs = {}
       ATTRS.forEach(attr => {
-        attrs[attr.key] = clamp((alloc[attr.key] || 0) + aggregate.mods[attr.key], 0, 20)
+        attrs[attr.key] = clamp((alloc[attr.key] || 0) + aggregate.mods[attr.key], 0, ATTR_MAX)
       })
       const legacyAttr = legacy && legacy.attr && attrs[legacy.attr] != null ? legacy.attr : null
       if (legacyAttr) {
-        attrs[legacyAttr] = clamp(attrs[legacyAttr] + (legacy.amount || 2), 0, 20)
+        attrs[legacyAttr] = clamp(attrs[legacyAttr] + (legacy.amount || 2), 0, ATTR_MAX)
       }
 
       const flags = {}
@@ -9261,6 +10221,7 @@
         flags.tyrant = false
       }
       aggregate.flags.forEach(flag => { flags[flag] = true })
+      if (!flags._choiceSeen) flags._choiceSeen = {}
       if (legacy) {
         flags.legacy = true
         flags.legacyAttr = legacyAttr
@@ -9338,6 +10299,7 @@
         age: 0,
         stage: 'child',
         lastYears: 1,
+        pendingChoice: null,
         alive: true,
         deathAge,
         cause: null,
@@ -9373,6 +10335,7 @@
         flags: {
           ...run.flags,
           ...(run.flags._milestones ? { _milestones: { ...run.flags._milestones } } : {}),
+          ...(run.flags._choiceSeen ? { _choiceSeen: { ...run.flags._choiceSeen } } : {}),
         },
         log: run.log.slice(),
         seen: run.seen.slice(),
@@ -9453,7 +10416,8 @@
       ATTRS.forEach(attr => {
         const delta = effects[attr.key]
         if (typeof delta === 'number') {
-          run.attrs[attr.key] = clamp(run.attrs[attr.key] + delta, 0, 20)
+          const grown = delta > 0 ? delta + (delta >= 2 ? 1 : 0) : delta
+          run.attrs[attr.key] = clamp(run.attrs[attr.key] + grown, 0, ATTR_MAX)
         }
       })
       if (typeof effects.health === 'number') {
@@ -9784,10 +10748,12 @@
       if (run.age >= run.deathAge || run.health <= 0) {
         finishLife(run)
       }
+      if (run.alive && !run.pendingChoice) maybeOfferChoice(run)
       return run
     }
 
     function advanceRun(run) {
+      if (run.pendingChoice) return run
       const next = cloneRun(run)
       return addYear(next)
     }
@@ -10666,8 +11632,8 @@
       : state.view === 'setup'
         ? setupHtml()
         : gameHtml();
-    app.innerHTML = html + (state.replay ? replayHtml() : '');
-    document.body.classList.toggle('modal-open', Boolean(state.replay));
+    app.innerHTML = html + (state.replay ? replayHtml() : (!state.replay && state.run && state.run.pendingChoice ? choiceHtml() : ''));
+    document.body.classList.toggle('modal-open', Boolean(state.replay || (state.run && state.run.pendingChoice)));
     scrollAfterRender();
   }
 
@@ -10867,10 +11833,10 @@
         html += '<div class="death-entry"><small>终局 · ' + esc(entry.cause || '') + '</small>' + esc(entry.text) + '</div>';
         continue;
       }
-      const tag = entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '';
+      const tag = entry.isChoice ? '抉择 · ' + (entry.choiceLabel || '命运岔路') : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '';
       html += '<div class="entry" data-tone="' + esc(entry.tone || 'normal') + '">'
         + '<div class="entry-age">' + entry.age + ' 岁' + (entry.span ? '<small>+' + entry.span + '年</small>' : '') + '</div>'
-        + '<div class="entry-body">' + (tag ? '<span class="entry-tag ' + (entry.isTwist ? 'twist' : '') + '">' + tag + '</span>' : '')
+        + '<div class="entry-body">' + (tag ? '<span class="entry-tag ' + (entry.isTwist ? 'twist' : entry.isChoice ? 'choice' : '') + '">' + tag + '</span>' : '')
         + '<div class="entry-text">' + esc(entry.text) + '</div>' + deltaHtml(entry) + '</div></div>';
     }
     return html;
@@ -10930,6 +11896,32 @@
       + '</div>';
   }
 
+  function choiceHtml() {
+    const run = state.run;
+    const pending = run && run.pendingChoice;
+    if (!pending) return '';
+    const options = pending.options.map(option => {
+      const requirements = choiceRequirementEntries(run, option);
+      const available = canChooseOption(run, option);
+      const reqHtml = requirements.length > 0
+        ? '<div class="choice-reqs">' + requirements.map(item => '<span class="choice-req" data-ok="' + (item.ok ? 'true' : 'false') + '">' + esc(item.text) + '</span>').join('') + '</div>'
+        : '';
+      return '<button class="choice-option" type="button" data-action="choose-option" data-id="' + esc(option.id) + '" data-available="' + (available ? 'true' : 'false') + '" ' + (available ? '' : 'disabled') + '>'
+        + '<span class="choice-option-top"><b>' + esc(option.label) + '</b><em>' + (available ? '选择' : '未达到') + '</em></span>'
+        + '<p>' + esc(option.desc) + '</p>'
+        + reqHtml
+        + (option.risk ? '<span class="choice-risk">风险：' + esc(option.risk) + '</span>' : '')
+        + (!available ? '<span class="choice-locked">属性或资源不足，暂时无法选择。</span>' : '')
+        + '</button>';
+    }).join('');
+    return '<div class="modal choice-modal" role="presentation">'
+      + '<section class="choice-sheet" role="dialog" aria-modal="true" aria-label="' + esc(pending.title) + '">'
+      + '<div class="choice-head"><div><span class="choice-kicker">CHOICE · ' + run.age + ' 岁</span><h2>' + esc(pending.title) + '</h2><p>' + esc(pending.prompt) + '</p></div><span class="mode-chip">命运岔路</span></div>'
+      + '<div class="choice-options">' + options + '</div>'
+      + '<p class="choice-note">选择会立刻改变这一生。灰掉的项目代表当前属性或资源还不够。</p>'
+      + '</section></div>';
+  }
+
   function replayHtml() {
     const replay = state.replay;
     if (!replay) return '';
@@ -10937,7 +11929,7 @@
     if (entries.length === 0) return '';
     const index = Math.min(Math.max(0, replay.index || 0), entries.length - 1);
     const entry = entries[index];
-    const tag = entry.kind === 'chapter' ? '章节' : entry.kind === 'birth' ? '出生' : entry.kind === 'death' ? '终局' : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '一年';
+    const tag = entry.kind === 'chapter' ? '章节' : entry.kind === 'birth' ? '出生' : entry.kind === 'death' ? '终局' : entry.isChoice ? '抉择' : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '一年';
     return '<div class="modal"><section class="replay-modal" role="dialog" aria-modal="true" aria-label="回放这一生">'
       + '<div class="modal-head"><div><span class="modal-kicker">REPLAY SYSTEM</span><h2>' + esc(replay.title || '回放这一生') + '</h2><p>不改变结局，只是把走过的路再读一遍。</p></div><button class="close-btn" data-action="close-replay" aria-label="关闭回放">×</button></div>'
       + '<div class="progress"><i style="width:' + Math.round(((index + 1) / entries.length) * 100) + '%"></i></div>'
@@ -10961,9 +11953,10 @@
 
   function startAuto() {
     stopAuto();
+    if (!state.run || !state.run.alive || state.run.pendingChoice) return;
     state.auto = true;
     autoTimer = setInterval(() => {
-      if (!state.run || !state.run.alive) {
+      if (!state.run || !state.run.alive || state.run.pendingChoice) {
         stopAuto();
         return;
       }
@@ -10972,12 +11965,23 @@
   }
 
   function advanceLife() {
-    if (!state.run || !state.run.alive) return;
+    if (!state.run || !state.run.alive || state.run.pendingChoice) return;
     state.run = advanceRun(state.run);
     if (!state.run.alive) {
       stopAuto();
       finalizeRecord();
+    } else if (state.run.pendingChoice) {
+      stopAuto();
     }
+    state.pendingScroll = 'bottom';
+    render();
+  }
+
+  function chooseOption(optionId) {
+    if (!state.run || !state.run.pendingChoice) return;
+    stopAuto();
+    state.run = resolveChoice(state.run, optionId);
+    if (!state.run.alive) finalizeRecord();
     state.pendingScroll = 'bottom';
     render();
   }
@@ -11217,6 +12221,7 @@
         break;
       case 'start-life': startLife(); break;
       case 'advance': advanceLife(); break;
+      case 'choose-option': chooseOption(target.dataset.id); break;
       case 'toggle-auto':
         if (state.auto) {
           stopAuto();
