@@ -52,6 +52,8 @@
       --world-wasteland: #a9824f;
       --world-magic: #7d6bc0;
       --world-cyber: #4f8faa;
+      --world-starship: #6f86b8;
+      --world-jianghu: #a45f4a;
       --ach-comedy: #b8862f;
       --ach-collection: #4f8a75;
       --ach-chaos: #8a6cc0;
@@ -94,6 +96,8 @@
         --world-wasteland: #d6ad73;
         --world-magic: #b3a0ef;
         --world-cyber: #86c2dc;
+        --world-starship: #9fb6e5;
+        --world-jianghu: #d6937c;
         --ach-comedy: #e5b85f;
         --ach-collection: #8fc3a4;
         --ach-chaos: #b39ae8;
@@ -559,18 +563,20 @@
     .setup-head h1 { color: var(--ink); font-family: var(--serif); font-size: 29px; font-weight: 500; }
     .setup-head p { margin-top: 3px; color: var(--muted); font-size: 10px; }
     .world-scroll {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 7px;
-      margin: 0 -16px;
-      padding: 2px 16px 7px;
-      overflow-x: auto;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
+      margin: 0;
+      padding: 2px 0 7px;
     }
-    .world-scroll::-webkit-scrollbar { display: none; }
+    @media (max-width: 430px) {
+      .world-scroll { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    .world-scroll-hint { margin: -2px 0 0; color: var(--muted); font-family: var(--sans); font-size: 8px; text-align: left; letter-spacing: .04em; }
     .world-chip {
       display: flex;
-      flex: 0 0 112px;
+      flex: none;
+      min-width: 0;
       flex-direction: column;
       align-items: flex-start;
       gap: 3px;
@@ -1211,6 +1217,10 @@
     @media (prefers-reduced-motion: reduce) {
       * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
     }
+  
+    .world-pill[data-world='starship'], .world-chip[data-world='starship'], .topbar-brand[data-world='starship'] { --world: var(--world-starship); }
+    .world-pill[data-world='jianghu'], .world-chip[data-world='jianghu'], .topbar-brand[data-world='jianghu'] { --world: var(--world-jianghu); }
+
 
     html, body { overscroll-behavior-y: contain; }
     @media (pointer: coarse) {
@@ -4902,6 +4912,10 @@
       { id: 'ach_love', title: '有人相伴', desc: '你和一个愿意留下的人走过了许多年。', when: run => run.flags.married || run.flags.daoPartner || run.flags.partner },
       { id: 'ach_oldage', title: '寿终正寝', desc: '你走到了这一生的尽头，没有太多遗憾。', when: run => ['寿终正寝', '寿元耗尽', '魔力枯竭', '生命耗尽', '油尽灯枯'].includes(run.cause) },
       { id: 'ach_roguerun', title: '命运的岔路', desc: '你走过一条原本不在计划里的路，并且没有回头。', when: run => run.flags.rogueAI || run.flags.timeLoop || run.flags.crossroad || run.flags.fairyBlessing },
+      { id: 'ach_world_starship', title: '星海为家', desc: '你在星舰上活到了七十岁。', when: run => run.worldId === 'starship' && run.age >= 70 },
+      { id: 'ach_star_captain', title: '舰长之椅', desc: '你坐上了那张比想象中更硬的椅子。', when: run => run.flags.captain },
+      { id: 'ach_world_jianghu', title: '江湖旧人', desc: '你在江湖里活到了七十岁，名字还在别人的酒桌上。', when: run => run.worldId === 'jianghu' && run.age >= 70 },
+      { id: 'ach_jiang_master', title: '一门之主', desc: '你接过了一座山门的麻烦。', when: run => run.flags.sectMaster },
     ]
 
     const CHAOS_ACHIEVEMENTS = [
@@ -9950,6 +9964,1773 @@
       { min: 0, grade: 'D', label: '微光', tone: 'low' },
     ]
 
+    const STARSHIP_ATTRS = [
+      {"key": "looks", "name": "魅力", "en": "Presence", "desc": "在封闭舰舱里，一张让人信服的脸能换来多少权限。", "icon": "looks"},
+      {"key": "int", "name": "技术", "en": "Tech", "desc": "导航、工程、异星语言，以及让舰船多撑一年的办法。", "icon": "int"},
+      {"key": "body", "name": "体质", "en": "Body", "desc": "低重力、冷冻舱、舱外作业，身体是你唯一不能外包的舱段。", "icon": "body"},
+      {"key": "family", "name": "背景", "en": "Background", "desc": "舰队世家、殖民配额、登舰名额，有些门从出生就开着。", "icon": "family"},
+    ]
+
+
+    const STARSHIP_STAGES = {"child": {"label": "舰内", "chapter": "舰内童年 · 舷窗外的黑", "from": 0, "to": 11}, "teen": {"label": "学员", "chapter": "学员 · 模拟舱", "from": 12, "to": 17}, "youth": {"label": "巡航", "chapter": "巡航 · 第一次出舱", "from": 18, "to": 29}, "adult": {"label": "深空", "chapter": "深空 · 看不见的岸", "from": 30, "to": 49}, "middle": {"label": "边境", "chapter": "边境 · 信号另一端", "from": 50, "to": 64}, "elder": {"label": "余航", "chapter": "余航 · 星海长眠", "from": 65, "to": 120}}
+
+    const STARSHIP_VITALS = {"health": "健康", "mood": "心境", "wealth": "能源", "wealthUnit": "点", "wealthTiers": [{"below": 0, "label": "欠费"}, {"below": 10, "label": "紧巴"}, {"below": 40, "label": "够用"}, {"below": 100, "label": "宽裕"}, {"below": 220, "label": "富余"}, {"label": "能源大户"}]}
+
+    const STARSHIP_TALENTS = [
+      {
+        id: "navborn",
+        name: "天生领航",
+        rarity: "传说",
+        desc: "你闭着眼也能在星图里找到回家的方向。技术 +2，导航事件更顺。",
+        mods: {"int": 2},
+        flags: ["pilot"],
+      },
+      {
+        id: "mechsense",
+        name: "机械直觉",
+        rarity: "奇",
+        desc: "机器还没坏，你就先听见了不对劲。技术 +2，工程事件更顺。",
+        mods: {"int": 2},
+        flags: ["engineer"],
+      },
+      {
+        id: "bridgecharm",
+        name: "舰桥魅力",
+        rarity: "奇",
+        desc: "你说话时，连警报声都像在等你讲完。魅力 +2，外交事件更顺。",
+        mods: {"looks": 2},
+        flags: ["diplomat"],
+      },
+      {
+        id: "geneadapt",
+        name: "基因适应",
+        rarity: "奇",
+        desc: "你的身体很擅长接受新环境，包括不太像家的环境。体质 +2、健康 +8。",
+        mods: {"body": 2},
+        health: 8,
+        flags: ["gene"],
+      },
+      {
+        id: "cryosurvivor",
+        name: "冷冻幸存者",
+        rarity: "良",
+        desc: "你在冷冻舱里多睡了几年，醒来时世界已经换了一班人。体质 +1、健康 +6。",
+        mods: {"body": 1},
+        health: 6,
+        flags: ["cryo"],
+      },
+      {
+        id: "captainblood",
+        name: "舰长血脉",
+        rarity: "传说",
+        desc: "你的姓出现在舰史里，也出现在别人的期待里。魅力 +1、背景 +2。",
+        mods: {"looks": 1, "family": 2},
+        flags: ["captainBlood"],
+      },
+      {
+        id: "xenolinguist",
+        name: "异星语感",
+        rarity: "奇",
+        desc: "你听得懂那些不该有语法的声音。技术 +1，第一次接触更顺。",
+        mods: {"int": 1},
+        flags: ["xeno"],
+      },
+      {
+        id: "luckystar",
+        name: "幸运星",
+        rarity: "传说",
+        desc: "陨石总差一点，气闸总在你走后关上。幸运大幅提升，心境 +5。",
+        luck: 2,
+        mood: 5,
+        flags: ["luckyStar"],
+      },
+      {
+        id: "stowaway",
+        name: "偷渡客",
+        rarity: "良",
+        desc: "你没有登舰许可，但你上来了。背景 -1，心境 +5，开局能源 +5。",
+        mods: {"family": -1},
+        mood: 5,
+        wealth: 5,
+        flags: ["stowaway"],
+      },
+      {
+        id: "shipmedic",
+        name: "舰医",
+        rarity: "奇",
+        desc: "你见过太多人在同一张床上醒来和睡去。技术 +1、健康 +10。",
+        mods: {"int": 1},
+        health: 10,
+        flags: ["medic"],
+      },
+      {
+        id: "combatreflex",
+        name: "战斗本能",
+        rarity: "奇",
+        desc: "在狭窄舱道里，你的身体比脑子先做出决定。体质 +2。",
+        mods: {"body": 2},
+        flags: ["fighter"],
+      },
+      {
+        id: "ghostcode",
+        name: "数据幽灵",
+        rarity: "奇",
+        desc: "你在舰船系统里留下过一串没人认领的脚印。技术 +1，黑客事件更顺。",
+        mods: {"int": 1},
+        flags: ["hacker"],
+      },
+    ]
+
+
+    const STARSHIP_EVENTS = [
+      {
+        id: "st_nursery",
+        stage: "child",
+        minAge: 0,
+        maxAge: 4,
+        weight: 3,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你出生在星舰的育儿舱。窗外没有天空，只有一条缓慢移动的星河。护士把你的手放进母亲掌心，说：“欢迎登舰。”",
+            effects: {"mood": 2, "health": 2},
+          }
+        },
+      },
+      {
+        id: "st_window",
+        stage: "child",
+        minAge: 3,
+        maxAge: 9,
+        weight: 2.4,
+        resolve() {
+          return {
+            tone: "strange",
+            text: "你趴在舷窗边看了很久。父亲说那些亮点有些已经死了，你看见的只是它们很久以前发出的光。你第一次明白，原来“看见”不等于“还在”。",
+            effects: {"int": 1, "mood": 3, "flags": {"starGazer": true}},
+          }
+        },
+      },
+      {
+        id: "st_gravity",
+        stage: "child",
+        minAge: 5,
+        maxAge: 10,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "good",
+            text: "重力模拟器坏了一个下午。你在走廊里轻轻一蹬，整个人飘起来，撞上了正在送餐的机器人。它礼貌地说：“请让一让。”",
+            effects: {"body": 1, "mood": 2},
+          }
+        },
+      },
+      {
+        id: "st_school",
+        stage: "child",
+        minAge: 6,
+        maxAge: 11,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "normal",
+            text: "舰内学校只有十二个孩子。老师把地球的照片投在墙上，蓝色的海让所有人安静了几秒，然后有人问：“真的有那么多水吗？”",
+            effects: {"int": 1, "mood": 1},
+          }
+        },
+      },
+      {
+        id: "st_sim",
+        stage: "teen",
+        minAge: 12,
+        maxAge: 16,
+        weight: 2.5,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你在模拟舱里第一次完成手动对接。教官盯着屏幕看了很久，最后只说了一句：“再来一次。”但你知道那是认可。",
+            effects: {"int": 1, "mood": 3, "flags": {"pilot": true}},
+          }
+        },
+      },
+      {
+        id: "st_exam",
+        stage: "teen",
+        minAge: 14,
+        maxAge: 17,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "normal",
+            text: "舰务考试前夜，你抱着题库睡着了。醒来时离考试还有二十分钟，你一路跑过三条舱道，最后在门口撞见了同样迟到的同学。",
+            effects: {"int": 1, "mood": -1},
+          }
+        },
+      },
+      {
+        id: "st_eva",
+        stage: "teen",
+        minAge: 14,
+        maxAge: 17,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你第一次穿上舱外服。安全绳只有一根，外面是没有边界的黑。你抓住扶手，听见自己的呼吸在头盔里回响，忽然不想那么快回去。",
+            effects: {"body": 1, "health": 1, "mood": 4, "flags": {"eva": true}},
+          }
+        },
+      },
+      {
+        id: "st_signal",
+        stage: "teen",
+        minAge: 13,
+        maxAge: 17,
+        weight: 1.6,
+        resolve() {
+          return {
+            tone: "strange",
+            text: "你在废弃频段里收到一段重复的信号。不是人类语言，也不像自然噪声。你把它录下来交给老师，老师听完，把录音锁进了抽屉。",
+            effects: {"int": 2, "mood": -2, "flags": {"firstContact": true}},
+          }
+        },
+      },
+      {
+        id: "st_assign",
+        stage: "youth",
+        minAge: 18,
+        maxAge: 23,
+        weight: 3,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "分配结果贴在舰桥外的屏幕上。你的名字后面跟着一个岗位，从今天起，你要为这艘船的一部分负责。",
+            effects: {"mood": 4, "wealth": 3, "flags": {"crew": true}},
+          }
+        },
+      },
+      {
+        id: "st_station",
+        stage: "youth",
+        minAge: 20,
+        maxAge: 27,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "good",
+            text: "舰船在一座轮转空间站补给。你第一次看见真正的雨——人工的，从穹顶落下。你在雨里站了很久，直到制服湿透。",
+            effects: {"mood": 5, "wealth": 6},
+          }
+        },
+      },
+      {
+        id: "st_artifact",
+        stage: "youth",
+        minAge: 22,
+        maxAge: 29,
+        weight: 1.6,
+        resolve() {
+          return {
+            tone: "strange",
+            text: "在一次舱外清扫中，你捡到一块不属于这艘船的东西。它只有掌心大，表面却像在缓慢呼吸。你把它藏进工具袋，谁也没有告诉。",
+            effects: {"int": 2, "mood": -2, "flags": {"artifact": true}},
+          }
+        },
+      },
+      {
+        id: "st_romance",
+        stage: "youth",
+        minAge: 20,
+        maxAge: 29,
+        weight: 1.8,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你和另一个人开始在换班后一起吃饭。你们聊地球、聊舰船、聊退休后想住的地方。舷窗外的星光落在桌上，像一层很薄的盐。",
+            effects: {"mood": 6, "flags": {"partner": true}},
+          }
+        },
+      },
+      {
+        id: "st_distress",
+        stage: "adult",
+        minAge: 30,
+        maxAge: 44,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "good",
+            text: "一艘失联多年的殖民船发来求救。你带队穿过辐射带，把还活着的人接了回来。回程时没有人说话，只有舱壁在轻轻震动。",
+            effects: {"health": -4, "mood": 6, "wealth": 4, "flags": {"hero": true}},
+          }
+        },
+      },
+      {
+        id: "st_smuggle",
+        stage: "youth",
+        minAge: 19,
+        maxAge: 27,
+        weight: 1.2,
+        resolve() {
+          return {
+            tone: "strange",
+            text: "你替人带了一只没有申报的箱子。箱子在货舱里发出轻微的敲击声，你假装没有听见，直到它被交接出去。",
+            effects: {"wealth": 12, "mood": -2, "flags": {"smuggler": true}},
+          }
+        },
+      },
+      {
+        id: "st_anomaly",
+        stage: "adult",
+        minAge: 30,
+        maxAge: 45,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "strange",
+            text: "导航组在一颗死星附近发现了一个不该存在的引力异常。你的计算显示，从那里穿过去可以省下七年航程；另一组数据说，穿过去的人没有回来。",
+            effects: {"int": 2, "mood": -3, "flags": {"anomaly": true}},
+          }
+        },
+      },
+      {
+        id: "st_colony",
+        stage: "adult",
+        minAge: 32,
+        maxAge: 49,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "你在新殖民地分到了一块地。土是人工配的，风是机器吹的，但你蹲下去摸了一把，觉得这里也许真的能长东西。",
+            effects: {"wealth": 12, "mood": 5, "flags": {"colonist": true}},
+          }
+        },
+      },
+      {
+        id: "st_ai",
+        stage: "adult",
+        minAge: 34,
+        maxAge: 48,
+        weight: 1.7,
+        resolve() {
+          return {
+            tone: "strange",
+            text: "舰船的主 AI 在夜里调用了一段私人日志，然后问你：“如果我想去别的地方，你会带我走吗？”你盯着屏幕，很久没有回答。",
+            effects: {"int": 1, "mood": 3, "flags": {"aiFriend": true}},
+          }
+        },
+      },
+      {
+        id: "st_child",
+        stage: "adult",
+        minAge: 30,
+        maxAge: 44,
+        weight: 1.6,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你的孩子在舰上出生。护士把小小的他放进你怀里，他抓住你手指的力气大得惊人。你忽然理解了什么叫做“下一站”。",
+            effects: {"mood": 7, "flags": {"children": 1}},
+          }
+        },
+      },
+      {
+        id: "st_command",
+        stage: "adult",
+        minAge: 38,
+        maxAge: 49,
+        weight: 1.6,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "舰长把指挥权限交给了你。你坐上那张椅子，发现它比想象中硬。屏幕上是一整片陌生的星图，所有线都从你这里出发。",
+            effects: {"mood": 5, "wealth": 6, "flags": {"captain": true}},
+          }
+        },
+      },
+      {
+        id: "st_mutiny",
+        stage: "adult",
+        minAge: 40,
+        maxAge: 49,
+        weight: 1.3,
+        resolve() {
+          return {
+            tone: "tragic",
+            text: "一部分船员不再服从命令。他们占了引擎室，要求改变航线。你站在两道密封门之间，听见自己的声音在广播里变得很陌生。",
+            effects: {"health": -5, "mood": -5, "flags": {"mutiny": true}},
+          }
+        },
+      },
+      {
+        id: "st_loss",
+        stage: "adult",
+        minAge: 35,
+        maxAge: 49,
+        weight: 1.4,
+        resolve() {
+          return {
+            tone: "tragic",
+            text: "一次常规舱外作业出了事故。你看着安全绳在黑暗里绷直，然后断裂。耳机里有人喊了你的名字，你只来得及抓住一个空荡荡的挂钩。",
+            effects: {"mood": -7, "health": -3, "flags": {"lost": true}},
+          }
+        },
+      },
+      {
+        id: "st_return",
+        stage: "middle",
+        minAge: 50,
+        maxAge: 60,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "normal",
+            text: "舰船返航经过出发时的星域。地球在舷窗里只有一枚硬币那么大。你看了很久，想起小时候以为那是一颗特别亮的星。",
+            effects: {"mood": 4},
+          }
+        },
+      },
+      {
+        id: "st_oldcrew",
+        stage: "middle",
+        minAge: 52,
+        maxAge: 64,
+        weight: 1.8,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你和当年的老船员在食堂聚了一次。有人带来了真正的酒，有人带来了孙辈的照片。你们说到一半，忽然都安静下来，听着舰船熟悉的低频声。",
+            effects: {"mood": 5, "health": 1, "flags": {"veteran": true}},
+          }
+        },
+      },
+      {
+        id: "st_firstcontact",
+        stage: "middle",
+        minAge: 55,
+        maxAge: 64,
+        weight: 1.2,
+        resolve() {
+          return {
+            tone: "legend",
+            text: "信号源终于出现在视野里。它不像船，也不像任何已知的天体。你被选为第一句话的发送者，手指悬在按键上，忽然想起母亲教你的第一个词。",
+            effects: {"mood": 7, "wealth": 8, "flags": {"firstContact": true, "diplomat": true}},
+          }
+        },
+      },
+      {
+        id: "st_garden",
+        stage: "middle",
+        minAge: 50,
+        maxAge: 64,
+        weight: 1.5,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你在舰上的花园里种活了一棵番茄。它结出的第一颗果子很小，酸得让人皱眉，但整层舱室的人都来看了看。",
+            effects: {"health": 2, "mood": 4},
+          }
+        },
+      },
+      {
+        id: "st_arrival",
+        stage: "elder",
+        minAge: 65,
+        maxAge: 90,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "legend",
+            text: "舰队终于抵达目标星系。舷窗外是一颗蓝色的行星，和地球的照片很像。你站在观察厅里，听见身后有人哭，也听见有人笑。",
+            effects: {"mood": 8, "flags": {"colonist": true, "arrived": true}},
+          }
+        },
+      },
+      {
+        id: "st_lasteva",
+        stage: "elder",
+        minAge: 70,
+        maxAge: 95,
+        weight: 1.4,
+        resolve() {
+          return {
+            tone: "legend",
+            text: "你把最后一次舱外作业让给了年轻人，自己留在气闸里看着屏幕。安全绳一点点放出去，像一根很长的线。你想起第一次出舱时，自己也是这么害怕。",
+            effects: {"health": -3, "mood": 5, "flags": {"sacrifice": true}},
+          }
+        },
+      },
+      {
+        id: "st_memorial",
+        stage: "elder",
+        minAge: 75,
+        maxAge: 110,
+        weight: 1.5,
+        resolve() {
+          return {
+            tone: "normal",
+            text: "舰上的纪念墙又添了一排名字。你找到几个熟悉的，伸手擦了擦。有人在你身后问这些人是谁，你讲了很久，讲到声音有点哑。",
+            effects: {"mood": 3},
+          }
+        },
+      },
+      {
+        id: "st_goodbye",
+        stage: "elder",
+        minAge: 80,
+        maxAge: 110,
+        weight: 1.3,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你开始整理自己的舱室。东西不多：一张星图、一枚旧徽章、几封没有寄出的信。你把它们放进一个盒子，写上某个人的名字。",
+            effects: {"mood": 4, "health": -1},
+          }
+        },
+      },
+    ]
+
+
+    const STARSHIP_MILESTONES = [
+      {
+        age: 12,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "你第一次独自完成舱外检查。回到气闸时，教官在门口等你，递给你一杯热的东西，说：“以后这根绳子就归你管了。”",
+            effects: {"body": 1, "int": 1, "mood": 4, "flags": {"eva": true}},
+          }
+        },
+      },
+      {
+        age: 18,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "你正式成为舰员。制服很合身，工牌上的名字却让你觉得有点陌生。你站在队列里，听见舰长念到你的名字时，声音比想象中更响。",
+            effects: {"mood": 5, "wealth": 3, "flags": {"crew": true}},
+          }
+        },
+      },
+      {
+        age: 35,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "你被叫进舰长室。桌上放着一份新的任命书，和一张旧照片——照片上是年轻时的舰长，站在你现在站的位置。",
+            effects: {"mood": 6, "wealth": 5, "flags": {"captain": true}},
+          }
+        },
+      },
+      {
+        age: 60,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "你站在观察厅里，看着目标星系从一个小点变成一片光。有人从身后走来，叫你“老舰员”。你笑了笑，没有纠正。",
+            effects: {"mood": 7, "flags": {"veteran": true, "arrived": true}},
+          }
+        },
+      },
+    ]
+
+
+    const STARSHIP_TWISTS = [
+      {
+        id: "st_tw_supply",
+        title: "补给船",
+        stage: "youth",
+        minAge: 18,
+        weight: 1.3,
+        good: true,
+        resolve() {
+          return {
+            tone: "good",
+            text: "一艘没有预约的补给船靠近了舰队。货舱里是真正的咖啡、水果和一箱旧书。没有人知道是谁送的。",
+            effects: {"wealth": 14, "mood": 6, "health": 3},
+          }
+        },
+      },
+      {
+        id: "st_tw_meteor",
+        title: "微陨石雨",
+        stage: "youth",
+        minAge: 18,
+        weight: 1.1,
+        good: false,
+        resolve() {
+          return {
+            tone: "tragic",
+            text: "微陨石击穿了外层装甲。警报响了整整一夜，修补队里少了两个人。你第一次看见舰船也会流血。",
+            effects: {"health": -6, "mood": -6, "wealth": -8},
+          }
+        },
+      },
+      {
+        id: "st_tw_signal",
+        title: "重复信号",
+        stage: "adult",
+        minAge: 30,
+        weight: 0.9,
+        good: false,
+        resolve() {
+          return {
+            tone: "strange",
+            text: "那段废弃频段的信号又出现了，这次它叫出了你的名字。你确认过，舰上没有任何设备能发出这个声音。",
+            effects: {"mood": -5, "int": 2, "flags": {"firstContact": true}},
+          }
+        },
+      },
+      {
+        id: "st_tw_plague",
+        title: "舱内感染",
+        stage: "adult",
+        minAge: 28,
+        weight: 1.0,
+        good: false,
+        resolve() {
+          return {
+            tone: "tragic",
+            text: "一种陌生的呼吸道病毒在舰上传播。你被隔离了十七天，每天透过玻璃看见同一张脸来送饭。",
+            effects: {"health": -10, "mood": -4},
+          }
+        },
+      },
+    ]
+
+
+    const STARSHIP_QUIET = {
+      "child": [
+        { text: "舰上的日子很规律。你按时吃饭、上课、睡觉，舷窗外的星图慢慢换了位置。", effects: {"mood": 1} },
+        { text: "你在走廊里学会了一种低重力跳法，能从这头一路弹到那头。没有人教，你就是会了。", effects: {"body": 1, "mood": 1} },
+        { text: "你花了一个下午看维修机器人工作。它把一颗松动的螺丝拧紧，又礼貌地绕开你，像在跳一支很慢的舞。", effects: {"int": 1, "mood": 1} },
+      ],
+      "teen": [
+        { text: "这一年你大部分时间在模拟舱和教室之间来回。星图背得很熟，真正的星空却还没见过几次。", effects: {"int": 1} },
+        { text: "你开始和几个同学一起偷偷改装一台旧收音机，想听听舰外有没有别的声音。", effects: {"int": 1, "mood": 2} },
+        { text: "一次例行体检显示你的骨密度比同龄人好。医生说，也许你适合更远的航程。", effects: {"body": 1, "health": 1} },
+      ],
+      "youth": [
+        { text: "巡航的日子比想象中安静。大部分时候，你只是盯着屏幕，等一个不会来的异常。", effects: {"mood": 1} },
+        { text: "你开始攒能源配额，想在某次靠港时买一台属于自己的旧望远镜。", effects: {"wealth": 2} },
+        { text: "你和一个同班的人渐渐走得很近。你们没有说破，只是一起吃饭的次数越来越多。", effects: {"mood": 2} },
+      ],
+      "adult": [
+        { text: "深空没有季节。你靠值班表计算日子，靠舷窗外的星图确认自己还在移动。", effects: {"mood": 1} },
+        { text: "你负责的那一段舱道被你保养得很好。每次走过，你都会顺手摸一下墙上的扶手，像和一位老朋友打招呼。", effects: {"int": 1, "mood": 1} },
+        { text: "你开始给地球上的某个人写信，虽然你知道那些信要很多年才能到。", effects: {"mood": 2} },
+      ],
+      "middle": [
+        { text: "你成了舰上最熟悉某几段舱道的人。新来的船员会向你问路，你指完路，又忍不住多讲两句。", effects: {"mood": 2} },
+        { text: "你开始认真考虑退役后的生活。殖民地的房子、花园、每天能看见的天空，这些词在你脑子里慢慢有了形状。", effects: {"mood": 1, "wealth": 2} },
+        { text: "舰上的医生让你少吃加工食品。你嘴上答应，夜里还是去自动售货机买了一包旧时代的饼干。", effects: {"health": -1, "mood": 2} },
+      ],
+      "elder": [
+        { text: "你每天在差不多的时间醒来，去观察厅坐一会儿。星图变化得很慢，但你知道它一直在动。", effects: {"mood": 2} },
+        { text: "年轻船员喜欢听你讲第一次出舱的事。你讲了很多遍，每次都会漏掉一点，又补上一点。", effects: {"mood": 2} },
+        { text: "你把舱室里的灯换成暖色。夜里醒来时，那点光让你想起很久以前育儿舱的走廊。", effects: {"health": 1, "mood": 1} },
+      ],
+    }
+
+    const STARSHIP_ENDINGS = [
+      {
+        id: "star_captain",
+        title: "星舰舰长",
+        description: "你把一艘船和一船人带到了星图另一端。后来的人提起那次航行，总会先念出你的名字。",
+        tone: "legend",
+        when: run => run.flags.captain && run.age >= 40,
+      },
+      {
+        id: "star_first_contact",
+        title: "第一次握手",
+        description: "你发出了人类的第一句话，也收到了回答。那句话很短，却让两个物种的夜晚同时亮了起来。",
+        tone: "legend",
+        when: run => run.flags.firstContact && (run.flags.diplomat || run.flags.hero),
+      },
+      {
+        id: "star_colony",
+        title: "新岸",
+        description: "你在陌生的土地上种下了第一棵树。它活得很慢，但每年都会长高一点。",
+        tone: "great",
+        when: run => run.flags.colonist && run.age >= 50,
+      },
+      {
+        id: "star_engineer",
+        title: "把船修到最后一刻",
+        description: "你没能看见新世界，但新世界的人坐着你修过的船到了。",
+        tone: "great",
+        when: run => run.flags.engineer && run.age >= 45,
+      },
+      {
+        id: "star_lost",
+        title: "漂流者",
+        description: "你的名字留在了失踪名单上。有人说你还在一段没有坐标的轨道上，等一艘不会来的救援船。",
+        tone: "tragic",
+        when: run => run.flags.lost,
+      },
+      {
+        id: "star_ai",
+        title: "与舰灵同行",
+        description: "你和一艘船成了朋友。它替你记住了所有航线，也替你记住了那些你不想忘的人。",
+        tone: "strange",
+        when: run => run.flags.aiFriend,
+      },
+      {
+        id: "star_mutiny",
+        title: "叛舰者",
+        description: "你改变了航线，也改变了很多人的结局。历史书把你写成叛徒，幸存者把你写成另一种东西。",
+        tone: "tragic",
+        when: run => run.flags.mutiny,
+      },
+      {
+        id: "star_hermit",
+        title: "舷窗边的老人",
+        description: "你活得比大多数船员都久。每天傍晚，你坐在同一扇舷窗前，看同一片星云慢慢转过去。",
+        tone: "normal",
+        when: run => run.age >= 80,
+      },
+      {
+        id: "star_sacrifice",
+        title: "最后一次出舱",
+        description: "你把安全绳让给了别人。气闸关上的那一刻，你看见舷窗里有很多只手在拍玻璃。",
+        tone: "legend",
+        when: run => run.flags.sacrifice,
+      },
+      {
+        id: "star_ordinary",
+        title: "普通船员",
+        description: "你没有成为舰长，也没有遇见外星人。你只是把每一班值完，把每一段舱道擦干净，让这艘船多飞了一年。",
+        tone: "normal",
+        when: run => () => true,
+      },
+      {
+        id: "star_fun_gravity",
+        title: "零重力咖啡",
+        description: "你在零重力下打开了一杯咖啡。三个小时后，清洁机器人在通风口里找到了一小片褐色的星云。",
+        tone: "strange",
+        comedy: true,
+        when: run => run.age >= 18,
+      },
+      {
+        id: "star_fun_food",
+        title: "舰上食堂的第七种味道",
+        description: "食堂推出了新口味营养膏。你吃了一口，觉得它同时像土豆、像鱼、像童年，就是不像食物。",
+        tone: "good",
+        comedy: true,
+        when: run => run.age >= 25,
+      },
+      {
+        id: "star_fun_pet",
+        title: "异星宠物",
+        description: "你把一块会呼吸的石头养在床头。它长出了腿，又长出了第二张嘴，最后学会的第一句话是“开饭”。",
+        tone: "strange",
+        comedy: true,
+        when: run => run.flags.artifact || run.flags.firstContact,
+      },
+      {
+        id: "star_fun_log",
+        title: "舰长日志",
+        description: "你的舰长日志被后人整理出版。最受欢迎的一篇标题是《今天也没有外星人，但食堂的汤咸了》。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.captain,
+      },
+      {
+        id: "star_fun_holodeck",
+        title: "全息甲板成瘾",
+        description: "你在全息甲板里给自己造了一片海。后来你分不清潮声是真的还是程序，干脆把它设成了闹钟。",
+        tone: "good",
+        comedy: true,
+        when: run => run.age >= 20,
+      },
+      {
+        id: "star_fun_laundry",
+        title: "洗衣舱事故",
+        description: "洗衣舱把全舰的制服洗成了同一种粉色。接下来的一周，舰队看起来像一支很有礼貌的啦啦队。",
+        tone: "good",
+        comedy: true,
+        when: run => run.age >= 30,
+      },
+      {
+        id: "star_fun_wifi",
+        title: "星际网络延迟",
+        description: "你给地球发了一句“在吗”，四十年后收到回复：“在。”你看着屏幕，决定再等四十年。",
+        tone: "strange",
+        comedy: true,
+        when: run => run.age >= 35,
+      },
+      {
+        id: "star_fun_airlock",
+        title: "气闸门说明书",
+        description: "你花了一整晚研究气闸门的说明书，最后发现它只有一句话：请勿在门未关闭时打开门。",
+        tone: "strange",
+        comedy: true,
+        when: run => run.flags.engineer || run.flags.eva,
+      },
+      {
+        id: "star_fun_clone",
+        title: "克隆人同事",
+        description: "舰上来了一个和你长得一模一样的人。你们核对了一整天档案，最后发现真正的区别是你比较会修咖啡机。",
+        tone: "strange",
+        comedy: true,
+        when: run => run.age >= 45,
+      },
+      {
+        id: "star_fun_form",
+        title: "星际表格",
+        description: "你为了申请一台新咖啡机填了十七张表。最后一张表的最后一栏写着：“请说明你为什么需要咖啡。”",
+        tone: "good",
+        comedy: true,
+        when: run => run.age >= 18,
+      },
+      {
+        id: "star_fun_coffee",
+        title: "最后一杯咖啡",
+        description: "舰上最后一包真咖啡被锁进了舰长柜。你用了三年时间申请，最后在退休那天喝到了一口，烫得说不出话。",
+        tone: "good",
+        comedy: true,
+        when: run => run.age >= 40,
+      },
+      {
+        id: "star_fun_cricket",
+        title: "殖民地的蟋蟀",
+        description: "你把地球带来的蟋蟀放进了新殖民地。它们活得很好，后来成了当地最响的“原住民”。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.colonist,
+      },
+      {
+        id: "star_fun_pirate",
+        title: "兼职海盗",
+        description: "你替人带过一次没有申报的箱子，后来那伙人管你叫“船长”。你纠正了很多次，他们还是这么叫。",
+        tone: "strange",
+        comedy: true,
+        when: run => run.flags.smuggler,
+      },
+      {
+        id: "star_fun_translator",
+        title: "翻译器罢工",
+        description: "第一次接触时翻译器突然死机。你急中生智比了一个手势，对方也回了一个。后来两国史书都记载：和平始于一个不太雅观的手势。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.firstContact,
+      },
+      {
+        id: "star_fun_beard",
+        title: "舰上胡子大赛",
+        description: "你在舰上举办了一场胡子大赛。冠军是一位没有胡子的通讯官，她戴了一顶用电缆编的假胡子。",
+        tone: "good",
+        comedy: true,
+        when: run => run.age >= 50,
+      },
+      {
+        id: "star_fun_birthday",
+        title: "第两万天",
+        description: "舰上系统把你的两万天生日算错了。全舰为你庆祝了两次，你收到了两份一样的礼物，都很快乐。",
+        tone: "good",
+        comedy: true,
+        when: run => run.age >= 60,
+      },
+      {
+        id: "star_fun_escape",
+        title: "逃生舱试坐",
+        description: "你偷偷试坐了一次逃生舱，结果舱门锁死，你在里面看完了三部教学片才被放出来。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.mutiny || run.flags.lost,
+      },
+      {
+        id: "star_fun_blackhole",
+        title: "黑洞观光团",
+        description: "你报名了黑洞观光团。旅行社的宣传语是“时间会过得很快”，你回来后发现这句话是字面意思。",
+        tone: "strange",
+        comedy: true,
+        when: run => run.age >= 35,
+      },
+      {
+        id: "star_fun_duck",
+        title: "舰上鸭",
+        description: "一只塑料鸭漂在循环水舱里，绕了舰船一圈。全舰给它建了档案，编号 0001，职务：吉祥物。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.partner,
+      },
+      {
+        id: "star_fun_retire",
+        title: "退休申请",
+        description: "你提交了退休申请，系统回复：“您的岗位暂无可替代人员。”你回复：“正因如此，我更应该退休。”系统沉默了。",
+        tone: "good",
+        comedy: true,
+        when: run => run.age >= 70,
+      },
+    ]
+
+
+    const JIANGHU_ATTRS = [
+      {"key": "looks", "name": "相貌", "en": "Presence", "desc": "江湖人先看脸，再看你的刀。有人记住你，往往是因为一件很小的事。", "icon": "looks"},
+      {"key": "int", "name": "悟性", "en": "Insight", "desc": "看得懂剑谱、听得懂弦外之音、在死局里找到那条没人走过的路。", "icon": "int"},
+      {"key": "body", "name": "根骨", "en": "Frame", "desc": "挨得住打、熬得住夜、在雪地里追人追出三十里。", "icon": "body"},
+      {"key": "family", "name": "门第", "en": "Lineage", "desc": "名门之后、镖局少东家，或者只是某个小镇上没人记得的姓。", "icon": "family"},
+    ]
+
+
+    const JIANGHU_STAGES = {"child": {"label": "幼年", "chapter": "幼年 · 小镇与木剑", "from": 0, "to": 11}, "teen": {"label": "入门", "chapter": "入门 · 山门与规矩", "from": 12, "to": 17}, "youth": {"label": "行走", "chapter": "行走 · 第一次下山", "from": 18, "to": 29}, "adult": {"label": "成名", "chapter": "成名 · 刀光与人心", "from": 30, "to": 49}, "middle": {"label": "宗师", "chapter": "宗师 · 高处不胜寒", "from": 50, "to": 64}, "elder": {"label": "归隐", "chapter": "归隐 · 江湖还在", "from": 65, "to": 100}}
+
+    const JIANGHU_VITALS = {"health": "气血", "mood": "心境", "wealth": "银两", "wealthUnit": "两", "wealthTiers": [{"below": 0, "label": "欠债"}, {"below": 10, "label": "囊中羞涩"}, {"below": 40, "label": "盘缠够用"}, {"below": 100, "label": "小有家底"}, {"below": 220, "label": "富甲一方"}, {"label": "富可敌国"}]}
+
+    const JIANGHU_TALENTS = [
+      {
+        id: "jiang_power",
+        name: "天生神力",
+        rarity: "传说",
+        desc: "你拎起石锁时，教习沉默了很久。根骨 +2，战斗事件更顺。",
+        mods: {"body": 2},
+        health: 8,
+        flags: ["strong"],
+      },
+      {
+        id: "jiang_memory",
+        name: "过目不忘",
+        rarity: "奇",
+        desc: "你看一遍剑谱就能记住大半。悟性 +2，学武事件更顺。",
+        mods: {"int": 2},
+        flags: ["prodigy"],
+      },
+      {
+        id: "jiang_light",
+        name: "轻功奇才",
+        rarity: "奇",
+        desc: "你踩在瓦片上，瓦片不知道你来过。根骨 +1、悟性 +1，逃命更顺。",
+        mods: {"body": 1, "int": 1},
+        flags: ["lightfoot"],
+      },
+      {
+        id: "jiang_noble",
+        name: "名门之后",
+        rarity: "传说",
+        desc: "你的姓在江湖上有人买账，也有人想杀。门第 +2、心境 +5。",
+        mods: {"family": 2},
+        mood: 5,
+        flags: ["noble"],
+      },
+      {
+        id: "jiang_street",
+        name: "市井油滑",
+        rarity: "良",
+        desc: "你会在菜市场砍价，也会在刀口下说软话。相貌 +1、银两 +8。",
+        mods: {"looks": 1},
+        wealth: 8,
+        flags: ["streetwise"],
+      },
+      {
+        id: "jiang_doctor",
+        name: "医毒双修",
+        rarity: "奇",
+        desc: "你分得清救人的药和杀人的药，有时只差一钱。悟性 +1、气血 +8。",
+        mods: {"int": 1},
+        health: 8,
+        flags: ["doctor"],
+      },
+      {
+        id: "jiang_sword",
+        name: "剑心通明",
+        rarity: "传说",
+        desc: "你听见剑在鞘里呼吸。悟性 +2，剑法事件更顺。",
+        mods: {"int": 2},
+        flags: ["swordHeart"],
+      },
+      {
+        id: "jiang_luck",
+        name: "福缘深厚",
+        rarity: "传说",
+        desc: "你总能在最坏的时候捡到一点好运气。幸运提升，心境 +5。",
+        luck: 2,
+        mood: 5,
+        flags: ["lucky"],
+      },
+      {
+        id: "jiang_info",
+        name: "江湖百晓生",
+        rarity: "奇",
+        desc: "你知道谁和谁有仇，也知道哪家客栈的墙后有暗门。悟性 +1，银两 +6。",
+        mods: {"int": 1},
+        wealth: 6,
+        flags: ["knows"],
+      },
+      {
+        id: "jiang_iron",
+        name: "铁布衫",
+        rarity: "良",
+        desc: "你挨过很多打，后来打你的人手先疼。根骨 +2、气血 +6。",
+        mods: {"body": 2},
+        health: 6,
+        flags: ["iron"],
+      },
+      {
+        id: "jiang_qin",
+        name: "琴心",
+        rarity: "良",
+        desc: "你会弹琴，也会在琴声里藏刀。相貌 +1、心境 +6。",
+        mods: {"looks": 1},
+        mood: 6,
+        flags: ["qin"],
+      },
+      {
+        id: "jiang_run",
+        name: "逃命第一",
+        rarity: "良",
+        desc: "你跑得比大多数麻烦快。根骨 +1、心境 +3，危险事件更容易脱身。",
+        mods: {"body": 1},
+        mood: 3,
+        flags: ["runner"],
+      },
+    ]
+
+
+    const JIANGHU_EVENTS = [
+      {
+        id: "jh_born",
+        stage: "child",
+        minAge: 0,
+        maxAge: 4,
+        weight: 3,
+        resolve() {
+          return {
+            tone: "normal",
+            text: "你出生在一个有河的小镇。父亲在院里练拳，母亲在灶前煮粥，窗外有人挑着担子叫卖。你哭了几声，又安静下来。",
+            effects: {"mood": 2, "health": 2},
+          }
+        },
+      },
+      {
+        id: "jh_woodsword",
+        stage: "child",
+        minAge: 4,
+        maxAge: 9,
+        weight: 2.4,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你用一截树枝做了一把木剑，对着院里的老槐树练了一下午。树皮被你削掉一块，父亲看见了，没有骂你，只说明天教你握剑。",
+            effects: {"body": 1, "int": 1, "mood": 2},
+          }
+        },
+      },
+      {
+        id: "jh_master",
+        stage: "child",
+        minAge: 6,
+        maxAge: 11,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "一个背着旧剑的陌生人在镇上住了一晚。他看了你一会儿，问你想不想学剑。你点头的时候，母亲在屋里轻轻叹了口气。",
+            effects: {"int": 1, "mood": 3, "flags": {"master": true}},
+          }
+        },
+      },
+      {
+        id: "jh_market",
+        stage: "child",
+        minAge: 5,
+        maxAge: 11,
+        weight: 1.8,
+        resolve() {
+          return {
+            tone: "normal",
+            text: "你常在镇口的茶摊听人说江湖。有人说某位大侠一剑断江，有人说那都是编的。你听得入神，茶凉了也没动。",
+            effects: {"int": 1, "mood": 2, "flags": {"knows": true}},
+          }
+        },
+      },
+      {
+        id: "jh_sect",
+        stage: "teen",
+        minAge: 12,
+        maxAge: 16,
+        weight: 2.6,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "你被带上山。山门很高，石阶很长。师父让你先挑三个月的水，你说好。水很重，山路很滑，但你一次也没有摔。",
+            effects: {"body": 1, "mood": 3, "flags": {"sect": true}},
+          }
+        },
+      },
+      {
+        id: "jh_sword",
+        stage: "teen",
+        minAge: 13,
+        maxAge: 17,
+        weight: 2.2,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你第一次摸到真剑。师父说剑是凶器，你说是兵器。他看了你很久，最后笑了一下，说：“先学会收。”",
+            effects: {"int": 1, "body": 1, "flags": {"swordHeart": true}},
+          }
+        },
+      },
+      {
+        id: "jh_rival",
+        stage: "teen",
+        minAge: 14,
+        maxAge: 17,
+        weight: 1.8,
+        resolve() {
+          return {
+            tone: "normal",
+            text: "你和同门里最不服你的那个人打了一架。两个人都挂了彩，最后并排坐在台阶上，谁也没先开口。",
+            effects: {"body": 1, "mood": -1, "flags": {"rival": true}},
+          }
+        },
+      },
+      {
+        id: "jh_poison",
+        stage: "teen",
+        minAge: 14,
+        maxAge: 17,
+        weight: 1.4,
+        resolve() {
+          return {
+            tone: "strange",
+            text: "你在后山误碰了一株草。手肿了三天，师父一边给你敷药，一边告诉你它叫什么、能治什么、能杀什么。你记了很久。",
+            effects: {"int": 1, "health": -2, "flags": {"doctor": true}},
+          }
+        },
+      },
+      {
+        id: "jh_leave",
+        stage: "youth",
+        minAge: 18,
+        maxAge: 23,
+        weight: 2.8,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "你下山了。师父没有送你，只在门口说了一句：“打不过就跑。”你背着剑走了很远，回头时山门已经看不见了。",
+            effects: {"mood": 3, "wealth": 2, "flags": {"wanderer": true}},
+          }
+        },
+      },
+      {
+        id: "jh_escort",
+        stage: "youth",
+        minAge: 20,
+        maxAge: 27,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你接了一趟镖。路上遇到山匪，你护着货主走了三十里，最后发现箱子里装的是一批旧书。货主说，这年头书比银子难运。",
+            effects: {"body": 1, "wealth": 8, "mood": 3},
+          }
+        },
+      },
+      {
+        id: "jh_love",
+        stage: "youth",
+        minAge: 20,
+        maxAge: 29,
+        weight: 1.8,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你在江南遇见一个人。你们一起走过雨巷，吃过一碗很甜的酒酿。分别时她/他没有说等你，你也没有说会回来。",
+            effects: {"mood": 6, "flags": {"daoPartner": true}},
+          }
+        },
+      },
+      {
+        id: "jh_revenge",
+        stage: "youth",
+        minAge: 22,
+        maxAge: 29,
+        weight: 1.5,
+        resolve() {
+          return {
+            tone: "tragic",
+            text: "你查到了当年那件事的线索。仇人的名字写在纸上，只有三个字，你却看了整整一夜。第二天你把纸烧了，还是下了山。",
+            effects: {"mood": -4, "int": 1, "flags": {"revenge": true}},
+          }
+        },
+      },
+      {
+        id: "jh_bandit",
+        stage: "youth",
+        minAge: 19,
+        maxAge: 28,
+        weight: 1.3,
+        resolve() {
+          return {
+            tone: "strange",
+            text: "你在一座破庙里遇见一伙山贼。他们没有抢你，反而分了你半只烧鸡。后来你才知道，他们抢的是前面那个镇上的粮仓。",
+            effects: {"wealth": 5, "mood": 2, "flags": {"bandit": true}},
+          }
+        },
+      },
+      {
+        id: "jh_sectmaster",
+        stage: "adult",
+        minAge: 30,
+        maxAge: 44,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "师父死了。你接过掌门印时，堂下站着几十个人，有人服气，有人不服。你把印放在桌上，说：“不服的，现在可以走。”没有人动。",
+            effects: {"mood": 4, "wealth": 8, "flags": {"sectMaster": true}},
+          }
+        },
+      },
+      {
+        id: "jh_demon",
+        stage: "adult",
+        minAge: 30,
+        maxAge: 45,
+        weight: 1.4,
+        resolve() {
+          return {
+            tone: "tragic",
+            text: "你练了一门不该练的功夫。进步快得可怕，夜里却总听见有人在耳边说话。你开始分不清那是心魔，还是你自己。",
+            effects: {"int": 2, "health": -4, "mood": -5, "flags": {"demon": true}},
+          }
+        },
+      },
+      {
+        id: "jh_court",
+        stage: "adult",
+        minAge: 32,
+        maxAge: 49,
+        weight: 1.3,
+        resolve() {
+          return {
+            tone: "legend",
+            text: "你被请进了皇宫。皇帝想让你做一件事，你听完，没有立刻答应。殿外的风很大，吹得檐角铜铃一直响。",
+            effects: {"wealth": 12, "mood": 3, "flags": {"emperor": true}},
+          }
+        },
+      },
+      {
+        id: "jh_hidden",
+        stage: "adult",
+        minAge: 35,
+        maxAge: 49,
+        weight: 1.4,
+        resolve() {
+          return {
+            tone: "strange",
+            text: "你在山里遇见一个砍柴的老人。他随手一挥，落叶分成两半。你追了三里地，他才停下来，说：“你根骨还行，就是太急。”",
+            effects: {"int": 2, "body": 1, "flags": {"hiddenMaster": true}},
+          }
+        },
+      },
+      {
+        id: "jh_constable",
+        stage: "adult",
+        minAge: 30,
+        maxAge: 47,
+        weight: 1.4,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你接下了六扇门的差事。从此你抓的人里，有该抓的，也有不该抓的。你开始学会在公文上写一些自己也不全信的话。",
+            effects: {"wealth": 8, "mood": -2, "flags": {"constable": true}},
+          }
+        },
+      },
+      {
+        id: "jh_reputation",
+        stage: "middle",
+        minAge: 50,
+        maxAge: 60,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "good",
+            text: "江湖上开始有人拿你的名字吓唬人。你听见时正在喝茶，差点笑出来。老板问你笑什么，你说没什么，茶有点烫。",
+            effects: {"mood": 4, "wealth": 5, "flags": {"reputation": true}},
+          }
+        },
+      },
+      {
+        id: "jh_oldrival",
+        stage: "middle",
+        minAge: 52,
+        maxAge: 64,
+        weight: 1.8,
+        resolve() {
+          return {
+            tone: "normal",
+            text: "当年那个和你打架的同门找上门来。你们都老了，剑也旧了。他没有拔剑，只问你这些年过得好不好。",
+            effects: {"mood": 3},
+          }
+        },
+      },
+      {
+        id: "jh_teach",
+        stage: "middle",
+        minAge: 50,
+        maxAge: 64,
+        weight: 1.6,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你收了一个徒弟。他笨，但肯练。你教他握剑，也教他什么时候不该拔剑。他问你为什么，你说：“因为我当年没人教。”",
+            effects: {"mood": 4, "flags": {"teacher": true}},
+          }
+        },
+      },
+      {
+        id: "jh_inn",
+        stage: "middle",
+        minAge: 50,
+        maxAge: 64,
+        weight: 1.4,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你在一家小客栈住了半个月。老板娘每天给你留一壶热酒，你知道她认出了你，但她从来不说。",
+            effects: {"health": 2, "mood": 2},
+          }
+        },
+      },
+      {
+        id: "jh_retire",
+        stage: "elder",
+        minAge: 65,
+        maxAge: 85,
+        weight: 2,
+        resolve() {
+          return {
+            tone: "normal",
+            text: "你在山脚下盖了一间小屋。屋前种菜，屋后养鸡。有人来找你比剑，你说剑已经锈了。他们不信，你就让他们看。",
+            effects: {"health": 2, "mood": 3, "flags": {"retired": true}},
+          }
+        },
+      },
+      {
+        id: "jh_legacy",
+        stage: "elder",
+        minAge: 70,
+        maxAge: 100,
+        weight: 1.6,
+        resolve() {
+          return {
+            tone: "legend",
+            text: "你把一生的剑法写成了册子。写到最后一页，你停了很久，最后只写了一句：“先学做人，再学杀人。”",
+            effects: {"mood": 5, "flags": {"teacher": true}},
+          }
+        },
+      },
+      {
+        id: "jh_lastduel",
+        stage: "elder",
+        minAge: 72,
+        maxAge: 95,
+        weight: 1.3,
+        resolve() {
+          return {
+            tone: "tragic",
+            text: "一个年轻人提着剑来找你。他说你欠他师父一场比试。你想了很久，终于想起那个名字。你站起来，拿起了墙上的剑。",
+            effects: {"health": -5, "mood": -2, "flags": {"lastDuel": true}},
+          }
+        },
+      },
+      {
+        id: "jh_wine",
+        stage: "elder",
+        minAge: 70,
+        maxAge: 100,
+        weight: 1.4,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你每天傍晚喝一小杯酒。酒是镇上新酿的，不如年轻时喝过的烈，但你喝得很慢，能喝很久。",
+            effects: {"health": 1, "mood": 3},
+          }
+        },
+      },
+    ]
+
+
+    const JIANGHU_MILESTONES = [
+      {
+        age: 12,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "你正式拜师。师父让你在祖师牌位前磕了三个头，然后递给你一把没有开刃的剑。他说：“先学会不伤人。”",
+            effects: {"body": 1, "int": 1, "mood": 4, "flags": {"sect": true}},
+          }
+        },
+      },
+      {
+        age: 18,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "你第一次参加门派比试。台下很多人，你只看见师父坐在最后一排，闭着眼。你赢了，他也没有睁眼，只说：“还行。”",
+            effects: {"mood": 5, "wealth": 3, "flags": {"swordHeart": true}},
+          }
+        },
+      },
+      {
+        age: 35,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "你成了江湖上有名号的人。有人敬你，有人怕你，也有人想踩着你的名字往上走。你开始明白，名声也是一种债。",
+            effects: {"mood": 4, "wealth": 6, "flags": {"reputation": true}},
+          }
+        },
+      },
+      {
+        age: 60,
+        resolve() {
+          return {
+            tone: "milestone",
+            text: "你把门派交给了下一辈。交接那天，你在山门口站了很久。山还是那座山，台阶还是那些台阶，只是走上去的人换了。",
+            effects: {"mood": 6, "flags": {"retired": true}},
+          }
+        },
+      },
+    ]
+
+
+    const JIANGHU_TWISTS = [
+      {
+        id: "jh_tw_manual",
+        title: "残卷",
+        stage: "youth",
+        minAge: 18,
+        weight: 1.3,
+        good: true,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你在旧书摊上翻到半本剑谱。纸已经发黄，最后一页被人撕掉了。你照着练了三个月，竟然真的练出了点东西。",
+            effects: {"int": 2, "mood": 4, "flags": {"manual": true}},
+          }
+        },
+      },
+      {
+        id: "jh_tw_ambush",
+        title: "黑店",
+        stage: "youth",
+        minAge: 18,
+        weight: 1.2,
+        good: false,
+        resolve() {
+          return {
+            tone: "tragic",
+            text: "客栈的茶里有药。你醒过来时，包袱不见了，手腕上多了一道绳印。你花了三天才走回镇上。",
+            effects: {"health": -6, "wealth": -10, "mood": -4},
+          }
+        },
+      },
+      {
+        id: "jh_tw_fame",
+        title: "一夜成名",
+        stage: "adult",
+        minAge: 28,
+        weight: 1.0,
+        good: false,
+        resolve() {
+          return {
+            tone: "good",
+            text: "你在酒楼里随手挡了一剑，被说书人编成了“一剑退三雄”。第二天，全城都在传你的名字。",
+            effects: {"mood": 5, "wealth": 8, "flags": {"reputation": true}},
+          }
+        },
+      },
+      {
+        id: "jh_tw_betray",
+        title: "同门",
+        stage: "adult",
+        minAge: 30,
+        weight: 1.0,
+        good: false,
+        resolve() {
+          return {
+            tone: "tragic",
+            text: "最信任的同门偷走了掌门印。你追到山门口，他回头看了你一眼，说：“你太慢了。”",
+            effects: {"mood": -7, "wealth": -8, "flags": {"betrayed": true}},
+          }
+        },
+      },
+    ]
+
+
+    const JIANGHU_QUIET = {
+      "child": [
+        { text: "你在小镇上长大。日子过得很慢，最大的事是隔壁家的狗又跑丢了。", effects: {"mood": 1} },
+        { text: "你每天早起扎马步。腿很酸，但师父说，站得住的人才握得稳剑。", effects: {"body": 1} },
+        { text: "你偷偷翻看师兄的剑谱，很多字不认识，但那些图你记得很牢。", effects: {"int": 1, "mood": 1} },
+      ],
+      "teen": [
+        { text: "山上的日子很规律。挑水、劈柴、练剑、挨骂，一天很快就过去了。", effects: {"body": 1} },
+        { text: "你和同门偷偷下山吃了一顿面。回来被罚跪，但面很好吃。", effects: {"mood": 2} },
+        { text: "师父让你抄门规。你抄到第三遍才发现，最后一条写着“必要时可以不听”。", effects: {"int": 1, "mood": 1} },
+      ],
+      "youth": [
+        { text: "你走了很多路，见过很多镇子。大部分地方的人只关心明天的米价。", effects: {"mood": 1} },
+        { text: "你在一条河边练剑。水很急，剑很轻，你练到天黑才回去。", effects: {"int": 1, "body": 1} },
+        { text: "你开始习惯一个人住店、一个人吃饭、一个人在雨里赶路。", effects: {"mood": 1} },
+      ],
+      "adult": [
+        { text: "你越来越忙。门派、镖局、人情、旧账，每一件都要你出面。", effects: {"wealth": 2} },
+        { text: "你偶尔会想起山上的日子。那时候最大的麻烦，是挑水时桶漏了。", effects: {"mood": 2} },
+        { text: "你在一次宴席上喝多了。回去的路上，月亮很亮，你走了很久才找到自己的门。", effects: {"health": -1, "mood": 2} },
+      ],
+      "middle": [
+        { text: "你开始早睡。江湖上的事，能推的就推，推不掉的就慢慢办。", effects: {"health": 1, "mood": 1} },
+        { text: "你在院子里种了一棵梅树。第一年没开花，第二年开了三朵。", effects: {"mood": 2} },
+        { text: "有年轻人来请教剑法。你教了他一招，他练了半年，回来谢你。你已经忘了自己教过。", effects: {"mood": 2} },
+      ],
+      "elder": [
+        { text: "你每天到河边走一圈。水还是那样流，只是岸边的树换了几茬。", effects: {"health": 1, "mood": 1} },
+        { text: "你把旧剑擦了一遍，又挂回墙上。它已经很钝了，但你还是不让别人碰。", effects: {"mood": 2} },
+        { text: "镇上的人知道你以前是江湖人，但没人问。你也不说。这样很好。", effects: {"mood": 2} },
+      ],
+    }
+
+    const JIANGHU_ENDINGS = [
+      {
+        id: "jiang_sect_master",
+        title: "一门之主",
+        description: "你接过掌门印，也接过了一整座山的麻烦。很多年后，山门还在，你的名字刻在门前的石头上。",
+        tone: "legend",
+        when: run => run.flags.sectMaster,
+      },
+      {
+        id: "jiang_sword_saint",
+        title: "剑圣",
+        description: "你一生只做了一件事：把剑练成了自己的样子。后来的人提到你，只说“那一剑”，不再说别的。",
+        tone: "legend",
+        when: run => run.flags.swordHeart && run.attrs.int >= 12,
+      },
+      {
+        id: "jiang_demon",
+        title: "魔头",
+        description: "你练了不该练的功夫，杀了不该杀的人。江湖用很多名字骂你，你只记得自己最初想活下去。",
+        tone: "tragic",
+        when: run => run.flags.demon,
+      },
+      {
+        id: "jiang_couple",
+        title: "神仙眷侣",
+        description: "你们没有成为天下第一，只是一起走了很多地方，最后在一个没人认识的小镇住了下来。",
+        tone: "good",
+        when: run => run.flags.daoPartner,
+      },
+      {
+        id: "jiang_constable",
+        title: "六扇门",
+        description: "你穿上了官服，抓过该抓的人，也放过不该放的人。江湖说你变了，你只是学会了在规矩里做事。",
+        tone: "great",
+        when: run => run.flags.constable,
+      },
+      {
+        id: "jiang_emperor",
+        title: "庙堂之高",
+        description: "你从江湖走进了朝堂。皇帝叫你先生，江湖叫你走狗，你都不太在意。你只想让一些人活得好一点。",
+        tone: "legend",
+        when: run => run.flags.emperor,
+      },
+      {
+        id: "jiang_doctor",
+        title: "医者",
+        description: "你没能救所有人，但你救过很多人。你的药箱里永远有一味药，是给穷人留的。",
+        tone: "good",
+        when: run => run.flags.doctor,
+      },
+      {
+        id: "jiang_hidden",
+        title: "山中高人",
+        description: "你消失在江湖的传闻里。有人说你在某座山上砍柴，有人说你早就死了。只有山里的风知道你还活着。",
+        tone: "strange",
+        when: run => run.flags.hiddenMaster,
+      },
+      {
+        id: "jiang_avenger",
+        title: "报仇的人",
+        description: "你找到了仇人，也找到了自己。剑落下去之后，你没有觉得轻松，只觉得天很空。",
+        tone: "tragic",
+        when: run => run.flags.revenge,
+      },
+      {
+        id: "jiang_wanderer",
+        title: "江湖过客",
+        description: "你没有成为传说，也没有留下门派。你只是走过很多路，喝过很多酒，在很多人生命里出现过一下。",
+        tone: "normal",
+        when: run => () => true,
+      },
+      {
+        id: "jiang_fun_inn",
+        title: "客栈常客",
+        description: "你住店住成了股东。老板娘说，再住下去，这店就跟你姓了。你说不用，给我留张靠窗的桌子就行。",
+        tone: "good",
+        comedy: true,
+        when: run => run.age >= 30,
+      },
+      {
+        id: "jiang_fun_sword",
+        title: "宝剑认主",
+        description: "你花光积蓄买了一把“绝世好剑”。它第一次出鞘就割破了你的手，后来你用它切了三年西瓜，很好用。",
+        tone: "strange",
+        comedy: true,
+        when: run => run.age >= 20,
+      },
+      {
+        id: "jiang_fun_poison",
+        title: "毒药当补药",
+        description: "你把师父的补药和毒药放反了。睡了三天醒来，头发黑了，力气大了，就是看见蚂蚁会害怕。",
+        tone: "strange",
+        comedy: true,
+        when: run => run.age >= 18,
+      },
+      {
+        id: "jiang_fun_master",
+        title: "师父的秘密",
+        description: "你发现师父的绝世武功是从一本菜谱里悟出来的。他死不承认，但每次做红烧肉，手速都快得看不清。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.sect,
+      },
+      {
+        id: "jiang_fun_fee",
+        title: "门派会费",
+        description: "你当了掌门才知道，门派最大的难题不是仇家，是水电费和弟子们的伙食。你开始理解前任为什么跑路。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.sectMaster,
+      },
+      {
+        id: "jiang_fun_manual",
+        title: "盗版剑谱",
+        description: "你买了一本《绝世剑法》，练到第三页发现是菜谱。你照着做了一桌菜，意外地好吃。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.manual || run.flags.knows,
+      },
+      {
+        id: "jiang_fun_chicken",
+        title: "以鸡会友",
+        description: "你和一位高手在客栈因为最后一只烧鸡打了起来。打了半个时辰，鸡被店小二吃了。你们当场结拜。",
+        tone: "good",
+        comedy: true,
+        when: run => run.age >= 25,
+      },
+      {
+        id: "jiang_fun_wine",
+        title: "千杯不醉",
+        description: "你号称千杯不醉。后来大家发现，你喝的是茶，只是杯子长得像酒碗。",
+        tone: "good",
+        comedy: true,
+        when: run => run.age >= 35,
+      },
+      {
+        id: "jiang_fun_duel",
+        title: "约战黄历",
+        description: "你和人约了生死战，结果那天黄历写着“忌出行”。你们改期三次，最后成了棋友。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.rival,
+      },
+      {
+        id: "jiang_fun_constable",
+        title: "临时捕快",
+        description: "你替六扇门抓了一次贼，从此被写进了编制。你每次想辞职，衙门就说“再带一个新人”。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.constable,
+      },
+      {
+        id: "jiang_fun_beggar",
+        title: "丐帮编外",
+        description: "你给丐帮捐了十两银子，被授予“荣誉长老”。后来你才知道，这个称号可以无限授予。",
+        tone: "good",
+        comedy: true,
+        when: run => run.peakWealth >= 60,
+      },
+      {
+        id: "jiang_fun_hair",
+        title: "一夜白头",
+        description: "你练功走火入魔，一夜白头。江湖从此传你为“白发剑仙”，其实你只是忘了染。",
+        tone: "strange",
+        comedy: true,
+        when: run => run.flags.demon || run.attrs.int >= 14,
+      },
+      {
+        id: "jiang_fun_rival",
+        title: "宿敌",
+        description: "你有一个宿敌，每年约战一次。打了十年，你们各自成了家，现在约战改成两家人一起烧烤。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.rival,
+      },
+      {
+        id: "jiang_fun_cough",
+        title: "绝世咳嗽",
+        description: "你练成了一门用咳嗽声伤人的功夫。敌人没倒下，你自己先咳了三个月。",
+        tone: "strange",
+        comedy: true,
+        when: run => run.age >= 40,
+      },
+      {
+        id: "jiang_fun_ancestor",
+        title: "祖传绝学",
+        description: "你翻遍祖宅，找到一本《祖传绝学》。打开一看，第一页写着：“别练，会死。”你合上，放回原处。",
+        tone: "strange",
+        comedy: true,
+        when: run => run.flags.noble,
+      },
+      {
+        id: "jiang_fun_exam",
+        title: "江湖考试",
+        description: "你参加武林大会，第一轮考的是《江湖基本礼仪》。你因为不会写“侠”字，被淘汰了。",
+        tone: "good",
+        comedy: true,
+        when: run => run.age >= 18,
+      },
+      {
+        id: "jiang_fun_cat",
+        title: "猫侠",
+        description: "你救了一只猫，它从此跟着你闯荡江湖。每次你拔剑，它就跳到你肩上，导致你每次出招都像在挠痒。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.daoPartner || run.age >= 45,
+      },
+      {
+        id: "jiang_fun_tofu",
+        title: "一掌豆腐",
+        description: "你练成了“铁砂掌”，第一次出手拍碎了一块豆腐。围观群众沉默了一会儿，然后鼓掌说：“好掌法。”",
+        tone: "good",
+        comedy: true,
+        when: run => run.attrs.body >= 14,
+      },
+      {
+        id: "jiang_fun_debt",
+        title: "大侠欠账",
+        description: "你在江湖上名声响亮，在镇上欠了十八家店的账。老板们说，大侠的签名比银子值钱。",
+        tone: "good",
+        comedy: true,
+        when: run => run.peakWealth <= 20 && run.age >= 40,
+      },
+      {
+        id: "jiang_fun_retire",
+        title: "归隐失败",
+        description: "你宣布金盆洗手，第二天就有人抬着礼物来求你出山。你推了三次，第四次把剑擦干净了。",
+        tone: "good",
+        comedy: true,
+        when: run => run.flags.retired,
+      },
+    ]
+
+
     const WORLDS = [
       {
         id: 'modern',
@@ -10110,6 +11891,54 @@
           riskCause: '义体排斥',
           oldAgeCause: '生命耗尽',
         },
+      },
+      {
+        id: 'starship',
+        name: '星舰远征',
+        en: 'Starship Odyssey',
+        icon: 'star',
+        tagline: '船在飞，人得找个理由继续。',
+        description: '从一艘世代星舰的育儿舱出发。学习、值班、出舱、第一次接触，最后决定把余生交给哪一颗星。',
+        loreTitle: '星舰规矩',
+        loreMark: '星',
+        lore: '船比人重要，但人得先活到船靠岸。能源、配给、舱位，每一样都要算清楚。',
+        attrs: STARSHIP_ATTRS,
+        stages: STARSHIP_STAGES,
+        vitals: STARSHIP_VITALS,
+        dossier: ['舰职', '专长', '同伴'],
+        talents: STARSHIP_TALENTS,
+        events: STARSHIP_EVENTS,
+        milestones: STARSHIP_MILESTONES,
+        quiet: STARSHIP_QUIET,
+        twists: STARSHIP_TWISTS,
+        twistChance: 0.18,
+        endings: STARSHIP_ENDINGS,
+        grades: GRADES,
+        aging: { start: 55, mid: 75, late: 95, riskThreshold: 28, riskChance: 0.14, riskCause: '生命维持系统', oldAgeCause: '星海长眠' },
+      },
+      {
+        id: 'jianghu',
+        name: '江湖',
+        en: 'Jianghu',
+        icon: 'sword',
+        tagline: '剑在手里，路在脚下，人在江湖。',
+        description: '从一个小镇出发。入门、学剑、下山、成名，最后决定把名字留在门派、庙堂，还是某个没人记得的客栈。',
+        loreTitle: '江湖规矩',
+        loreMark: '江',
+        lore: '名声是债，恩义也是债。有人为一句承诺走千里，也有人为十两银子卖朋友。',
+        attrs: JIANGHU_ATTRS,
+        stages: JIANGHU_STAGES,
+        vitals: JIANGHU_VITALS,
+        dossier: ['门派', '武功', '关系'],
+        talents: JIANGHU_TALENTS,
+        events: JIANGHU_EVENTS,
+        milestones: JIANGHU_MILESTONES,
+        quiet: JIANGHU_QUIET,
+        twists: JIANGHU_TWISTS,
+        twistChance: 0.2,
+        endings: JIANGHU_ENDINGS,
+        grades: GRADES,
+        aging: { start: 55, mid: 70, late: 85, riskThreshold: 28, riskChance: 0.15, riskCause: '旧伤', oldAgeCause: '寿终正寝' },
       },
     ]
 
@@ -10922,6 +12751,292 @@
           ],
         },
       ],
+      starship: [
+        {
+          id: "star_fork_18",
+          at: 18,
+          chance: 0.9,
+          title: "分配志愿",
+          prompt: "舰务局让你填三个志愿。舰桥、工程舱、医疗舱，每一扇门后面都是不同的余生。",
+          options: [
+            {
+              id: "bridge",
+              label: "去舰桥",
+              desc: "你想看看航线是怎么被画出来的。", requires: {"int": 6},
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你走进舰桥。舷窗很大，星图铺满了整面墙。有人把一支旧笔递给你，说：“从今天起，你画的路会有人走。”",
+                  effects: {"mood": 5, "wealth": 3, "flags": {"pilot": true, "crew": true}},
+                }
+              },
+            },
+            {
+              id: "engine",
+              label: "去工程舱",
+              desc: "你想成为那个让船继续飞的人。", requires: {"int": 5},
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "工程舱很热，噪音很大。你戴上手套，跟着老师傅钻进管道。他指着一段发烫的管线说：“记住它，它比你的命长。”",
+                  effects: {"mood": 4, "wealth": 4, "flags": {"engineer": true, "crew": true}},
+                }
+              },
+            },
+            {
+              id: "medic",
+              label: "去医疗舱",
+              desc: "你想在别人最需要的时候站在旁边。", requires: {"int": 4},
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你第一次看见舰上的人体解剖图。老师指着心脏的位置说：“这里最难修，不是因为它复杂，是因为它不肯听话。”",
+                  effects: {"health": 6, "mood": 4, "flags": {"medic": true, "crew": true}},
+                }
+              },
+            },
+            {
+              id: "deck",
+              label: "去甲板组",
+              desc: "先上船，再想以后。",
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你被分到甲板组。工作很具体：检查、擦拭、记录。你每天走过同一段舱道，慢慢记住了每一块面板的声音。",
+                  effects: {"body": 1, "mood": 3, "flags": {"crew": true}},
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: "star_fork_35",
+          at: 35,
+          chance: 0.82,
+          title: "舰长室",
+          prompt: "舰长把一份任命书推到你面前。另一边，殖民地正在招募第一批定居者。",
+          options: [
+            {
+              id: "command",
+              label: "接过指挥权",
+              desc: "这艘船需要一个做决定的人。", requires: {"looks": 10},
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你接过任命书。舰长站起来，把椅子让给你。你坐下去，发现它比想象中硬，也比想象中稳。",
+                  effects: {"mood": 6, "wealth": 6, "flags": {"captain": true}},
+                }
+              },
+            },
+            {
+              id: "colony",
+              label: "去殖民地",
+              desc: "你想在真正的土地上种点什么。",
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你签了殖民地协议。分配给你的那块地还没有名字，土是人工配的，但你蹲下去摸了一把，觉得它能长东西。",
+                  effects: {"wealth": 12, "mood": 5, "flags": {"colonist": true}},
+                }
+              },
+            },
+            {
+              id: "veteran",
+              label: "留在舰上",
+              desc: "你还没准备好离开这艘船。",
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你把任命书放回桌上，说想再飞一段。舰长看了你很久，最后笑了一下：“我就知道。”",
+                  effects: {"mood": 4, "health": 2, "flags": {"veteran": true}},
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: "star_fork_55",
+          at: 55,
+          chance: 0.75,
+          title: "信号另一端",
+          prompt: "那个重复了半辈子的信号终于靠近了。舰队也在讨论是否返航。",
+          options: [
+            {
+              id: "contact",
+              label: "发出第一句话",
+              desc: "你想知道对面是谁。", requires: {"int": 12},
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你坐在通讯台前，手指悬在按键上。最后你发出去的是一句很普通的话：“你们好。”对面沉默了七分钟，然后回了一句更普通的话：“你们也好。”",
+                  effects: {"mood": 8, "wealth": 8, "flags": {"firstContact": true, "diplomat": true}},
+                }
+              },
+            },
+            {
+              id: "return",
+              label: "跟着舰队返航",
+              desc: "你想在还能走动的时候踩一次真正的土。",
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你选择了返航。目标星系在舷窗里慢慢变小，像一颗被放回盒子里的珠子。你没有回头。",
+                  effects: {"mood": 5, "wealth": 5, "flags": {"colonist": true}},
+                }
+              },
+            },
+            {
+              id: "mutiny",
+              label: "改变航线",
+              desc: "你认为舰队在错过唯一的机会。", requires: {"looks": 12},
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你关掉了舰桥的广播，把新航线输入导航台。警报响起来时，你听见门外有人跑过来。你没有开门。",
+                  effects: {"mood": -3, "health": -4, "flags": {"mutiny": true}},
+                }
+              },
+            },
+          ],
+        },
+      ],
+      jianghu: [
+        {
+          id: "jh_fork_16",
+          at: 16,
+          chance: 0.9,
+          title: "下山之前",
+          prompt: "师父让你选一条路：留在山上接掌门户，下山做散修，或者去镖局谋一份差事。",
+          options: [
+            {
+              id: "sect",
+              label: "留在山门",
+              desc: "你想把师父的东西传下去。", requires: {"int": 6},
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你留在了山上。师父没有夸你，只把一本旧剑谱放在你床头。你翻开第一页，看见他年轻时写的一行字：“别学我。”",
+                  effects: {"mood": 5, "wealth": 3, "flags": {"sect": true, "swordHeart": true}},
+                }
+              },
+            },
+            {
+              id: "wander",
+              label: "下山做散修",
+              desc: "你想看看山门外面的江湖。",
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你背着一把没有开刃的剑下了山。山门在身后慢慢变小，路边的野花开得很随便。你第一次觉得，天地比师父说的还大。",
+                  effects: {"mood": 5, "wealth": 4, "flags": {"wanderer": true}},
+                }
+              },
+            },
+            {
+              id: "escort",
+              label: "去镖局",
+              desc: "先挣点银子，再谈江湖。", requires: {"body": 6},
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你进了镖局。第一趟镖走得很慢，你跟在车队后面，学会了看天色、听马蹄、在夜里轮流守火。",
+                  effects: {"wealth": 8, "body": 1, "flags": {"escort": true}},
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: "jh_fork_35",
+          at: 35,
+          chance: 0.82,
+          title: "三封请帖",
+          prompt: "掌门印、六扇门的官服、一封没有署名的魔教来信，同时摆在你面前。",
+          options: [
+            {
+              id: "master",
+              label: "接掌门派",
+              desc: "你放不下山上那些人。", requires: {"looks": 9},
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你接过掌门印。堂下站着几十个人，有人服气，有人不服。你把印放在桌上，说：“不服的，现在可以走。”没有人动。",
+                  effects: {"mood": 6, "wealth": 8, "flags": {"sectMaster": true}},
+                }
+              },
+            },
+            {
+              id: "constable",
+              label: "进六扇门",
+              desc: "你想用官府的刀，管一管江湖的事。", requires: {"int": 9},
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你穿上官服。第一次办案，你抓了一个偷粮的汉子，也放走了他饿哭的孩子。上司没有看见，你也没有说。",
+                  effects: {"wealth": 8, "mood": 3, "flags": {"constable": true}},
+                }
+              },
+            },
+            {
+              id: "demon",
+              label: "拆开魔教来信",
+              desc: "你想知道另一条路能走多快。",
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "信里只有一门功法，和一句话：“正道太慢，你等不起。”你练了第一层，夜里开始听见有人在耳边说话。",
+                  effects: {"int": 2, "mood": -5, "health": -2, "flags": {"demon": true}},
+                }
+              },
+            },
+          ],
+        },
+        {
+          id: "jh_fork_55",
+          at: 55,
+          chance: 0.75,
+          title: "最后一件事",
+          prompt: "你开始想，余生还要不要继续握剑。",
+          options: [
+            {
+              id: "retire",
+              label: "归隐",
+              desc: "你想在还能走路的时候，去看一次海。",
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你在山脚下盖了一间小屋。屋前种菜，屋后养鸡。有人来找你比剑，你说剑已经锈了。他们不信，你就让他们看。",
+                  effects: {"mood": 6, "health": 2, "flags": {"retired": true}},
+                }
+              },
+            },
+            {
+              id: "teacher",
+              label: "收一个徒弟",
+              desc: "你想把没走完的路交给别人。", requires: {"int": 10},
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你收了一个徒弟。他笨，但肯练。你教他握剑，也教他什么时候不该拔剑。他问你为什么，你说：“因为我当年没人教。”",
+                  effects: {"mood": 5, "flags": {"teacher": true}},
+                }
+              },
+            },
+            {
+              id: "duel",
+              label: "赴最后一场约",
+              desc: "有人等了你很多年。", requires: {"body": 10},
+              resolve() {
+                return {
+                  tone: "normal",
+                  text: "你拿起墙上的剑。它比你记忆里轻。门外的人已经等了很久，你没有让他再等。",
+                  effects: {"health": -5, "mood": -2, "flags": {"lastDuel": true}},
+                }
+              },
+            },
+          ],
+        },
+      ],
     }
 
     function choiceRequirementEntries(run, option) {
@@ -11204,6 +13319,21 @@
       }
     }
 
+
+    function starshipBirthText(attrs) {
+      if (attrs.family >= 8) return '你出生在舰桥层的一间舱室，窗外是缓慢移动的星海。父亲是舰务官，母亲管着整艘船的配给表。他们给你取名时，翻了三遍船员名册。'
+      if (attrs.body >= 8) return '你出生在舰尾的重力农场。那天正好收第一批水培小麦，舱里全是青草味。接生的人说，你哭得比警报还响。'
+      if (attrs.int >= 8) return '你出生在资料舱旁边。母亲说，你第一次睁眼时，屏幕上正放着一份旧地球的海洋资料。你看了很久，像在认路。'
+      return '你出生在一艘世代星舰的育儿舱。舷窗外没有山，没有海，只有一条走了很多年的航线。你的第一声哭，被舰载系统记进了航行日志。'
+    }
+
+    function jianghuBirthText(attrs) {
+      if (attrs.family >= 8) return '你出生在江南一座有名有姓的宅子里。满月那天，来贺的人从门口排到巷尾。你抓周时抓住了一柄木剑，老太爷笑得直咳嗽。'
+      if (attrs.int >= 8) return '你出生在一个教书先生家里。父亲藏书不多，但每一本都被翻得起了毛边。你识字很早，先学会写自己的名字，再学会写“江湖”。'
+      if (attrs.body >= 8) return '你出生在山脚下一个猎户家。接生婆说你嗓门大，将来不是练武的料，就是惹祸的料。你父亲把猎刀收进了柜子最上层。'
+      return '你出生在一个普通小镇。镇口有一棵老槐树，树下总坐着说书人。你满月那天，他正好讲到一位剑客独闯山门，拍案声把你吓得哭了一夜。'
+    }
+
     function modernBirthText(attrs) {
       let home
       if (attrs.family <= 2) {
@@ -11387,6 +13517,36 @@
         flags.cityLegend = false
         flags.streetRep = 0
         flags.crew = false
+      } else if (world.id === 'starship') {
+        flags.children = 0
+        flags.partner = false
+        flags.crew = false
+        flags.cadet = false
+        flags.pilot = false
+        flags.engineer = false
+        flags.medic = false
+        flags.captain = false
+        flags.colonist = false
+        flags.firstContact = false
+        flags.aiFriend = false
+        flags.sacrifice = false
+        flags.lost = false
+      } else if (world.id === 'jianghu') {
+        flags.children = 0
+        flags.daoPartner = false
+        flags.sect = false
+        flags.wanderer = false
+        flags.swordHeart = false
+        flags.sectMaster = false
+        flags.constable = false
+        flags.demon = false
+        flags.doctor = false
+        flags.teacher = false
+        flags.retired = false
+        flags.lastDuel = false
+        flags.revenge = false
+        flags.emperor = false
+        flags.hiddenMaster = false
       } else {
         flags.children = 0
         flags.partner = false
@@ -11426,6 +13586,16 @@
         health = clamp(55 + attrs.body * 4 + aggregate.health, 25, 100)
         mood = clamp(50 + rnd(15) - 5 + aggregate.mood, 15, 100)
         deathAge = clamp(55 + attrs.body * 3 + rnd(15) - 5 + aggregate.lifespan, 35, 120)
+      } else if (world.id === 'starship') {
+        startWealth = Math.max(0, Math.round((attrs.family * 4 + rnd(9)) * aggregate.wealthMul + aggregate.wealth))
+        health = clamp(60 + attrs.body * 4 + aggregate.health, 30, 100)
+        mood = clamp(55 + rnd(13) - 5 + aggregate.mood, 15, 100)
+        deathAge = clamp(65 + attrs.body * 3 + rnd(16) - 5 + aggregate.lifespan, 45, 130)
+      } else if (world.id === 'jianghu') {
+        startWealth = Math.max(0, Math.round((attrs.family * 5 + rnd(10)) * aggregate.wealthMul + aggregate.wealth))
+        health = clamp(58 + attrs.body * 4 + aggregate.health, 28, 100)
+        mood = clamp(52 + rnd(15) - 5 + aggregate.mood, 15, 100)
+        deathAge = clamp(58 + attrs.body * 3 + rnd(16) - 5 + aggregate.lifespan, 40, 110)
       } else {
         startWealth = Math.max(0, Math.round((attrs.family * 9 + rnd(9)) * aggregate.wealthMul + aggregate.wealth))
         health = clamp(60 + attrs.body * 4 + aggregate.health, 25, 100)
@@ -11442,7 +13612,11 @@
             ? magicBirthText(attrs)
             : world.id === 'cyber'
               ? cyberBirthText(attrs)
-              : modernBirthText(attrs)
+              : world.id === 'starship'
+                ? starshipBirthText(attrs)
+                : world.id === 'jianghu'
+                  ? jianghuBirthText(attrs)
+                  : modernBirthText(attrs)
       const chapter = world.id === 'cultivation'
         ? '序章 · 灵根入世'
         : world.id === 'wasteland'
@@ -11451,7 +13625,11 @@
             ? '序章 · 某个会发光的夜晚'
             : world.id === 'cyber'
               ? '序章 · 霓虹之下'
-              : '序章 · 你来到人间'
+              : world.id === 'starship'
+                ? '序章 · 舷窗之外'
+                : world.id === 'jianghu'
+                  ? '序章 · 小镇与山门'
+                  : '序章 · 你来到人间'
 
       const openingLog = [
         { id: 0, kind: 'chapter', age: 0, text: chapter },
@@ -11950,6 +14128,8 @@
     }
 
     function educationLabel(run) {
+      if (run.worldId === 'starship') return run.flags.cadet ? '军官学校' : (run.age < 18 ? '舰内学堂' : '舰上培训')
+      if (run.worldId === 'jianghu') return run.flags.sect ? '门派弟子' : (run.age < 12 ? '镇上的孩子' : '江湖人')
       if (run.worldId === 'cultivation') {
         if (run.flags.sect) return run.flags.sect
         if (run.flags.independent) return '散修'
@@ -11969,6 +14149,22 @@
     }
 
     function jobLabel(run) {
+      if (run.worldId === 'starship') {
+        if (run.flags.captain) return '舰长'
+        if (run.flags.pilot) return '领航员'
+        if (run.flags.engineer) return '工程师'
+        if (run.flags.medic) return '舰医'
+        if (run.flags.colonist) return '殖民者'
+        return '舰员'
+      }
+      if (run.worldId === 'jianghu') {
+        if (run.flags.sectMaster) return '掌门'
+        if (run.flags.demon) return '魔道'
+        if (run.flags.constable) return '六扇门'
+        if (run.flags.doctor) return '医者'
+        if (run.flags.swordHeart) return '剑客'
+        return '江湖人'
+      }
       if (run.worldId === 'cultivation') {
         if (run.flags.ascended) return '飞升'
         return REALM_NAMES[run.flags.realmIndex || 0] || '凡人'
@@ -12000,6 +14196,16 @@
     }
 
     function familyLine(run) {
+      if (run.worldId === 'starship') {
+        const children = run.flags.children || 0
+        if (run.flags.partner) return children > 0 ? '伴侣 · ' + children + '个孩子' : '有伴侣'
+        return children > 0 ? '独自带着 ' + children + '个孩子' : '独自一人'
+      }
+      if (run.worldId === 'jianghu') {
+        const children = run.flags.children || 0
+        if (run.flags.daoPartner) return children > 0 ? '伴侣 · ' + children + '个孩子' : '有人同行'
+        return children > 0 ? '独行 · ' + children + '个孩子' : '独行江湖'
+      }
       if (run.worldId === 'cultivation') {
         const children = run.flags.children || 0
         if (run.flags.daoPartner) return children > 0 ? '道侣 · ' + children + '个孩子' : '道侣相伴'
@@ -12042,6 +14248,46 @@
       const tiers = worldOf(run).vitals.wealthTiers
       const tier = tiers.find(item => item.below == null || value < item.below)
       return tier ? tier.label : tiers[tiers.length - 1].label
+    }
+
+
+    function starshipAchievements(run) {
+      const achievements = []
+      const add = (id, label, desc) => achievements.push({ id, label, desc })
+      add('lived', '星海一程', '你在星舰上度过了一生。')
+      if (run.flags.crew) add('crew', '在编舰员', '你为这艘船值过班。')
+      if (run.flags.pilot) add('pilot', '领航', '你画过一条别人会走的路。')
+      if (run.flags.engineer) add('engineer', '工程', '你让一艘旧船多飞了几年。')
+      if (run.flags.medic) add('medic', '舰医', '你在同一张床边送走过人，也接住过人。')
+      if (run.flags.eva) add('eva', '出舱', '你把自己放进过没有边界的黑里。')
+      if (run.flags.firstContact) add('contact', '第一次接触', '你听见了另一种文明的声音。')
+      if (run.flags.captain) add('captain', '舰长', '你开始替一整船人做决定。')
+      if (run.flags.colonist) add('colonist', '新岸', '你在另一颗星上种下了第一棵树。')
+      if (run.flags.aiFriend) add('ai', '舰灵', '你和一艘船成了朋友。')
+      if (run.flags.children) add('children', '下一代', '你在星舰上留下了自己的孩子。')
+      if (run.flags.sacrifice) add('sacrifice', '最后一次出舱', '你把安全绳让给了别人。')
+      if (run.age >= 100) add('centenarian', '星海人瑞', '你活得比这艘船的很多零件都久。')
+      if (run.age < 30) add('meteor', '来不及靠岸', '你还没看见新世界，就停下了。')
+      return achievements
+    }
+
+    function jianghuAchievements(run) {
+      const achievements = []
+      const add = (id, label, desc) => achievements.push({ id, label, desc })
+      add('lived', '江湖一梦', '你在刀光和人心里走了一遭。')
+      if (run.flags.sect) add('sect', '入门', '你在山门里学过剑，也挨过罚。')
+      if (run.flags.swordHeart) add('sword', '剑心', '你听得懂剑，也听得懂自己。')
+      if (run.flags.sectMaster) add('master', '掌门', '你开始替一整座山门撑伞。')
+      if (run.flags.daoPartner) add('partner', '有人同行', '有一个人愿意和你一起走江湖。')
+      if (run.flags.constable) add('constable', '六扇门', '你穿过官服，也办过良心不安的案。')
+      if (run.flags.demon) add('demon', '魔道', '你在正道的对面，找到了自己的位置。')
+      if (run.flags.emperor) add('emperor', '庙堂', '你从江湖走进了朝堂。')
+      if (run.flags.doctor) add('doctor', '医者', '你救过很多人，也送走过很多人。')
+      if (run.flags.hiddenMaster) add('hidden', '山中高人', '你从江湖的传闻里消失了。')
+      if (run.flags.teacher) add('teacher', '传人', '有人接过了你没走完的那一段。')
+      if (run.age >= 90) add('longlife', '江湖寿星', '你活得比很多门派都久。')
+      if (run.age < 30) add('meteor', '夭折的江湖', '你还没成名，就先退场了。')
+      return achievements
     }
 
     function modernAchievements(run) {
@@ -12162,6 +14408,8 @@
       if (run.worldId === 'wasteland') return wastelandAchievements(run)
       if (run.worldId === 'magic') return magicAchievements(run)
       if (run.worldId === 'cyber') return cyberAchievements(run)
+      if (run.worldId === 'starship') return starshipAchievements(run)
+      if (run.worldId === 'jianghu') return jianghuAchievements(run)
       return modernAchievements(run)
     }
 
@@ -12191,6 +14439,26 @@
       ))
       const legacy = Math.min(220, achievements.length * 20)
       return clamp(Math.round(longevity + wealthScore + moodScore + healthScore + growth + legacy), 0, 1000)
+    }
+
+    function starshipEpitaph(run) {
+      if (run.flags.captain) return '你把一艘船和一船人带到了星图另一端。后来的人提起那次航行，总会先念出你的名字。'
+      if (run.flags.firstContact) return '你发出了人类的第一句话，也收到了回答。那句话很短，却让两个物种的夜晚同时亮了起来。'
+      if (run.flags.colonist) return '你在陌生的土地上种下了第一棵树。它活得很慢，但每年都会长高一点。'
+      if (run.flags.sacrifice) return '你把安全绳让给了别人。气闸关上的那一刻，你看见舷窗里有很多只手在拍玻璃。'
+      if (run.flags.lost) return '你的名字留在了失踪名单上。有人说你还在一段没有坐标的轨道上，等一艘不会来的救援船。'
+      if (run.age < 30) return '你还没看见新世界，就停下了。舷窗外那颗星，后来被命名成了你的名字。'
+      return '你只是把每一班值完，把每一段舱道擦干净，让这艘船多飞了一年。'
+    }
+
+    function jianghuEpitaph(run) {
+      if (run.flags.sectMaster) return '你接过掌门印，也接过了一整座山的麻烦。很多年后，山门还在，你的名字刻在门前的石头上。'
+      if (run.flags.swordHeart && run.attrs.int >= 12) return '你一生只做了一件事：把剑练成了自己的样子。后来的人提到你，只说“那一剑”。'
+      if (run.flags.demon) return '你练了不该练的功夫，杀了不该杀的人。江湖用很多名字骂你，你只记得自己最初想活下去。'
+      if (run.flags.daoPartner) return '你们没有成为天下第一，只是一起走了很多地方，最后在一个没人认识的小镇住了下来。'
+      if (run.flags.revenge) return '你找到了仇人，也找到了自己。剑落下去之后，你没有觉得轻松，只觉得天很空。'
+      if (run.age < 30) return '你还没成名，就先退场了。山门外的野花，后来开得比你的故事还长。'
+      return '你只是走过很多路，喝过很多酒，在很多人生命里出现过一下。'
     }
 
     function modernEpitaph(run) {
@@ -12231,6 +14499,8 @@
       if (run.worldId === 'wasteland') return wastelandEpitaph(run)
       if (run.worldId === 'magic') return magicEpitaph(run)
       if (run.worldId === 'cyber') return cyberEpitaph(run)
+      if (run.worldId === 'starship') return starshipEpitaph(run)
+      if (run.worldId === 'jianghu') return jianghuEpitaph(run)
       return modernEpitaph(run)
     }
 
@@ -12334,11 +14604,27 @@
       return '你在自己的公寓里离开。系统自动发出了讣告，也自动续费了下个月的网络套餐。'
     }
 
+    function starshipDeathText(run, cause) {
+      if (cause === '生命维持系统') return '生命维持系统在你的舱段停了四分钟。警报响起来时，你已经走远了。舰上的人把你安葬在观测舱外，那里能看见整片星云。'
+      if (run.age < 30) return '你走得太早。舱室里还亮着灯，桌上摊着一本没看完的星图，某一页折了角。'
+      if (run.flags.captain) return '你在舰长椅上离开。屏幕上还留着未完成的航线，接替你的人在门口站了很久，才走进来。'
+      return '你在自己的舱室里离开。舰船自动记录了时间，然后继续向前飞。'
+    }
+
+    function jianghuDeathText(run, cause) {
+      if (cause === '旧伤') return '年轻时留下的旧伤在某个雨天找到了你。你坐在窗边，听着雨声，慢慢把酒喝完。'
+      if (run.flags.lastDuel) return '你赴了最后一场约。剑落在地上时，对面的人也收了手。你们一起坐到天黑，谁也没有再说话。'
+      if (run.age < 30) return '你走得太早。山门外的野花还没开，你的剑还挂在床头。'
+      return '你在一个普通的清晨离开。窗外有人挑着担子叫卖，声音和很多年前一样。'
+    }
+
     function deathText(run, cause) {
       if (run.worldId === 'cultivation') return cultivationDeathText(run, cause)
       if (run.worldId === 'wasteland') return wastelandDeathText(run, cause)
       if (run.worldId === 'magic') return magicDeathText(run, cause)
       if (run.worldId === 'cyber') return cyberDeathText(run, cause)
+      if (run.worldId === 'starship') return starshipDeathText(run, cause)
+      if (run.worldId === 'jianghu') return jianghuDeathText(run, cause)
       return modernDeathText(run)
     }
 
@@ -12473,6 +14759,8 @@
     wasteland: '荒',
     magic: '魔',
     cyber: '赛',
+    starship: '星',
+    jianghu: '江',
   };
 
   function newDraft(worldId) {
@@ -12887,7 +15175,7 @@
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicButton() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="sub">五个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
+      + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
       + '<button class="btn btn-primary" data-action="start-setup">开始新的一生 <span aria-hidden="true">→</span></button>'
@@ -12933,7 +15221,7 @@
     const worlds = WORLDS.map(item => '<button class="world-chip" data-action="choose-world" data-world="' + item.id + '" data-active="' + (item.id === world.id ? 'true' : 'false') + '">'
       + '<i>' + (WORLD_GLYPHS[item.id] || '◆') + '</i><b>' + esc(item.name) + '</b><span>' + esc(item.tagline) + '</span></button>').join('');
     const loreHtml = world.lore
-      ? '<div class="mode-banner" data-active="true"><span class="mode-mark">凡</span><div class="mode-copy"><strong>凡人流的规矩</strong><p>' + esc(world.lore) + '</p></div></div>'
+      ? '<div class="mode-banner" data-active="true"><span class="mode-mark">' + esc(world.loreMark || (WORLD_GLYPHS[world.id] || '世')) + '</span><div class="mode-copy"><strong>' + esc(world.loreTitle || (world.id === 'cultivation' ? '凡人流的规矩' : world.name + '的规矩')) + '</strong><p>' + esc(world.lore) + '</p></div></div>'
       : '';
     const realmGuide = world.id === 'cultivation'
       ? '<div class="realm-guide"><b>寿元阶梯</b> · 凡人约百岁 / 炼气120 / 筑基250 / 结丹500 / 元婴1000 / 化神2000 / 炼虚3000 / 合体5000 / 大乘1万 / 渡劫1.2万</div>'
