@@ -301,6 +301,13 @@
     .hero-actions { display: flex; gap: 8px; margin-top: 20px; }
     .hero-actions .btn-primary { flex: 1 1 auto; }
     .hero-actions .btn-ghost { flex: none; }
+    .play-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px; }
+    .play-mode-switch button { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; min-height: 56px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); text-align: left; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    .play-mode-switch button b { color: var(--ink); font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+    .play-mode-switch button span { font-family: var(--sans); font-size: 8px; line-height: 1.45; }
+    .play-mode-switch button[data-active="true"] { border-color: color-mix(in srgb, var(--brand) 42%, var(--line)); background: var(--brand-soft); color: var(--muted); }
+    .play-mode-switch button[data-active="true"] b { color: var(--brand); }
+    .play-mode-hint { margin: 6px 0 0; color: var(--muted); font-family: var(--sans); font-size: 8px; line-height: 1.6; }
     .world-pills {
       display: flex;
       flex-wrap: wrap;
@@ -3684,6 +3691,27 @@
         when: run => run.flags.ascended || run.cause === '飞升',
       },
       {
+        id: 'cult_ascend_sword',
+        title: '剑开天门',
+        description: '你以剑光劈开天门。飞升那日，人间所有剑修都听见了一声极轻的剑鸣，像有人在很远的地方收剑入鞘。',
+        tone: 'legend',
+        when: run => (run.flags.ascended || run.cause === '飞升') && run.flags.swordHeart,
+      },
+      {
+        id: 'cult_ascend_demon',
+        title: '魔仙渡劫',
+        description: '你带着一身魔气走进天门。仙界的云在你脚下退开三尺，没人敢问你是怎么上来的。',
+        tone: 'great',
+        when: run => (run.flags.ascended || run.cause === '飞升') && run.flags.demon,
+      },
+      {
+        id: 'cult_ascend_alone',
+        title: '独行天门',
+        description: '你一个人走到天门下。回头看时，身后没有道侣，也没有弟子；只有很长的路，和一路没说完的话。',
+        tone: 'normal',
+        when: run => (run.flags.ascended || run.cause === '飞升') && !run.flags.daoPartner,
+      },
+      {
         id: 'cult_deviation',
         title: '走火入魔',
         description: '道心终究没有压住心魔。你在自己的识海里迷了路，再也没能走出来。',
@@ -3808,6 +3836,195 @@
         description: '你还没飞升，但天道已经给你留了一个候补席位。你坐在云上等通知，等得胡子都白了。',
         tone: 'great',
         when: run => (run.flags.realmIndex || 0) >= 8 && run.age >= 1000,
+      },
+      {
+        id: 'cult_sword_grave',
+        title: '剑冢',
+        description: '你老到握不住剑，就把本命剑插进山门后的土里。很多年后，那里长出一片竹林，风一过，满山都是剑鸣。',
+        tone: 'great',
+        when: run => run.flags.swordHeart && run.age >= 200 && !run.flags.ascended,
+      },
+      {
+        id: 'cult_alchemy_legend',
+        title: '丹圣',
+        description: '你留下一部丹经，后来的人照着炼，十炉里仍要炸九炉。剩下那一炉，被供在宗门最高的阁楼上。',
+        tone: 'legend',
+        when: run => run.flags.alchemist && run.peakWealth >= 150,
+      },
+      {
+        id: 'cult_sect_legend',
+        title: '仙门中兴',
+        description: '你接手时，山门只剩半座破殿。你走时，山下已经排起了三百里的求道队伍。',
+        tone: 'legend',
+        when: run => run.flags.sectMaster && (run.flags.realmIndex || 0) >= 4,
+      },
+      {
+        id: 'cult_rogue_king',
+        title: '散修之王',
+        description: '你没有山门，却在每一座城里都有人替你留灯。散修们说，遇到事就去找你，你从不问他们有没有灵石。',
+        tone: 'great',
+        when: run => !run.flags.sect && (run.flags.realmIndex || 0) >= 3 && run.peakWealth >= 120,
+      },
+      {
+        id: 'cult_merchant',
+        title: '灵石巨贾',
+        description: '你算了一辈子账，最后把整条坊市街都买了下来。宗门长老见了你，也要先问一句“最近手头方便吗”。',
+        tone: 'good',
+        when: run => run.peakWealth >= 220 && (run.flags.realmIndex || 0) >= 3,
+      },
+      {
+        id: 'cult_teacher',
+        title: '衣钵有传',
+        description: '你没收过几个弟子，但每一个都记得你讲过的那句话：修道先修心，飞升是后话。后来他们又讲给了别人。',
+        tone: 'great',
+        when: run => (run.flags.disciple || run.flags.teacher || run.flags.elderTeacher || run.flags.professor) && (run.flags.realmIndex || 0) >= 3,
+      },
+      {
+        id: 'cult_parent',
+        title: '仙凡一家',
+        description: '你的孩子没能继承你的灵根，却继承了你吃饭时爱敲碗的毛病。你飞得再高，回家还是要先洗手。',
+        tone: 'good',
+        when: run => (run.flags.children || 0) >= 2 && run.flags.daoPartner,
+      },
+      {
+        id: 'cult_lonely',
+        title: '万载孤修',
+        description: '你一个人修了很久。久到山门换过三任主人，久到当年给你递水的人连坟都找不到了。你还在。',
+        tone: 'normal',
+        when: run => !run.flags.daoPartner && (run.flags.realmIndex || 0) >= 3 && run.age >= 500,
+      },
+      {
+        id: 'cult_puppet',
+        title: '傀儡宗师',
+        description: '你身边的人一个个走了，最后留下一屋子会说话的木头。它们每天准时叫你起床，只有你知道，其中一个刻的是谁的脸。',
+        tone: 'great',
+        when: run => run.attrs.int >= 18 && (run.flags.realmIndex || 0) >= 4,
+      },
+      {
+        id: 'cult_array',
+        title: '阵法宗师',
+        description: '你在山门外布了一座大阵，阵眼是一只缺了口的茶碗。三百年里没人破得开，连你自己都忘了怎么关。',
+        tone: 'great',
+        when: run => run.attrs.int >= 20 && (run.flags.realmIndex || 0) >= 4,
+      },
+      {
+        id: 'cult_talisman',
+        title: '符箓大家',
+        description: '你画的符能求雨、能避雷，也能让隔壁宗门的护山大阵沉默三天。你死后，那些符被当成废纸卖了三文钱。',
+        tone: 'normal',
+        when: run => run.attrs.int >= 16 && run.peakWealth >= 100,
+      },
+      {
+        id: 'cult_body',
+        title: '体修极境',
+        description: '别人用法宝，你用拳头。别人渡劫靠阵法，你靠硬扛。最后那道雷落下来时，你只是抬了抬眼皮。',
+        tone: 'great',
+        when: run => run.attrs.body >= 25 && (run.flags.realmIndex || 0) >= 3,
+      },
+      {
+        id: 'cult_mortal_heart',
+        title: '人间烟火',
+        description: '你本可以走得更远，却在山脚下开了一间面馆。修士们说你可惜了，可你记得每个熟客要不要香菜。',
+        tone: 'good',
+        when: run => (run.flags.children || 0) >= 1 && run.flags.daoPartner && (run.flags.realmIndex || 0) >= 2,
+      },
+      {
+        id: 'cult_mad',
+        title: '道心崩了',
+        description: '你在识海里和心魔吵了几百年，最后谁也没赢。你开始对着空气讲道，讲得比从前任何时候都流畅。',
+        tone: 'strange',
+        when: run => run.mood <= 20 && (run.flags.realmIndex || 0) >= 4,
+      },
+      {
+        id: 'cult_hermit',
+        title: '山野散人',
+        description: '你没有宗门，也不收弟子。山下的人只知道山上住着一个很老的修士，偶尔会下来换盐和灯油。',
+        tone: 'normal',
+        when: run => !run.flags.sect && run.age >= 200,
+      },
+      {
+        id: 'cult_realm_qi',
+        title: '凡尘一炁',
+        description: '你炼了一辈子气，最后也没能筑基。可你死的时候，山里的风停了片刻，像在替你送行。',
+        tone: 'normal',
+        when: run => (run.flags.realmIndex || 0) === 1 && run.age >= 90,
+      },
+      {
+        id: 'cult_realm_foundation',
+        title: '守山百年',
+        description: '你筑基之后没有下山，在宗门守了一百年山门。你认得每一个晚归的弟子，也记得每一场没下完的雪。',
+        tone: 'normal',
+        when: run => (run.flags.realmIndex || 0) === 2 && run.age >= 180,
+      },
+      {
+        id: 'cult_realm_core',
+        title: '结丹散修',
+        description: '你结丹那年，坊市里放了三天的鞭炮。后来你没有再进一步，但每次有人问起，你都说那一炉丹火很旺。',
+        tone: 'normal',
+        when: run => (run.flags.realmIndex || 0) === 3 && run.age >= 350,
+      },
+      {
+        id: 'cult_realm_nascent',
+        title: '元婴坐化',
+        description: '你的元婴在识海里坐了一千年，最后和你一起安静下来。洞府外的护山阵还在运转，像一颗不肯停的心。',
+        tone: 'normal',
+        when: run => (run.flags.realmIndex || 0) === 4 && run.age >= 700,
+      },
+      {
+        id: 'cult_realm_soul',
+        title: '化神归天',
+        description: '你化神那天，山门上空聚了很久的云。你走进去，再没有出来。后来的人说，那天的云很像一扇门。',
+        tone: 'great',
+        when: run => (run.flags.realmIndex || 0) === 5 && run.age >= 1500,
+      },
+      {
+        id: 'cult_realm_void',
+        title: '炼虚失踪',
+        description: '你炼虚之后开始频繁走神。有一次你说去后山看看，就再也没回来。宗门找了三百年，只找到一只你常穿的鞋。',
+        tone: 'strange',
+        when: run => (run.flags.realmIndex || 0) === 6 && run.age >= 2500,
+      },
+      {
+        id: 'cult_realm_body',
+        title: '合体成石',
+        description: '你合体那关没能完全过去，身体一点点变成了山石。弟子们在你面前打坐，偶尔会听见石头里传来一声很轻的呼吸。',
+        tone: 'tragic',
+        when: run => (run.flags.realmIndex || 0) === 7 && run.age >= 4000,
+      },
+      {
+        id: 'cult_realm_maha',
+        title: '大乘守墓',
+        description: '你修到大乘，却没有飞升。你在山门后守着一片墓碑，每天扫一遍落叶，像在替所有人把路走完。',
+        tone: 'great',
+        when: run => (run.flags.realmIndex || 0) === 8 && run.age >= 8000,
+      },
+      {
+        id: 'cult_realm_tribulation',
+        title: '渡劫余生',
+        description: '最后一道雷落下时，你活了下来。可你从此再没提过飞升，只在下雨天把门窗关得很紧。',
+        tone: 'tragic',
+        when: run => (run.flags.realmIndex || 0) === 9 && run.age >= 10000 && !run.flags.ascended,
+      },
+      {
+        id: 'cult_core_joke',
+        title: '金丹卡喉',
+        description: '你的金丹结是结成了，但位置不太对。每次运功都像噎着一颗滚烫的枣核，同门说你这是“前无古人”。',
+        tone: 'strange',
+        when: run => (run.flags.realmIndex || 0) === 3 && run.mood <= 35,
+      },
+      {
+        id: 'cult_nascent_joke',
+        title: '元婴带娃',
+        description: '你的元婴比你先当了爹。它每天在识海里哄孩子，你在外面打架，回家还要听它抱怨你不管家务。',
+        tone: 'strange',
+        when: run => (run.flags.realmIndex || 0) === 4 && (run.flags.children || 0) >= 1,
+      },
+      {
+        id: 'cult_false_immortal',
+        title: '散仙不散',
+        description: '你渡劫失败，却没死。于是你在人间又住了很多年，成了别人口中的“散仙”，也成了方圆百里最会修屋顶的人。',
+        tone: 'normal',
+        when: run => (run.flags.realmIndex || 0) >= 9 && run.mood >= 80 && !run.flags.ascended,
       },
       {
         id: 'cult_sit',
@@ -9834,7 +10051,7 @@
       return run.pendingChoice
     }
 
-    function resolveChoice(source, optionId) {
+    function resolveChoice(source, optionId, meta) {
       if (!source || !source.pendingChoice) return source
       const next = cloneRun(source)
       const pending = next.pendingChoice
@@ -9863,6 +10080,7 @@
         tone: result.tone || 'normal',
         deltas,
         isChoice: true,
+        autoChoice: Boolean(meta && meta.auto),
         choiceLabel: pending.title,
       })
       if (next.ascending) {
@@ -9874,6 +10092,17 @@
         finishLife(next)
       }
       return next
+    }
+
+    function autoResolveChoice(source) {
+      if (!source || !source.pendingChoice) return source
+      const options = (source.pendingChoice.options || []).filter(option => canChooseOption(source, option))
+      if (!options.length) {
+        const next = cloneRun(source)
+        next.pendingChoice = null
+        return next
+      }
+      return resolveChoice(source, pick(options).id, { auto: true })
     }
 
     const REALM_NAMES = ['凡人', '炼气期', '筑基期', '结丹期', '元婴期', '化神期', '炼虚期', '合体期', '大乘期', '渡劫期', '真仙']
@@ -10306,6 +10535,7 @@
         stage: 'child',
         lastYears: 1,
         pendingChoice: null,
+        playMode: 'interactive',
         alive: true,
         deathAge,
         cause: null,
@@ -10755,6 +10985,7 @@
         finishLife(run)
       }
       if (run.alive && !run.pendingChoice) maybeOfferChoice(run)
+      if (run.pendingChoice && run.playMode === 'text') return autoResolveChoice(run)
       return run
     }
 
@@ -11162,7 +11393,13 @@
       const findById = id => world.endings.find(ending => ending.id === id)
       const forced = run.worldId === 'cultivation'
         ? run.flags.ascended || run.cause === '飞升'
-          ? 'cult_ascend'
+          ? run.flags.swordHeart
+            ? 'cult_ascend_sword'
+            : run.flags.demon
+              ? 'cult_ascend_demon'
+              : !run.flags.daoPartner
+                ? 'cult_ascend_alone'
+                : 'cult_ascend'
           : run.cause === '天劫'
             ? 'cult_tribulation'
             : run.cause === '心魔'
@@ -11243,6 +11480,7 @@
   const app = document.getElementById('app');
   const toastEl = document.getElementById('toast');
   const MUSIC_KEY = 'dsh.life-restart.music';
+  const PLAY_MODE_KEY = 'dsh.life-restart.play-mode';
   let toastTimer = null;
   let autoTimer = null;
   let replayTimer = null;
@@ -11256,6 +11494,14 @@
     }
   }
 
+  function storedPlayMode() {
+    try {
+      return window.localStorage.getItem(PLAY_MODE_KEY) === 'text' ? 'text' : 'interactive';
+    } catch {
+      return 'interactive';
+    }
+  }
+
   const state = {
     view: 'home',
     draft: newDraft('modern'),
@@ -11264,6 +11510,7 @@
     legacy: null,
     auto: false,
     musicOn: storedMusicOn(),
+    playMode: storedPlayMode(),
     replay: null,
     showAllAchievements: false,
     pendingScroll: 'top',
@@ -11657,6 +11904,13 @@
       + '</div>';
   }
 
+  function setPlayMode(mode) {
+    if (mode !== 'interactive' && mode !== 'text') return;
+    state.playMode = mode;
+    try { window.localStorage.setItem(PLAY_MODE_KEY, mode); } catch { /* Private mode can refuse persistence. */ }
+    render();
+  }
+
   function homeHtml() {
     const record = state.record;
     const unlockedAch = new Set(record.unlockedAchievements || []);
@@ -11682,12 +11936,17 @@
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicButton() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="sub">五个世界，一百个结局，一百个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
+      + '<p class="sub">五个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
       + '<button class="btn btn-primary" data-action="start-setup">开始新的一生 <span aria-hidden="true">→</span></button>'
       + (replay ? '<button class="btn btn-ghost" data-action="open-last-replay">回放上一生</button>' : '')
       + '</div>'
+      + '<div class="play-mode-switch" role="group" aria-label="游戏模式">'
+      + '<button data-action="set-mode" data-mode="interactive" data-active="' + (state.playMode === 'interactive' ? 'true' : 'false') + '"><b>互动模式</b><span>在命运岔路停下来，自己选</span></button>'
+      + '<button data-action="set-mode" data-mode="text" data-active="' + (state.playMode === 'text' ? 'true' : 'false') + '"><b>纯文本模式</b><span>自动替你选，只负责读故事</span></button>'
+      + '</div>'
+      + '<p class="play-mode-hint">' + (state.playMode === 'text' ? '纯文本模式：不再弹出选择框，命运会替你掷骰。' : '互动模式：遇到岔路会停下来，选项由你的属性决定。') + '</p>'
       + '<div class="stat-grid">'
       + '<div class="stat"><b>' + (record.runs || 0) + '</b><span>活过</span></div>'
       + '<div class="stat"><b>' + (record.best || 0) + '</b><span>最高评分</span></div>'
@@ -11707,7 +11966,7 @@
       + replayHtml
       + '<p class="panel-note">回放只读取本机记录，不会改变已经发生的结局。</p>'
       + '</section>'
-      + '<footer class="footnote"><span>记录保存在本机浏览器</span><span>100 ENDINGS · 100 ACHIEVEMENTS</span></footer>'
+      + '<footer class="footnote"><span>记录保存在本机浏览器</span><span>' + TOTAL_ENDINGS + ' ENDINGS · ' + ACHIEVEMENT_TOTAL + ' ACHIEVEMENTS</span></footer>'
       + '</div>';
   }
 
@@ -11767,7 +12026,7 @@
     const talentPct = Math.round((selectedCount / TALENT_PICK_COUNT) * 100);
 
     return '<div class="screen setup">'
-      + '<div class="topbar"><div class="topbar-left"><button class="icon-btn" data-action="home" aria-label="返回开始界面">‹</button><div class="topbar-copy"><b>准备这一生</b><span>' + esc(world.name) + ' · 十点投胎 · 十选五</span></div></div><div class="topbar-actions">' + musicButton() + '<span class="mode-chip">' + (state.legacy ? '继承' : '重开') + '</span></div></div>'
+      + '<div class="topbar"><div class="topbar-left"><button class="icon-btn" data-action="home" aria-label="返回开始界面">‹</button><div class="topbar-copy"><b>准备这一生</b><span>' + esc(world.name) + ' · 十点投胎 · 十选五</span></div></div><div class="topbar-actions">' + musicButton() + '<span class="mode-chip" data-mode="' + state.playMode + '">' + (state.playMode === 'text' ? '纯文本' : '互动') + '</span><span class="mode-chip">' + (state.legacy ? '继承' : '重开') + '</span></div></div>'
       + '<div class="setup-head"><div><h1>投胎之前</h1><p>把十点押在你想成为的样子上。</p></div><span class="mode-chip">' + esc(world.en) + '</span></div>'
       + '<div class="world-scroll">' + worlds + '</div>'
       + loreHtml
@@ -11841,7 +12100,7 @@
         html += '<div class="death-entry"><small>终局 · ' + esc(entry.cause || '') + '</small>' + esc(entry.text) + '</div>';
         continue;
       }
-      const tag = entry.isChoice ? '抉择 · ' + (entry.choiceLabel || '命运岔路') : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '';
+      const tag = entry.isChoice ? (entry.autoChoice ? '命运选择 · ' : '抉择 · ') + (entry.choiceLabel || '命运岔路') : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '';
       html += '<div class="entry" data-tone="' + esc(entry.tone || 'normal') + '">'
         + '<div class="entry-age">' + entry.age + ' 岁' + (entry.span ? '<small>+' + entry.span + '年</small>' : '') + '</div>'
         + '<div class="entry-body">' + (tag ? '<span class="entry-tag ' + (entry.isTwist ? 'twist' : entry.isChoice ? 'choice' : '') + '">' + tag + '</span>' : '')
@@ -11937,7 +12196,7 @@
     if (entries.length === 0) return '';
     const index = Math.min(Math.max(0, replay.index || 0), entries.length - 1);
     const entry = entries[index];
-    const tag = entry.kind === 'chapter' ? '章节' : entry.kind === 'birth' ? '出生' : entry.kind === 'death' ? '终局' : entry.isChoice ? '抉择' : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '一年';
+    const tag = entry.kind === 'chapter' ? '章节' : entry.kind === 'birth' ? '出生' : entry.kind === 'death' ? '终局' : entry.isChoice ? (entry.autoChoice ? '命运选择' : '抉择') : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '一年';
     return '<div class="modal"><section class="replay-modal" role="dialog" aria-modal="true" aria-label="回放这一生">'
       + '<div class="modal-head"><div><span class="modal-kicker">REPLAY SYSTEM</span><h2>' + esc(replay.title || '回放这一生') + '</h2><p>不改变结局，只是把走过的路再读一遍。</p></div><button class="close-btn" data-action="close-replay" aria-label="关闭回放">×</button></div>'
       + '<div class="progress"><i style="width:' + Math.round(((index + 1) / entries.length) * 100) + '%"></i></div>'
@@ -12091,6 +12350,7 @@
     writeRecord(state.record);
     const legacy = state.legacy;
     state.run = createRun(state.draft.alloc, selectedTalents(), state.draft.worldId, nextNumber, legacy);
+    state.run.playMode = state.playMode;
     state.legacy = null;
     state.view = 'game';
     stopAuto();
@@ -12213,6 +12473,7 @@
     }
     switch (action) {
       case 'toggle-music': toggleMusic(); break;
+      case 'set-mode': setPlayMode(target.dataset.mode); break;
       case 'start-setup': startSetup(); break;
       case 'home': goHome(); break;
       case 'choose-world': chooseWorld(target.dataset.world); break;
