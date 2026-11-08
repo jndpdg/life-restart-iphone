@@ -622,6 +622,12 @@
       letter-spacing: 0.01em;
     }
     .realm-guide b { color: var(--brand); font-weight: 600; }
+    .growth-guide {
+      margin: 6px 2px 0;
+      color: var(--faint);
+      font-size: 8px;
+      line-height: 1.5;
+    }
     .points-card { margin-top: 10px; }
     .card {
       margin-top: 10px;
@@ -11722,6 +11728,7 @@
     const realmGuide = world.id === 'cultivation'
       ? '<div class="realm-guide"><b>寿元阶梯</b> · 凡人约百岁 / 炼气120 / 筑基250 / 结丹500 / 元婴1000 / 化神2000 / 炼虚3000 / 合体5000 / 大乘1万 / 渡劫1.2万</div>'
       : '';
+    const growthGuide = '<div class="growth-guide">属性上限 40 · 出生仍分配 10 点 · 游戏内成长收益小幅提升 · 遇到岔路时按当前属性解锁选项</div>';
 
     const attrs = world.attrs.map(attr => {
       const value = state.draft.alloc[attr.key] || 0;
@@ -11765,6 +11772,7 @@
       + '<div class="world-scroll">' + worlds + '</div>'
       + loreHtml
       + realmGuide
+      + growthGuide
       + legacyHtml
       + '<section class="card points-card">'
       + '<div class="card-head"><div><h2>分配属性</h2><p>' + esc(world.description) + '</p></div><div class="points-left">' + remaining + '<span>剩余点数</span></div></div>'
