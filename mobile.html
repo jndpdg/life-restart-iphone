@@ -333,6 +333,14 @@
     .play-mode-switch button[data-active="true"] { border-color: color-mix(in srgb, var(--brand) 42%, var(--line)); background: var(--brand-soft); color: var(--muted); }
     .play-mode-switch button[data-active="true"] b { color: var(--brand); }
     .play-mode-hint { margin: 6px 0 0; color: var(--muted); font-family: var(--sans); font-size: 8px; line-height: 1.6; }
+    .story-mode-switch { margin-top: 8px; }
+    .story-mode-switch button[data-active="false"] { opacity: 0.58; }
+    .story-mode-switch button[data-story="power"][data-active="true"] { border-color: color-mix(in srgb, #e7b56a 50%, var(--line)); background: color-mix(in srgb, #e7b56a 12%, transparent); }
+    .story-mode-switch button[data-story="power"][data-active="true"] b { color: #e7b56a; }
+    .story-mode-hint { margin-top: 5px; }
+    .power-chip { border-color: color-mix(in srgb, #e7b56a 42%, var(--line)); color: #e7b56a; }
+    .world-state-chip[data-tone="bad"] { border-color: color-mix(in srgb, #d88888 34%, var(--line)); color: #d88888; }
+    .world-state-chip[data-tone="good"] { border-color: color-mix(in srgb, #8ebf9b 34%, var(--line)); color: #8ebf9b; }
     .world-pills {
       display: flex;
       flex-wrap: wrap;
@@ -13353,6 +13361,44 @@
       ],
     }
 
+    const GENERIC_FILLER = [
+      '你在窗边坐了一会儿，天色从亮到暗，什么也没有发生。',
+      '你翻出一件很久没穿的衣服，口袋里有一张忘了扔的票根。',
+      '你走了一段没有目的地的路，回来时脚有点酸。',
+      '你把屋子里里外外收拾了一遍，扔掉了三袋东西。',
+      '你听见邻居家传来电视声，忽然觉得这样的晚上也不错。',
+      '你花了很长时间等一个不确定的消息，最后决定先去吃饭。',
+      '你在路边看见一只不怕人的鸟，站了一会儿，它飞走了。',
+      '你把旧照片翻出来看了一遍，又原样收好。',
+      '你给自己泡了杯热的东西，坐在桌边慢慢喝完。',
+      '你路过一家新开的店，没进去，只记下了名字。',
+      '你把明天的计划写下来，写完又划掉了两条。',
+      '你在夜里醒了一次，听见远处有车经过，很快又安静了。',
+      '你把窗台擦了一遍，抹布洗了两回，水一直是浑的。',
+      '你在楼下遇见一只流浪猫，它看了你一眼，先走了。',
+      '你翻到一本旧笔记，上面的字迹已经有些陌生。',
+      '你花了很久挑一双鞋，最后买了最普通的那双。',
+      '你听见有人在楼上搬东西，断断续续响了一下午。',
+      '你把冰箱里快过期的东西煮成一锅，味道居然还行。',
+      '你在路口等灯，看见对面有人向你点了点头。',
+      '你把手机调成静音，过了一个没有消息的下午。',
+      '你在公园的长椅上坐到太阳偏西，什么也没想。',
+      '你整理抽屉，找出几枚已经不流通的硬币。',
+      '你路过旧学校，围墙刷了新漆，里面的树还在。',
+      '你试着早睡，躺下后听见自己的心跳，很久才睡着。',
+      '你买了一把花，插在瓶里，第三天就蔫了。',
+      '你在雨里跑了一段，进屋时才发现鞋全湿了。',
+      '你把一首老歌听了很多遍，直到它听起来像新的。',
+      '你在菜市场转了两圈，最后只买了一把青菜。',
+      '你收到一张明信片，署名的人你想了很久才记起。',
+      '你在阳台上站了一会儿，风把晾着的衣服吹得鼓起来。',
+      '你把用旧的东西修了修，决定再用一年。',
+      '你在夜路上看见自己的影子，被路灯拉得很长。',
+      '你给自己定了一个小目标，第二天就忘了。',
+      '你听见楼下有人吵架，后来声音停了，灯也灭了。',
+      '你把房间的灯关了又开，最后决定就这样坐着。',
+    ]
+
     const COMMON_CHOICE_NODES = [
       {
         id: 'common_direction',
@@ -13629,7 +13675,7 @@
     }
 
     function fillerText(run) {
-      const pool = FILLER_LINES[run.worldId] || FILLER_LINES.modern
+      const pool = (FILLER_LINES[run.worldId] || FILLER_LINES.modern).concat(GENERIC_FILLER)
       const recent = run.recentTexts || []
       const fresh = pool.filter(text => !recent.includes(text))
       return pick(fresh.length ? fresh : pool)
@@ -13674,7 +13720,8 @@
 
     function maybeOfferChoice(run) {
       if (!run || !run.alive || run.pendingChoice) return null
-      const nodes = (CHOICE_NODES[run.worldId] || []).concat(COMMON_CHOICE_NODES)
+      const nodes = (CHOICE_NODES[run.worldId] || [])
+        .concat(WORLD_CHOICE_EXTRA[run.worldId] || [], COMMON_CHOICE_NODES, COMMON_CHOICE_EXTRA)
       const seen = run.flags._choiceSeen || {}
       const eligible = nodes.filter(node => {
         if (seen[node.id]) return false
@@ -13684,7 +13731,9 @@
       })
       if (eligible.length === 0) return null
       const node = pick(eligible)
-      if (Math.random() > (node.chance == null ? 0.85 : node.chance)) return null
+      const giftChoice = run.powerGift && run.powerGift.choice ? run.powerGift.choice : 0
+      const choiceChance = clamp((node.chance == null ? 0.85 : node.chance) + giftChoice + (run.power ? 0.03 : 0), 0.1, 0.97)
+      if (Math.random() > choiceChance) return null
       run.pendingChoice = {
         id: node.id,
         title: node.title,
@@ -13723,6 +13772,7 @@
       const deltas = numberDeltas(before, next)
       next.flags._choiceSeen = { ...(next.flags._choiceSeen || {}), [pending.id]: option.id }
       next.flags.lastChoice = option.id
+      next.flags.choicesMade = (next.flags.choicesMade || 0) + 1
       next.pendingChoice = null
       pushEntry(next, {
         kind: 'event',
@@ -13759,6 +13809,110 @@
       return resolveChoice(source, pick(options).id, { auto: true })
     }
 
+
+    const COMMON_CHOICE_EXTRA = [
+      {
+        id: 'common_beginner', at: 20, chance: 0.58, title: '第一份真正的选择',
+        prompt: '这一回没有人替你填表。你站在路口，第一次觉得未来是可以被自己改写的。',
+        options: [
+          { id: 'ambition', label: '去更大的地方', desc: '见更大的世面，也承担更高的房租。', requires: { int: 7 }, resolve() { return { tone: 'good', text: '你拖着行李去了更大的城市。第一晚住在很窄的房间里，窗外车流一直响到凌晨。', effects: { wealth: 8, mood: 4, int: 1, flags: { ambition: true } } } } },
+          { id: 'rooted', label: '留在熟悉的地方', desc: '离家人近一点，日子慢一点。', resolve() { return { tone: 'normal', text: '你留了下来。朋友都在，路也熟，只是偶尔会想：如果当时走了，会不会不一样。', effects: { mood: 7, health: 2, flags: { rooted: true } } } } },
+          { id: 'craft', label: '把手艺学深', desc: '不急着赢，先把一件事做透。', requires: { body: 6 }, resolve() { return { tone: 'good', text: '你跟着一个老手学了三年。出师那天，他把自己用了半辈子的工具留给了你。', effects: { int: 2, wealth: 7, flags: { craftsman: true } } } } },
+        ],
+      },
+      {
+        id: 'common_betrayal', at: 36, chance: 0.6, title: '被辜负以后',
+        prompt: '一个你信过的人，把本该属于你的东西拿走了。现在轮到你决定，要不要把这件事翻过来。',
+        options: [
+          { id: 'expose', label: '把事情摊开', desc: '需要足够的头脑和人脉。', requires: { int: 10 }, resolve() { return { tone: 'good', text: '你把证据摆到桌面上。对方先是沉默，后来开始解释，最后什么也没说。', effects: { wealth: 12, mood: 6, flags: { exposed: true } } } } },
+          { id: 'forgive', label: '算了，继续走', desc: '不便宜对方，但也不再让他占你的心。', resolve() { return { tone: 'normal', text: '你没有再提这件事。很久以后你才明白，放下不是原谅，只是不想再背着它。', effects: { mood: 9, flags: { forgave: true } } } } },
+          { id: 'cut', label: '彻底切断关系', desc: '少一个朋友，也少一个隐患。', resolve() { return { tone: 'normal', text: '你删掉了联系方式，换了常去的店。城市很大，足够让两个人再不相见。', effects: { health: 2, mood: 3, wealth: -3, flags: { cutOff: true } } } } },
+        ],
+      },
+      {
+        id: 'common_legacy', at: 58, chance: 0.64, title: '留下什么',
+        prompt: '到这个年纪，你开始想一件很慢的事：如果有一天不在了，什么会替你继续活下去。',
+        options: [
+          { id: 'teach', label: '教一个年轻人', desc: '把手上的东西交出去。', resolve() { return { tone: 'good', text: '你带了一个年轻人。他学得不算快，但每次都认真。你忽然不着急了。', effects: { mood: 10, int: 1, flags: { mentor: true } } } } },
+          { id: 'build', label: '留下一件东西', desc: '房子、店、书，或者一棵树。', requires: { wealth: 55 }, resolve() { return { tone: 'good', text: '你用攒下的钱做了一件会留很久的东西。落成那天，你没有请很多人。', effects: { mood: 7, wealth: -18, flags: { legacyBuilt: true } } } } },
+          { id: 'vanish', label: '安静地退场', desc: '不惊动谁，去一个没人认识的地方。', resolve() { return { tone: 'strange', text: '你收拾了两个箱子，坐上了一班很慢的车。窗外的东西一件件退后，你没有回头。', effects: { mood: 6, health: 3, flags: { vanished: true } } } } },
+        ],
+      },
+    ]
+
+    const WORLD_CHOICE_EXTRA = {
+      modern: [
+        { id: 'modern_side_30', at: 30, chance: 0.62, title: '副业还是正职', prompt: '你在夜里做的那点事，忽然开始赚钱了。白天的工作却还在等你打卡。', options: [
+          { id: 'side', label: '先两边都抓着', desc: '累，但不想这么快赌。', resolve() { return { tone: 'normal', text: '你白天上班，晚上做自己的事。三个月后，你开始记不清上一次睡够六小时是什么时候。', effects: { wealth: 10, health: -3, mood: 2, flags: { sideHustle: true } } } } },
+          { id: 'quit', label: '辞职，全力做一次', desc: '需要一点积蓄和胆量。', requires: { wealth: 40 }, resolve(run) { const ok = Math.random() < 0.48 + run.attrs.int * 0.015; return ok ? { tone: 'good', text: '你递了辞呈。第一个月很难，第三个月开始有人主动找你。', effects: { wealth: 35, mood: 8, flags: { entrepreneur: true } } } : { tone: 'bad', text: '你递了辞呈。半年后账上只剩三位数，你又开始投简历。', effects: { wealth: -20, mood: -7, flags: { failedStartup: true } } } } },
+        ] },
+        { id: 'modern_family_48', at: 48, chance: 0.55, title: '父母老了', prompt: '电话里母亲说没事，背景音里却有医院的广播。你手里还有一个走不开的项目。', options: [
+          { id: 'go', label: '放下手里的事回去', desc: '有些班可以换，有些时间不能。', resolve() { return { tone: 'good', text: '你把项目交了出去，回了家。医院走廊很长，母亲看见你时先是愣住，然后笑了。', effects: { mood: 10, wealth: -10, health: -2, flags: { familyFirst: true } } } } },
+          { id: 'pay', label: '花钱请人照顾', desc: '你走不开，但可以承担费用。', requires: { wealth: 50 }, resolve() { return { tone: 'normal', text: '你请了护工，每天视频。母亲总说挺好，你却在挂断后坐很久。', effects: { wealth: -22, mood: -4, flags: { paidCare: true } } } } },
+        ] },
+      ],
+      cultivation: [
+        { id: 'cult_path_30', at: 30, chance: 0.6, title: '宗门还是散修', prompt: '宗门要你留下守山，山外却有人说，真正的道在更远的地方。', options: [
+          { id: 'stay', label: '留在宗门', desc: '有靠山，也有规矩。', resolve() { return { tone: 'normal', text: '你留在了宗门。每月领灵石，每年守山门，修为涨得不快，但没人敢随便动你。', effects: { wealth: 12, mood: 4, flags: { sect: true, sectLoyal: true } } } } },
+          { id: 'leave', label: '做个散修', desc: '自由，但一切都要自己挣。', resolve() { return { tone: 'strange', text: '你交回令牌，下了山。山风很冷，包袱很轻，前面没有路，也没有人替你决定。', effects: { int: 2, wealth: -6, flags: { wanderer: true } } } } },
+        ] },
+        { id: 'cult_trib_50', at: 50, chance: 0.58, title: '为天劫做准备', prompt: '劫云还没来，但你知道它总会来。现在做的每一件事，都是在为那一天加一块筹码。', options: [
+          { id: 'sword', label: '磨一剑', desc: '把命押在锋芒上。', requires: { body: 14 }, resolve() { return { tone: 'good', text: '你闭门磨剑三年。剑成那天，山上的鸟一整日没有落下。', effects: { body: 3, mood: 6, flags: { tribulationSword: true } } } } },
+          { id: 'array', label: '布一阵', desc: '用准备换一点从容。', requires: { int: 14 }, resolve() { return { tone: 'good', text: '你在洞府外布下三层阵。每一层都不算强，叠在一起却让你安心。', effects: { int: 3, wealth: -16, flags: { tribulationArray: true } } } } },
+          { id: 'body', label: '炼体', desc: '不求快，只求扛得住。', resolve() { return { tone: 'normal', text: '你每日以灵泉淬体，疼得说不出话。半年后，你发现自己能站得更久。', effects: { body: 2, health: 6, flags: { tribulationBody: true } } } } },
+        ] },
+      ],
+      wasteland: [
+        { id: 'waste_convoy_28', at: 28, chance: 0.6, title: '商队与地堡', prompt: '一支商队缺个识路的人。地堡里则还有一张空床。', options: [
+          { id: 'convoy', label: '跟商队走', desc: '钱多，命也悬。', resolve() { return { tone: 'good', text: '你跟着商队走了七天。回来时车上多了两箱水，少了一个同伴。', effects: { wealth: 24, health: -4, flags: { caravan: true } } } } },
+          { id: 'bunker', label: '留在地堡', desc: '安稳，但看不到更远的地方。', resolve() { return { tone: 'normal', text: '你留在地堡，修好了漏风的门。晚上听广播时，你偶尔会想商队走到了哪里。', effects: { health: 5, mood: 3, flags: { bunkerLife: true } } } } },
+        ] },
+        { id: 'waste_radio_45', at: 45, chance: 0.55, title: '广播里的声音', prompt: '北岸电台说还有一片干净的地方。信号断断续续，像有人在故意剪掉后半句。', options: [
+          { id: 'go', label: '相信它，去找', desc: '万一呢。', resolve(run) { const ok = Math.random() < 0.38 + run.attrs.family * 0.01; return ok ? { tone: 'good', text: '你走了很久，最后真的看见了一片绿色。那一刻你蹲下来，摸了很久的土。', effects: { health: 8, mood: 14, wealth: 20, flags: { foundOasis: true } } } : { tone: 'bad', text: '你走了很远，最后只找到一座空发射塔。广播还在响，里面没有人。', effects: { health: -8, mood: -10, flags: { falseRadio: true } } } } },
+          { id: 'stay', label: '关掉收音机', desc: '不拿命去赌一个声音。', resolve() { return { tone: 'normal', text: '你把收音机拆了，用零件换了一袋种子。春天时，门口多了一小片绿。', effects: { mood: 4, wealth: 5, flags: { seeds: true } } } } },
+        ] },
+      ],
+      magic: [
+        { id: 'magic_book_26', at: 26, chance: 0.6, title: '禁书区', prompt: '图书馆最里面那排书没有索引。你借整理书架的名义，摸到了其中一本。', options: [
+          { id: 'read', label: '翻开它', desc: '有些知识会咬人。', requires: { int: 9 }, resolve() { return { tone: 'strange', text: '你读了三页，第四页开始，书里的字像在看着你。你合上书，手心全是汗。', effects: { int: 2, mood: -4, flags: { forbiddenMagic: true } } } } },
+          { id: 'report', label: '上报学院', desc: '安全，但会失去它。', resolve() { return { tone: 'normal', text: '你把书交了上去。学院给了你一枚徽章，也从此有人开始注意你。', effects: { mood: 3, wealth: 8, flags: { loyalAcademy: true } } } } },
+        ] },
+        { id: 'magic_dragon_44', at: 44, chance: 0.55, title: '龙族的契约', prompt: '一条还不会飞的幼龙把额头抵在你手上。它身后，龙族的长老在等你的回答。', options: [
+          { id: 'bond', label: '签下契约', desc: '从此它的事就是你的事。', resolve() { return { tone: 'good', text: '你在契约上写下名字。幼龙舔了舔你的手指，长老们退开半步。', effects: { mood: 12, int: 2, flags: { dragon: true, dragonBond: true } } } } },
+          { id: 'refuse', label: '婉拒', desc: '你还没有准备好承担另一条命。', resolve() { return { tone: 'normal', text: '你摇了摇头。幼龙看了你很久，最后被长老带走。你站在原地，听见它叫了一声。', effects: { mood: -4, int: 1, flags: { refusedDragon: true } } } } },
+        ] },
+      ],
+      cyber: [
+        { id: 'cyber_corp_28', at: 28, chance: 0.6, title: '公司的邀请', prompt: '一家大公司给你发来合同。签下它，你可以住进有窗的公寓；代价是你的一部分记忆。', options: [
+          { id: 'sign', label: '签', desc: '先活得像个人，再谈别的。', resolve() { return { tone: 'normal', text: '你签了字。公寓真的有窗，只是你偶尔会想不起某个旧朋友的脸。', effects: { wealth: 30, mood: -4, flags: { corpEmployee: true } } } } },
+          { id: 'ghost', label: '拒绝，做幽灵', desc: '没钱，但没人能改你的记忆。', resolve() { return { tone: 'strange', text: '你删掉了合同，搬进地下室。网络很深，你在里面给自己留了一扇只有你知道的门。', effects: { int: 2, wealth: -8, flags: { digitalGhost: true } } } } },
+        ] },
+        { id: 'cyber_upload_46', at: 46, chance: 0.55, title: '上传', prompt: '医生说你的身体撑不了太久。公司说，他们可以把你的意识放进云端。', options: [
+          { id: 'upload', label: '上传', desc: '换一种方式继续存在。', requires: { wealth: 60 }, resolve() { return { tone: 'strange', text: '你躺进舱里。最后看见的是天花板，然后是一片没有边界的白。', effects: { health: 20, mood: 4, wealth: -40, flags: { uploaded: true } } } } },
+          { id: 'stay', label: '留在身体里', desc: '会疼，但还摸得到雨。', resolve() { return { tone: 'normal', text: '你拒绝了。窗外的雨下了很久，你把手伸出去，接住了一点。', effects: { mood: 9, health: -4, flags: { stayedHuman: true } } } } },
+        ] },
+      ],
+      starship: [
+        { id: 'star_colony_30', at: 30, chance: 0.6, title: '留下还是下船', prompt: '殖民地需要人留下。舰上则还有你的岗位和一张返航票。', options: [
+          { id: 'stay', label: '留在殖民地', desc: '从零开始建一个家。', resolve() { return { tone: 'good', text: '你留了下来。第一年住帐篷，第三年有了自己的屋顶。晚上能看见两颗月亮。', effects: { mood: 9, health: -2, wealth: 12, flags: { colonist: true } } } } },
+          { id: 'ship', label: '回舰上去', desc: '继续航行，继续看新的星。', resolve() { return { tone: 'normal', text: '你回了舰上。舷窗外的殖民地越来越小，最后变成一颗很亮的点。', effects: { int: 2, mood: 3, flags: { crew: true } } } } },
+        ] },
+        { id: 'star_contact_48', at: 48, chance: 0.55, title: '第一次接触', prompt: '对方没有脸，也没有声音。它只是停在那里，等你先动。', options: [
+          { id: 'open', label: '打开通讯', desc: '未知，但可能是答案。', resolve() { return { tone: 'good', text: '你按下按钮。沉默很久之后，舱里所有灯同时亮了一下。', effects: { int: 3, mood: 12, flags: { firstContact: true } } } } },
+          { id: 'shield', label: '保持距离', desc: '先保证舰上的人活着。', resolve() { return { tone: 'normal', text: '你关掉外联，拉高护盾。对方停了一会儿，然后离开了。你没有追。', effects: { mood: -3, flags: { cautiousContact: true } } } } },
+        ] },
+      ],
+      jianghu: [
+        { id: 'jiang_sect_26', at: 26, chance: 0.6, title: '入门还是独行', prompt: '掌门把入门帖放在你面前。山下则有人说，江湖不是拜出来的。', options: [
+          { id: 'join', label: '拜入门派', desc: '有师门，有规矩，也有靠山。', resolve() { return { tone: 'normal', text: '你磕了头，敬了茶。从此你的名字前面多了一个门派，身后也多了一群要顾的人。', effects: { wealth: 8, mood: 4, flags: { sect: true, sectLoyal: true } } } } },
+          { id: 'wander', label: '独自行走', desc: '没有靠山，也没有人替你挡剑。', resolve() { return { tone: 'strange', text: '你收了帖子，背上剑。下山那条路很长，走到最后只剩你一个人的脚步声。', effects: { body: 2, mood: 3, flags: { wanderer: true } } } } },
+        ] },
+        { id: 'jiang_revenge_45', at: 45, chance: 0.58, title: '旧仇', prompt: '当年那个人如今老了，坐在一间小院里晒药。你站在门外，手按在剑柄上。', options: [
+          { id: 'revenge', label: '拔剑', desc: '把这件事做个了断。', resolve() { return { tone: 'tragic', text: '你拔了剑。事情结束得比想象中快。回程时，你忽然不知道该去哪里。', effects: { mood: -8, health: -2, flags: { revenge: true } } } } },
+          { id: 'leave', label: '转身离开', desc: '不原谅，但也不再让它牵着走。', resolve() { return { tone: 'good', text: '你松开了剑柄。走出巷子时，天正好下雨。你没有回头。', effects: { mood: 12, int: 2, flags: { letGo: true } } } } },
+        ] },
+      ],
+    };
 
     const QUEST_POOLS = {
       cultivation: [
@@ -14612,7 +14766,18 @@
       const realm = questRealm(run)
       const luck = run.luck || 0
       const base = 0.5 + int * 0.012 + body * 0.008 + realm * 0.03 + luck * 0.008
-      return clamp(base - quest.difficulty * 0.82, 0.1, 0.92)
+      const state = worldStateOf(run)
+      const gift = run.powerGift || {}
+      const bonus = (run.power ? 0.12 : 0) + (gift.quest || 0) + (state.quest || 0)
+      return clamp(base - quest.difficulty * 0.82 + bonus, 0.1, 0.94)
+    }
+
+    function scalePositive(effects, factor) {
+      const out = { ...(effects || {}) }
+      Object.keys(out).forEach(key => {
+        if (key !== 'flags' && typeof out[key] === 'number' && out[key] > 0) out[key] = Math.round(out[key] * factor)
+      })
+      return out
     }
 
     function questEligible(run, quest) {
@@ -14705,7 +14870,7 @@
         return {
           tone: 'good',
           text: quest.successText,
-          effects: quest.successEffects || {},
+          effects: run.power ? scalePositive(quest.successEffects, 1.5) : (quest.successEffects || {}),
           questResult: 'success',
           sceneId: quest.scene || null,
         }
@@ -15101,14 +15266,243 @@
       }
     }
 
-    function createRun(alloc, talents, worldId, number, legacy, genderArg) {
+    const STORY_MODE_IDS = ['normal', 'power']
+    const STORY_MODES = {
+      normal: { id: 'normal', name: '正常模式', short: '正常', mark: '命', desc: '有起有落，挫折会真的落到身上。' },
+      power: { id: 'power', name: '爽文模式', short: '爽文', mark: '爽', desc: '自带金手指，机缘更多，挫折减半。' },
+    }
+
+    const POWER_GIFTS = [
+      { id: 'system', name: '系统', glyph: '系', desc: '任务成功率 +15%，每年回一点心境。', quest: 0.15, mood: 2, flag: 'powerSystem' },
+      { id: 'reborn', name: '重生记忆', glyph: '忆', desc: '四维 +3，开局财富 +30。', attrs: { looks: 3, int: 3, body: 3, family: 3 }, wealth: 30, flag: 'powerReborn' },
+      { id: 'luck', name: '气运之子', glyph: '运', desc: '气运 +8，劫难伤害减半。', luck: 8, crisis: 0.5, flag: 'powerLuck' },
+      { id: 'sword', name: '剑骨', glyph: '剑', desc: '体魄 +5，战斗与宗门任务更容易成功。', attrs: { body: 5 }, quest: 0.08, flag: 'powerSword' },
+      { id: 'rich', name: '神豪', glyph: '豪', desc: '开局财富 +120，财富类任务收益更高。', wealth: 120, flag: 'powerRich' },
+      { id: 'mind', name: '读心术', glyph: '心', desc: '智力 +4，人生岔路出现得更频繁。', attrs: { int: 4 }, choice: 0.07, flag: 'powerMind' },
+    ]
+
+    const WORLD_MODIFIERS = {
+      modern: [
+        { id: 'boom', name: '经济上行', desc: '机会多，钱也来得快。', tone: 'good', wealth: 24, quest: 0.05 },
+        { id: 'cold', name: '裁员寒潮', desc: '工作不稳，挫折更频繁。', tone: 'bad', wealth: -12, crisis: 0.055 },
+        { id: 'bubble', name: '房价狂飙', desc: '有人一夜暴富，也有人被房贷压住。', tone: 'strange', wealth: 38, crisis: 0.035 },
+      ],
+      cultivation: [
+        { id: 'surge', name: '灵气复苏', desc: '天地灵气回流，突破与任务都更顺。', tone: 'good', quest: 0.08 },
+        { id: 'decline', name: '末法时代', desc: '灵气稀薄，劫难更重。', tone: 'bad', crisis: 0.06, quest: -0.05 },
+        { id: 'war', name: '宗门林立', desc: '百家争鸣，也处处是刀。', tone: 'strange', crisis: 0.05, quest: 0.04 },
+      ],
+      wasteland: [
+        { id: 'rain', name: '久违的雨', desc: '水源充足，身体好过一些。', tone: 'good', health: 6 },
+        { id: 'storm', name: '辐射风暴', desc: '出门就是赌命。', tone: 'bad', crisis: 0.075 },
+        { id: 'oasis', name: '绿洲传闻', desc: '北边似乎还有一片能种东西的地。', tone: 'good', wealth: 14, quest: 0.04 },
+      ],
+      magic: [
+        { id: 'mana', name: '魔力潮汐', desc: '施法更顺，学院任务更多。', tone: 'good', quest: 0.06 },
+        { id: 'rift', name: '裂隙渗漏', desc: '禁林里的东西比平时更躁动。', tone: 'bad', crisis: 0.06 },
+        { id: 'festival', name: '丰收节', desc: '街上全是灯和甜味，心情会好一点。', tone: 'good', mood: 7 },
+      ],
+      cyber: [
+        { id: 'boom', name: '数据繁荣', desc: '订单接不完，信用也在涨。', tone: 'good', wealth: 26, quest: 0.04 },
+        { id: 'crash', name: '断网潮', desc: '城里的系统一茬接一茬地崩。', tone: 'bad', wealth: -14, crisis: 0.06 },
+        { id: 'ghost', name: '幽灵信号', desc: '有人在网络深处看着你。', tone: 'strange', quest: 0.05, crisis: 0.025 },
+      ],
+      starship: [
+        { id: 'tailwind', name: '顺风航道', desc: '航行平稳，任务更容易完成。', tone: 'good', quest: 0.06 },
+        { id: 'anomaly', name: '深空异常', desc: '舷窗外的东西不太对。', tone: 'bad', crisis: 0.075 },
+        { id: 'colony', name: '殖民地丰收', desc: '新世界传来第一份好消息。', tone: 'good', wealth: 18, mood: 4 },
+      ],
+      jianghu: [
+        { id: 'peace', name: '江湖太平', desc: '少了些刀光，多了些人情。', tone: 'good', mood: 6, crisis: -0.02 },
+        { id: 'turmoil', name: '门派纷争', desc: '四处都在比武、寻仇、站队。', tone: 'strange', crisis: 0.07, quest: 0.05 },
+        { id: 'tournament', name: '武林大会', desc: '各路人马都在往同一个地方赶。', tone: 'good', quest: 0.07 },
+      ],
+    }
+
+    const CRISES = {
+      modern: [
+        { id: 'mod_layoff', title: '裁员名单', minAge: 24, text: '公司叫你去一趟会议室。桌上放着一份协议，和一杯已经凉掉的水。', effect: () => ({ wealth: -(8 + rnd(20)), mood: -(4 + rnd(8)) }) },
+        { id: 'mod_illness', title: '体检报告', minAge: 36, text: '体检报告上多了一行小字。医生说要复查，语气平常得像在说天气。', effect: () => ({ health: -(5 + rnd(9)), mood: -(3 + rnd(6)) }) },
+        { id: 'mod_debt', title: '一笔旧账', minAge: 30, text: '一个多年不联系的人忽然找上门，说你欠他的不只是钱。', effect: () => ({ wealth: -(12 + rnd(25)), mood: -(5 + rnd(7)) }) },
+      ],
+      cultivation: [
+        { id: 'cult_qi', title: '灵气逆冲', minAge: 20, text: '冲关时灵气忽然逆走，你咬着牙把那一口血咽了回去。', effect: () => ({ health: -(6 + rnd(10)), mood: -(4 + rnd(6)) }) },
+        { id: 'cult_enemy', title: '旧敌寻仇', minAge: 30, text: '山门外有人叫你的名字。你走出去时，对方已经把剑拔了一半。', effect: () => ({ health: -(8 + rnd(12)), wealth: -(6 + rnd(16)) }) },
+        { id: 'cult_heart', title: '心魔夜', minAge: 40, text: '夜里打坐，你听见一个很像自己的声音，在问你到底想要什么。', effect: () => ({ mood: -(9 + rnd(10)), health: -(3 + rnd(6)) }) },
+      ],
+      wasteland: [
+        { id: 'waste_raid', title: '掠夺者', minAge: 18, text: '车队刚过废桥，枪声就从两边响了起来。', effect: () => ({ health: -(7 + rnd(12)), wealth: -(8 + rnd(18)) }) },
+        { id: 'waste_water', title: '水源污染', minAge: 24, text: '水桶里浮着一层说不清颜色的东西。今晚没人敢先喝。', effect: () => ({ health: -(6 + rnd(10)), mood: -(4 + rnd(6)) }) },
+        { id: 'waste_storm', title: '沙暴封路', minAge: 30, text: '沙暴来得比预报早，你只能把车停在原地，等它过去。', effect: () => ({ wealth: -(10 + rnd(22)), mood: -(3 + rnd(8)) }) },
+      ],
+      magic: [
+        { id: 'magic_spell', title: '魔咒反噬', minAge: 18, text: '咒语念到最后一个音节，你的指尖忽然黑了一块。', effect: () => ({ health: -(6 + rnd(10)), mood: -(4 + rnd(7)) }) },
+        { id: 'magic_beast', title: '禁林逃兽', minAge: 26, text: '学院北边的禁林里，有什么东西撞开了栅栏。', effect: () => ({ health: -(8 + rnd(12)), wealth: -(5 + rnd(12)) }) },
+        { id: 'magic_fail', title: '论文被否', minAge: 32, text: '你的研究被导师当众划掉，理由是“不够安全”。', effect: () => ({ mood: -(8 + rnd(10)), wealth: -(4 + rnd(10)) }) },
+      ],
+      cyber: [
+        { id: 'cyber_hack', title: '账户被黑', minAge: 20, text: '你醒来时，信用额度变成了零，聊天记录里多了一个没见过的自己。', effect: () => ({ wealth: -(12 + rnd(26)), mood: -(5 + rnd(8)) }) },
+        { id: 'cyber_chrome', title: '义体排异', minAge: 28, text: '新装的义体在雨夜里发烫，像有另一颗心脏在骨头里跳。', effect: () => ({ health: -(6 + rnd(11)), mood: -(4 + rnd(6)) }) },
+        { id: 'cyber_corp', title: '公司清算', minAge: 36, text: '你所在的楼层被清空，门禁卡在中午十二点失效。', effect: () => ({ wealth: -(10 + rnd(22)), mood: -(6 + rnd(8)) }) },
+      ],
+      starship: [
+        { id: 'star_breach', title: '舱体失压', minAge: 18, text: '警报响了三短一长。你抓住扶手时，耳朵里全是风声。', effect: () => ({ health: -(7 + rnd(11)), mood: -(4 + rnd(6)) }) },
+        { id: 'star_mutiny', title: '舰内哗变', minAge: 28, text: '有人切断了三号甲板的通讯。你听见走廊尽头有人在喊你的名字。', effect: () => ({ mood: -(8 + rnd(10)), wealth: -(6 + rnd(14)) }) },
+        { id: 'star_void', title: '深空静默', minAge: 38, text: '舷窗外什么都没有。连仪表都安静得不太正常。', effect: () => ({ health: -(5 + rnd(9)), mood: -(7 + rnd(9)) }) },
+      ],
+      jianghu: [
+        { id: 'jiang_ambush', title: '客栈伏击', minAge: 18, text: '半夜楼下有人碰倒了酒坛。你摸到枕边的剑时，门已经被踹开。', effect: () => ({ health: -(7 + rnd(12)), wealth: -(6 + rnd(15)) }) },
+        { id: 'jiang_poison', title: '旧毒复发', minAge: 28, text: '多年前中的那一掌，在雨天里又隐隐发疼。', effect: () => ({ health: -(6 + rnd(10)), mood: -(3 + rnd(7)) }) },
+        { id: 'jiang_betray', title: '同门反目', minAge: 36, text: '最信任的那个人站在对面，剑尖没有抖。', effect: () => ({ mood: -(9 + rnd(10)), health: -(4 + rnd(8)) }) },
+      ],
+    }
+
+    const POWER_MOMENTS = [
+      { id: 'face', title: '当众打脸', text: '所有人都等着看你出丑。你只用了三句话，就让刚才笑得最大声的人闭上了嘴。', effects: { mood: 12, wealth: 18 } },
+      { id: 'auction', title: '拍卖会捡漏', text: '你在一堆没人要的旧物里，看见了一件不该出现在这里的东西。', effects: { wealth: 55, mood: 8 } },
+      { id: 'genius', title: '一战成名', text: '原本只是去凑数，结果你把台上的人一个个请了下去。', effects: { mood: 14, wealth: 30 } },
+      { id: 'reborn', title: '前世记忆', text: '你忽然想起一个还没发生的节点，于是提前一步站到了正确的位置。', effects: { int: 2, wealth: 22 } },
+      { id: 'rich', title: '天降横财', text: '一笔来路不明但手续齐全的钱，落进了你的账户。', effects: { wealth: 80 } },
+      { id: 'heal', title: '灵药在手', text: '你从旧货堆里翻出一株没人认得的药草，服下后浑身轻快。', effects: { health: 18, mood: 6 } },
+      { id: 'ally', title: '贵人相助', text: '一个只见过一面的人，在你最难的时候递来了一把钥匙。', effects: { wealth: 35, mood: 9 } },
+      { id: 'slap', title: '反转打脸', text: '对方以为你已经没有底牌。你笑了笑，把最后一张牌翻了过来。', effects: { mood: 16, int: 2 } },
+    ]
+
+    const OBJECTIVES = [
+      { id: 'age60', title: '活到 60 岁', desc: '把这一世走得更长一些。', check: run => run.age >= 60, progress: run => run.age / 60, reward: { mood: 6 } },
+      { id: 'wealth100', title: '攒下 100 财富', desc: '让手头宽裕一次。', check: run => (run.peakWealth || 0) >= 100, progress: run => (run.peakWealth || 0) / 100, reward: { mood: 5 } },
+      { id: 'quest2', title: '完成 2 个任务', desc: '主动接下命运递来的活。', check: run => (run.flags.questsDone || 0) >= 2, progress: run => (run.flags.questsDone || 0) / 2, reward: { wealth: 12 } },
+      { id: 'choice3', title: '做出 3 次抉择', desc: '在岔路口留下自己的脚印。', check: run => (run.flags.choicesMade || 0) >= 3, progress: run => (run.flags.choicesMade || 0) / 3, reward: { mood: 5 } },
+      { id: 'mood70', title: '心境达到 70', desc: '别让这一世只剩疲惫。', check: run => run.mood >= 70, progress: run => run.mood / 70, reward: { health: 5 } },
+      { id: 'crisis1', title: '扛过一次劫难', desc: '被命运按下去，还能站起来。', check: run => (run.flags.crises || 0) >= 1, progress: run => (run.flags.crises || 0), reward: { mood: 7 } },
+    ]
+
+    function storyModeOf(run) {
+      return run && run.storyMode === 'power' ? STORY_MODES.power : STORY_MODES.normal
+    }
+
+    function worldStateOf(run) {
+      return run && run.worldState ? run.worldState : { name: '风平浪静', desc: '', tone: 'normal', quest: 0, crisis: 0 }
+    }
+
+    function chooseWorldState(worldId) {
+      const pool = WORLD_MODIFIERS[worldId] || []
+      return pool.length ? { ...pick(pool) } : { id: 'calm', name: '风平浪静', desc: '', tone: 'normal', quest: 0, crisis: 0 }
+    }
+
+    function applyPowerGift(run, gift) {
+      if (!gift) return
+      run.powerGift = gift
+      if (gift.attrs) Object.keys(gift.attrs).forEach(key => { run.attrs[key] = clamp((run.attrs[key] || 0) + gift.attrs[key], 0, ATTR_MAX) })
+      if (gift.health) run.health = clamp(run.health + gift.health, 0, 100)
+      if (gift.mood) run.mood = clamp(run.mood + gift.mood, 0, 100)
+      if (gift.wealth) {
+        run.wealth = Math.max(0, run.wealth + gift.wealth)
+        run.startWealth = run.wealth
+        run.peakWealth = Math.max(run.peakWealth || 0, run.wealth)
+      }
+      if (gift.luck) run.luck = (run.luck || 0) + gift.luck
+      run.flags[gift.flag] = true
+      run.flags.powerGift = gift.id
+    }
+
+    function crisisChance(run) {
+      const state = worldStateOf(run)
+      const base = 0.09 + (run.challenge || 3) * 0.022 + (state.crisis || 0) - (run.power ? 0.04 : 0)
+      return clamp(base, 0.04, 0.46)
+    }
+
+    function maybeCrisis(run) {
+      if (!run || !run.alive || run.age < 16) return null
+      if (run.flags.lastCrisisAge && run.age - run.flags.lastCrisisAge < 5) return null
+      const pool = CRISES[run.worldId] || []
+      const eligible = pool.filter(item => run.age >= (item.minAge || 0))
+      if (!eligible.length) return null
+      if (Math.random() > crisisChance(run)) return null
+      const crisis = pick(eligible)
+      run.flags.lastCrisisAge = run.age
+      return {
+        id: 'crisis-' + crisis.id,
+        title: crisis.title,
+        resolve(target) {
+          let effects = crisis.effect(target)
+          if (target.power) {
+            const keys = ['health', 'mood', 'wealth']
+            effects = { ...effects }
+            keys.forEach(key => { if (effects[key] < 0) effects[key] = Math.round(effects[key] * 0.5) })
+          }
+          target.flags.crises = (target.flags.crises || 0) + 1
+          return { tone: 'bad', text: crisis.text, effects }
+        },
+      }
+    }
+
+    function maybePowerMoment(run) {
+      if (!run || !run.alive || !run.power || run.age < 16) return null
+      if (run.flags.lastPowerAge && run.age - run.flags.lastPowerAge < 4) return null
+      if (Math.random() > 0.14) return null
+      const seen = run.flags._powerSeen || (run.flags._powerSeen = {})
+      const pool = POWER_MOMENTS.filter(item => !seen[item.id])
+      if (!pool.length) return null
+      const moment = pick(pool)
+      seen[moment.id] = true
+      run.flags.lastPowerAge = run.age
+      return {
+        id: 'power-' + moment.id,
+        title: moment.title,
+        resolve() {
+          return { tone: 'good', text: moment.text, effects: { ...(moment.effects || {}) } }
+        },
+      }
+    }
+
+    function updateObjectives(run) {
+      if (!run || !run.objectives || !run.objectives.length) return
+      run.objectives.forEach(objective => {
+        if (objective.done) return
+        objective.progressValue = clamp(Number(objective.progress(run)) || 0, 0, 1)
+        if (!objective.check(run)) return
+        objective.done = true
+        objective.doneAge = run.age
+        run.flags.objectivesDone = (run.flags.objectivesDone || 0) + 1
+        if (objective.reward) applyEffects(run, objective.reward)
+        pushEntry(run, {
+          kind: 'event',
+          age: run.age,
+          tone: 'good',
+          text: '本世目标达成：' + objective.title + '。你完成了一件原本不在命运计划里的事。',
+          deltas: [],
+          isObjective: true,
+          objectiveId: objective.id,
+        })
+      })
+    }
+
+    function createRun(alloc, talents, worldId, number, legacy, genderArg, storyArg) {
       const world = WORLD_BY_ID[worldId] || WORLDS[0]
       const gender = GENDER_MAP[genderArg] ? genderArg : pick(GENDERS).key
       const aggregate = aggregateTalents(talents)
+      const storyMode = storyArg === 'power' ? 'power' : 'normal'
+      const power = storyMode === 'power'
+      const gift = power ? pick(POWER_GIFTS) : null
+      const worldState = chooseWorldState(world.id)
+      const challenge = 1 + rnd(5)
+      const objectives = []
+      const objectivePool = OBJECTIVES.slice()
+      while (objectives.length < 3 && objectivePool.length) {
+        const picked = objectivePool.splice(rnd(objectivePool.length), 1)[0]
+        objectives.push({ ...picked, done: false, progressValue: 0 })
+      }
+      if (gift && gift.luck) aggregate.luck = (aggregate.luck || 0) + gift.luck
       const attrs = {}
       ATTRS.forEach(attr => {
         attrs[attr.key] = clamp((alloc[attr.key] || 0) + aggregate.mods[attr.key], 0, ATTR_MAX)
       })
+      if (gift && gift.attrs) {
+        Object.keys(gift.attrs).forEach(key => {
+          attrs[key] = clamp((attrs[key] || 0) + gift.attrs[key], 0, ATTR_MAX)
+        })
+      }
       const legacyAttr = legacy && legacy.attr && attrs[legacy.attr] != null ? legacy.attr : null
       if (legacyAttr) {
         attrs[legacyAttr] = clamp(attrs[legacyAttr] + (legacy.amount || 2), 0, ATTR_MAX)
@@ -15203,6 +15597,12 @@
       if (flags.sectRank == null) flags.sectRank = ''
       if (flags._questSeen == null) flags._questSeen = {}
       if (flags._scenes == null) flags._scenes = {}
+      if (flags.choicesMade == null) flags.choicesMade = 0
+      if (flags.crises == null) flags.crises = 0
+      if (flags.objectivesDone == null) flags.objectivesDone = 0
+      if (flags.lastCrisisAge == null) flags.lastCrisisAge = 0
+      if (flags.lastPowerAge == null) flags.lastPowerAge = 0
+      if (flags._powerSeen == null) flags._powerSeen = {}
       aggregate.flags.forEach(flag => { flags[flag] = true })
       if (!flags._choiceSeen) flags._choiceSeen = {}
       if (legacy) {
@@ -15251,6 +15651,9 @@
         deathAge = clamp(55 + attrs.body * 4 + rnd(15) - 8 + aggregate.lifespan, 35, 105)
       }
       if (legacy) startWealth = Math.max(0, startWealth + (legacy.wealth || 0))
+      if (worldState.wealth) startWealth = Math.max(0, startWealth + worldState.wealth)
+      if (worldState.health) health = clamp(health + worldState.health, 0, 100)
+      if (worldState.mood) mood = clamp(mood + worldState.mood, 0, 100)
 
       const birth = world.id === 'cultivation'
         ? cultivationBirthText(attrs)
@@ -15293,9 +15696,25 @@
           text: '你带着上一世的余荫出生。某种说不清的熟悉感还在，像一件没有完全脱下的旧衣服。',
         })
       }
+      openingLog.push({
+        id: 90,
+        kind: 'event',
+        age: 0,
+        tone: worldState.tone === 'bad' ? 'bad' : worldState.tone === 'good' ? 'good' : 'normal',
+        text: '这一世的世界状态：' + worldState.name + '。' + (worldState.desc || ''),
+      })
+      if (gift) {
+        openingLog.push({
+          id: 91,
+          kind: 'event',
+          age: 0,
+          tone: 'good',
+          text: '你睁开眼时，身上多了一件不属于这个世界的东西——【' + gift.name + '】。' + gift.desc,
+        })
+      }
       openingLog.forEach((entry, index) => { entry.id = index })
 
-      return {
+      const newRun = {
         id: 'lr-' + Date.now().toString(36) + '-' + rnd(9999),
         no: number,
         worldId: world.id,
@@ -15308,6 +15727,12 @@
         pendingChoice: null,
         pendingScene: null,
         playMode: 'interactive',
+        storyMode,
+        power,
+        powerGift: gift,
+        challenge,
+        worldState,
+        objectives,
         alive: true,
         deathAge,
         cause: null,
@@ -15336,12 +15761,21 @@
         ending: null,
         createdAt: Date.now(),
       }
+      applyPowerGift(newRun, gift)
+      return newRun
     }
 
     function cloneRun(run) {
       return {
         ...run,
         attrs: { ...run.attrs },
+        log: run.log.slice(),
+        seen: run.seen.slice(),
+        recentTexts: (run.recentTexts || []).slice(),
+        recentEventIds: (run.recentEventIds || []).slice(),
+        objectives: (run.objectives || []).map(item => ({ ...item })),
+        worldState: run.worldState ? { ...run.worldState } : null,
+        powerGift: run.powerGift ? { ...run.powerGift } : null,
         flags: {
           ...run.flags,
           ...(run.flags._milestones ? { _milestones: { ...run.flags._milestones } } : {}),
@@ -15349,11 +15783,8 @@
           ...(run.flags._partnerSeen ? { _partnerSeen: { ...run.flags._partnerSeen } } : {}),
           ...(run.flags._questSeen ? { _questSeen: { ...run.flags._questSeen } } : {}),
           ...(run.flags._scenes ? { _scenes: { ...run.flags._scenes } } : {}),
+          ...(run.flags._powerSeen ? { _powerSeen: { ...run.flags._powerSeen } } : {}),
         },
-        log: run.log.slice(),
-        seen: run.seen.slice(),
-        recentTexts: (run.recentTexts || []).slice(),
-        recentEventIds: (run.recentEventIds || []).slice(),
         achievements: run.achievements ? run.achievements.slice() : [],
         ending: run.ending ? { ...run.ending, achievements: run.ending.achievements.slice() } : null,
       }
@@ -15395,7 +15826,8 @@
       let pool = world.events.filter(event => matchesEvent(event, run))
       if (pool.length > 1) {
         const recent = run.recentEventIds || []
-        const fresh = pool.filter(event => event.id !== run.lastEventId && !recent.includes(event.id))
+        const recentTexts = run.recentTexts || []
+        const fresh = pool.filter(event => event.id !== run.lastEventId && !recent.includes(event.id) && !recentTexts.includes(event.text))
         if (fresh.length > 0) pool = fresh
       }
       if (pool.length === 0) {
@@ -15670,10 +16102,18 @@
         source = 'milestone'
       } else {
         const partnerStory = choosePartnerStory(run)
-        const twist = !partnerStory && Math.random() < world.twistChance ? chooseTwist(run) : null
+        const crisis = !partnerStory ? maybeCrisis(run) : null
+        const powerMoment = !partnerStory && !crisis ? maybePowerMoment(run) : null
+        const twist = !partnerStory && !crisis && !powerMoment && Math.random() < world.twistChance ? chooseTwist(run) : null
         if (partnerStory) {
           source = 'partner'
           current = partnerStory
+        } else if (crisis) {
+          source = 'crisis'
+          current = crisis
+        } else if (powerMoment) {
+          source = 'power'
+          current = powerMoment
         } else if (twist) {
           source = 'twist'
           current = twist
@@ -15686,7 +16126,10 @@
       }
 
       if (source === 'quiet') {
-        const pool = world.quiet[run.stage] || world.quiet.child || []
+        const baseQuiet = world.quiet[run.stage] || world.quiet.child || []
+        const extras = (FILLER_LINES[world.id] || FILLER_LINES.modern).concat(GENERIC_FILLER)
+          .map(text => ({ text, effects: { mood: 1 } }))
+        const pool = baseQuiet.concat(extras)
         const quiet = pickFresh(run, pool) || { text: fillerText(run), effects: { mood: 1 } }
         const before = snapshotNumbers(run)
         applyEffects(run, quiet.effects)
@@ -15722,10 +16165,12 @@
           milestone: source === 'milestone',
           isTwist: source === 'twist',
           isPartner: source === 'partner',
-          title: source === 'twist' ? current.title : undefined,
+          isCrisis: source === 'crisis',
+          isPower: source === 'power',
+          title: source === 'twist' || source === 'crisis' || source === 'power' ? current.title : undefined,
         })
-        if (source !== 'milestone' && source !== 'partner' && !current.repeatable) run.seen.push(current.id)
-        if (source !== 'milestone' && source !== 'partner') {
+        if (source !== 'milestone' && source !== 'partner' && source !== 'crisis' && source !== 'power' && !current.repeatable) run.seen.push(current.id)
+        if (source !== 'milestone' && source !== 'partner' && source !== 'crisis' && source !== 'power') {
           run.recentEventIds = (run.recentEventIds || []).concat(current.id).slice(-4)
           run.lastEventId = current.id
         }
@@ -15743,6 +16188,8 @@
           deltas: [],
         })
       }
+
+      updateObjectives(run)
 
       if (run.ascending) {
         finishLife(run, { silent: true })
@@ -16411,6 +16858,7 @@
   const MUSIC_KEY = 'dsh.life-restart.music';
   const TRACK_KEY = 'dsh.life-restart.track';
   const PLAY_MODE_KEY = 'dsh.life-restart.play-mode';
+  const STORY_MODE_KEY = 'dsh.life-restart.story-mode';
   let toastTimer = null;
   let autoTimer = null;
   let replayTimer = null;
@@ -16432,6 +16880,14 @@
     }
   }
 
+  function storedStoryMode() {
+    try {
+      return window.localStorage.getItem(STORY_MODE_KEY) === 'power' ? 'power' : 'normal';
+    } catch {
+      return 'normal';
+    }
+  }
+
   const state = {
     view: 'home',
     draft: newDraft('modern'),
@@ -16443,6 +16899,7 @@
     track: storedTrack(),
     showTracks: false,
     playMode: storedPlayMode(),
+    storyMode: storedStoryMode(),
     replay: null,
     showAllAchievements: false,
     achPage: 0,
@@ -16550,8 +17007,44 @@
       scale: [659.25, 783.99, 880.00, 987.77, 1174.66, 1318.51, 1567.98, 1760.00],
       melody: [[4, -1, 5, -1], [-1, 3, -1, 6], [2, -1, 4, -1], [-1, 1, -1, 5], [4, -1, 5, -1], [-1, 2, -1, 3], [0, -1, 2, -1], [-1, 4, -1, 6]],
     },
+    wind: {
+      id: 'wind', name: '风起', glyph: '风', sub: 'G major · 88 BPM',
+      desc: '长风过野，明亮而有向前走的劲。', style: 'bright', beat: 60 / 88,
+      progression: [
+        { bass: 98.00, root: 196.00, fifth: 293.66 },
+        { bass: 73.42, root: 146.83, fifth: 220.00 },
+        { bass: 82.41, root: 164.81, fifth: 246.94 },
+        { bass: 65.41, root: 130.81, fifth: 196.00 },
+      ],
+      scale: [392.00, 440.00, 493.88, 587.33, 659.25, 783.99, 880.00, 987.77],
+      melody: [[0, -1, 2, -1], [-1, 3, -1, 4], [2, -1, 4, -1], [-1, 3, -1, -1], [5, -1, 4, -1], [-1, 2, -1, 3], [0, -1, 2, -1], [-1, 4, -1, 6]],
+    },
+    abyss: {
+      id: 'abyss', name: '深渊', glyph: '渊', sub: 'F# minor · 64 BPM',
+      desc: '暗流在低处涌动，适合劫难与秘境。', style: 'cloud', beat: 60 / 64,
+      progression: [
+        { bass: 46.25, root: 92.50, fifth: 138.59 },
+        { bass: 36.71, root: 73.42, fifth: 110.00 },
+        { bass: 27.50, root: 55.00, fifth: 82.41 },
+        { bass: 20.60, root: 41.20, fifth: 61.74 },
+      ],
+      scale: [369.99, 415.30, 440.00, 554.37, 587.33, 739.99, 830.61, 880.00],
+      melody: [[2, -1, -1, -1], [-1, 4, -1, -1], [1, -1, -1, -1], [-1, 3, -1, 5], [2, -1, 4, -1], [-1, 0, -1, -1], [3, -1, -1, -1], [-1, -1, 5, -1]],
+    },
+    festival: {
+      id: 'festival', name: '灯会', glyph: '灯', sub: 'D major · 96 BPM',
+      desc: '灯火、人声和甜味，适合热闹的一生。', style: 'bright', beat: 60 / 96,
+      progression: [
+        { bass: 73.42, root: 146.83, fifth: 220.00 },
+        { bass: 61.74, root: 123.47, fifth: 185.00 },
+        { bass: 98.00, root: 196.00, fifth: 293.66 },
+        { bass: 55.00, root: 110.00, fifth: 164.81 },
+      ],
+      scale: [587.33, 659.25, 739.99, 880.00, 987.77, 1174.66, 1318.51, 1479.98],
+      melody: [[0, 2, -1, 3], [-1, 4, -1, 5], [2, -1, 4, -1], [-1, 3, -1, 2], [5, -1, 4, -1], [-1, 6, -1, -1], [0, 2, -1, 4], [-1, 3, -1, 5]],
+    },
   };
-  const MUSIC_TRACK_ORDER = ['rain', 'clouds', 'sun', 'stars'];
+  const MUSIC_TRACK_ORDER = ['rain', 'clouds', 'sun', 'stars', 'wind', 'abyss', 'festival'];
 
   function storedTrack() {
     try {
@@ -16998,7 +17491,7 @@
     }).join('');
     return '<div class="modal track-modal" role="dialog" aria-modal="true" aria-label="选择背景曲">'
       + '<section class="track-sheet">'
-      + '<div class="track-head"><div><span class="modal-kicker">SOUNDTRACK</span><h2>选择这一世的背景曲</h2><p>四种风格，切换后从下一小节开始播放。</p></div><button class="close-btn" data-action="close-tracks" aria-label="关闭">×</button></div>'
+      + '<div class="track-head"><div><span class="modal-kicker">SOUNDTRACK</span><h2>选择这一世的背景曲</h2><p>' + MUSIC_TRACK_ORDER.length + ' 种风格，切换后从下一小节开始播放。</p></div><button class="close-btn" data-action="close-tracks" aria-label="关闭">×</button></div>'
       + '<div class="track-list">' + cards + '</div>'
       + '<div class="track-note">音乐开关仍由音符按钮控制；选择会保存在本机浏览器。</div>'
       + '</section></div>';
@@ -17054,6 +17547,14 @@
     render();
   }
 
+  function setStoryMode(mode) {
+    if (mode !== 'normal' && mode !== 'power') return;
+    state.storyMode = mode;
+    try { window.localStorage.setItem(STORY_MODE_KEY, mode); } catch { /* Private mode can refuse persistence. */ }
+    render();
+    showToast(mode === 'power' ? '爽文模式：金手指已就位。' : '正常模式：这一世按自己的命走。');
+  }
+
   function homeHtml() {
     const bucket = modeRecord(state.record, state.playMode);
     const unlockedAch = new Set(bucket.unlockedAchievements || []);
@@ -17095,6 +17596,11 @@
       + '<button data-action="set-mode" data-mode="text" data-active="' + (state.playMode === 'text' ? 'true' : 'false') + '"><b>纯文本模式</b><span>自动替你选，只负责读故事</span></button>'
       + '</div>'
       + '<p class="play-mode-hint">' + (state.playMode === 'text' ? '纯文本模式：不再弹出选择框，命运会替你掷骰。' : '互动模式：遇到岔路会停下来，选项由你的属性决定。') + ' 结局、成就与回放按模式独立记录。' + '</p>'
+      + '<div class="play-mode-switch story-mode-switch" role="group" aria-label="人生难度">'
+      + '<button data-action="set-story" data-story="normal" data-active="' + (state.storyMode === 'normal' ? 'true' : 'false') + '"><b>正常模式</b><span>有起有落，挫折会真的落到身上</span></button>'
+      + '<button data-action="set-story" data-story="power" data-active="' + (state.storyMode === 'power' ? 'true' : 'false') + '"><b>爽文模式</b><span>自带金手指，机缘更多，挫折减半</span></button>'
+      + '</div>'
+      + '<p class="play-mode-hint story-mode-hint">' + (state.storyMode === 'power' ? '爽文模式：开局随机获得一件金手指，任务与奇遇更容易成功。' : '正常模式：属性、选择与运气决定这一世。') + '</p>'
       + '<div class="stat-grid">'
       + '<div class="stat"><b>' + (bucket.runs || 0) + '</b><span>活过</span></div>'
       + '<div class="stat"><b>' + (bucket.best || 0) + '</b><span>最高评分</span></div>'
@@ -17181,7 +17687,7 @@
     const talentPct = Math.round((selectedCount / TALENT_PICK_COUNT) * 100);
 
     return '<div class="screen setup">'
-      + '<div class="topbar"><div class="topbar-left"><button class="icon-btn" data-action="home" aria-label="返回开始界面">‹</button><div class="topbar-copy"><b>准备这一生</b><span>' + esc(world.name) + ' · 十五点投胎 · 十选五</span></div></div><div class="topbar-actions">' + musicControls() + '<span class="mode-chip" data-mode="' + state.playMode + '">' + (state.playMode === 'text' ? '纯文本' : '互动') + '</span><span class="mode-chip">' + (state.legacy ? '继承' : '重开') + '</span></div></div>'
+      + '<div class="topbar"><div class="topbar-left"><button class="icon-btn" data-action="home" aria-label="返回开始界面">‹</button><div class="topbar-copy"><b>准备这一生</b><span>' + esc(world.name) + ' · 十五点投胎 · 十选五</span></div></div><div class="topbar-actions">' + musicControls() + '<span class="mode-chip" data-story="' + state.storyMode + '">' + (state.storyMode === 'power' ? '爽文' : '正常') + '</span><span class="mode-chip" data-mode="' + state.playMode + '">' + (state.playMode === 'text' ? '纯文本' : '互动') + '</span><span class="mode-chip">' + (state.legacy ? '继承' : '重开') + '</span></div></div>'
       + '<div class="setup-head"><div><h1>投胎之前</h1><p>把十五点押在你想成为的样子上。</p></div><span class="mode-chip">' + esc(world.en) + '</span></div>'
       + '<div class="world-scroll">' + worlds + '</div>'
       + genderHtml
@@ -17494,7 +18000,15 @@
       + '</div>'
       + statsHtml(run)
       + '<div class="age-line"><b>' + run.age + '</b><span>岁 · ' + esc(stage.label) + '</span></div>'
-      + '<div class="game-chips"><span class="run-chip task-chip">任务 ' + (run.flags.questsDone || 0) + (run.flags.sectRank ? ' · ' + esc(run.flags.sectRank) : '') + '</span><span class="run-chip">性别：' + esc(run.genderLabel || '未知') + '</span><span class="run-chip">' + esc(world.dossier[0]) + '：' + esc(educationLabel(run)) + '</span><span class="run-chip">' + esc(world.dossier[1]) + '：' + esc(jobLabel(run)) + '</span></div>'
+      + '<div class="game-chips">'
+      + '<span class="run-chip task-chip">任务 ' + (run.flags.questsDone || 0) + (run.flags.sectRank ? ' · ' + esc(run.flags.sectRank) : '') + '</span>'
+      + (run.power ? '<span class="run-chip power-chip">爽文 · ' + esc(run.powerGift ? run.powerGift.name : '金手指') + '</span>' : '')
+      + '<span class="run-chip">劫难 ★' + (run.challenge || 3) + '</span>'
+      + '<span class="run-chip">目标 ' + (run.objectives || []).filter(item => item.done).length + ' / ' + ((run.objectives || []).length || 3) + '</span>'
+      + '<span class="run-chip world-state-chip" data-tone="' + esc(run.worldState ? run.worldState.tone : 'normal') + '">世界：' + esc(run.worldState ? run.worldState.name : '风平浪静') + '</span>'
+      + '<span class="run-chip">性别：' + esc(run.genderLabel || '未知') + '</span>'
+      + '<span class="run-chip">' + esc(world.dossier[0]) + '：' + esc(educationLabel(run)) + '</span><span class="run-chip">' + esc(world.dossier[1]) + '：' + esc(jobLabel(run)) + '</span>'
+      + '</div>'
       + '</header>'
       + avatarHtml(run)
       + '<main class="log">' + logHtml(run) + (run.ending ? endingHtml(run) : '') + '</main>'
@@ -17761,7 +18275,7 @@
     state.record = withModeRecord(state.record, mode, { ...bucket, runs: nextNumber });
     writeRecord(state.record);
     const legacy = state.legacy;
-    state.run = createRun(state.draft.alloc, selectedTalents(), state.draft.worldId, nextNumber, legacy, state.draft.gender);
+    state.run = createRun(state.draft.alloc, selectedTalents(), state.draft.worldId, nextNumber, legacy, state.draft.gender, state.storyMode);
     state.run.playMode = mode;
     state.legacy = null;
     state.view = 'game';
@@ -17890,6 +18404,7 @@
       case 'close-tracks': state.showTracks = false; render(); break;
       case 'pick-track': setMusicTrack(target.dataset.track); break;
       case 'set-mode': setPlayMode(target.dataset.mode); break;
+      case 'set-story': setStoryMode(target.dataset.story); break;
       case 'start-setup': startSetup(); break;
       case 'home': goHome(); break;
       case 'choose-world': chooseWorld(target.dataset.world); break;
