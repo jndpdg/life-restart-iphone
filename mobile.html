@@ -215,6 +215,27 @@
     }
     .topbar .music-btn .music-label,
     .game-head .music-btn .music-label { display: none; }
+    .music-controls { display: flex; flex: none; align-items: center; gap: 4px; }
+    .track-btn {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-height: 31px;
+      padding: 0 8px;
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      background: color-mix(in srgb, var(--panel) 55%, transparent);
+      color: var(--muted);
+      font-size: 8px;
+      letter-spacing: 0.02em;
+    }
+    .track-btn em { max-width: 64px; overflow: hidden; color: var(--brand); font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+    .topbar .track-btn,
+    .game-head .track-btn { width: 34px; height: 34px; min-height: 0; padding: 0; }
+    .topbar .track-btn em,
+    .game-head .track-btn em { display: none; }
     @keyframes music-pulse {
       0%, 100% { opacity: 0.68; }
       50% { opacity: 1; }
@@ -1261,6 +1282,44 @@
     .choice-risk { display: block; margin-top: 5px; color: var(--warn); font-size: 8px; }
     .choice-locked { display: block; margin-top: 6px; color: var(--bad); font-size: 8px; }
     .choice-note { margin-top: 11px; color: var(--faint); font-size: 8px; line-height: 1.6; text-align: center; }
+    .track-modal { align-items: center; }
+    .track-sheet {
+      width: 100%;
+      max-width: 560px;
+      max-height: 88vh;
+      max-height: 88dvh;
+      overflow-y: auto;
+      padding: 18px;
+      border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--line));
+      border-radius: 17px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .track-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .track-head h2 { margin-top: 3px; color: var(--ink); font-family: var(--serif); font-size: 24px; font-weight: 500; }
+    .track-head p { margin-top: 5px; color: var(--muted); font-size: 9px; line-height: 1.6; }
+    .track-list { display: flex; flex-direction: column; gap: 7px; margin-top: 14px; }
+    .track-card {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-left: 3px solid color-mix(in srgb, var(--brand) 45%, var(--line));
+      border-radius: 9px;
+      background: color-mix(in srgb, var(--panel-2) 68%, transparent);
+      text-align: left;
+    }
+    .track-card[data-active="true"] { border-color: color-mix(in srgb, var(--brand) 42%, var(--line)); background: var(--brand-soft); }
+    .track-glyph { display: grid; flex: none; place-items: center; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px; color: var(--brand); font-family: var(--serif); font-size: 16px; }
+    .track-copy { flex: 1; min-width: 0; }
+    .track-copy b { color: var(--ink); font-size: 13px; font-weight: 650; }
+    .track-copy em { margin-left: 6px; color: var(--brand); font-size: 8px; font-style: normal; }
+    .track-copy p { margin-top: 2px; color: var(--muted); font-size: 8.5px; line-height: 1.5; }
+    .track-pick { flex: none; color: var(--faint); font-size: 8px; }
+    .track-card[data-active="true"] .track-pick { color: var(--brand); }
+    .track-note { margin-top: 11px; color: var(--faint); font-size: 8px; line-height: 1.6; text-align: center; }
     .toast {
       position: fixed;
       bottom: calc(96px + var(--safe-bottom));
@@ -16350,6 +16409,7 @@
   const app = document.getElementById('app');
   const toastEl = document.getElementById('toast');
   const MUSIC_KEY = 'dsh.life-restart.music';
+  const TRACK_KEY = 'dsh.life-restart.track';
   const PLAY_MODE_KEY = 'dsh.life-restart.play-mode';
   let toastTimer = null;
   let autoTimer = null;
@@ -16380,6 +16440,8 @@
     legacy: null,
     auto: false,
     musicOn: storedMusicOn(),
+    track: storedTrack(),
+    showTracks: false,
     playMode: storedPlayMode(),
     replay: null,
     showAllAchievements: false,
@@ -16439,29 +16501,71 @@
     toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1900);
   }
 
-  const MUSIC_BEAT = 60 / 72;
-  const MUSIC_BAR = MUSIC_BEAT * 4;
-  const MUSIC_PROGRESSION = [
-    { bass: 110.00, root: 220.00, fifth: 329.63 },
-    { bass: 87.31, root: 174.61, fifth: 261.63 },
-    { bass: 130.81, root: 261.63, fifth: 392.00 },
-    { bass: 98.00, root: 196.00, fifth: 293.66 },
-    { bass: 110.00, root: 220.00, fifth: 329.63 },
-    { bass: 87.31, root: 174.61, fifth: 261.63 },
-    { bass: 130.81, root: 261.63, fifth: 392.00 },
-    { bass: 98.00, root: 196.00, fifth: 293.66 },
-  ];
-  const MUSIC_SCALE = [440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66];
-  const MUSIC_MELODY = [
-    [4, -1, -1, -1],
-    [-1, 3, -1, -1],
-    [2, -1, -1, -1],
-    [-1, 1, -1, -1],
-    [4, -1, 3, -1],
-    [-1, 2, -1, -1],
-    [0, -1, -1, -1],
-    [-1, -1, 2, -1],
-  ];
+  const MUSIC_TRACKS = {
+    rain: {
+      id: 'rain', name: '山雨', glyph: '雨', sub: 'A minor · 72 BPM',
+      desc: '空山细雨，稀疏清冷，适合慢慢读一生。', style: 'sparse', beat: 60 / 72,
+      progression: [
+        { bass: 110.00, root: 220.00, fifth: 329.63 },
+        { bass: 87.31, root: 174.61, fifth: 261.63 },
+        { bass: 130.81, root: 261.63, fifth: 392.00 },
+        { bass: 98.00, root: 196.00, fifth: 293.66 },
+      ],
+      scale: [440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66],
+      melody: [[4, -1, -1, -1], [-1, 3, -1, -1], [2, -1, -1, -1], [-1, 1, -1, -1], [4, -1, 3, -1], [-1, 2, -1, -1], [0, -1, -1, -1], [-1, -1, 2, -1]],
+    },
+    clouds: {
+      id: 'clouds', name: '云海', glyph: '云', sub: 'D minor · 76 BPM',
+      desc: '旧日云海，暗色铺底，带一层很轻的高音回响。', style: 'cloud', beat: 60 / 76,
+      progression: [
+        { bass: 73.42, root: 146.83, fifth: 220.00 },
+        { bass: 58.27, root: 116.54, fifth: 174.61 },
+        { bass: 87.31, root: 174.61, fifth: 261.63 },
+        { bass: 65.41, root: 130.81, fifth: 196.00 },
+      ],
+      scale: [293.66, 349.23, 392.00, 440.00, 523.25, 587.33, 698.46, 783.99],
+      melody: [[2, -1, -1, -1], [-1, 3, -1, -1], [4, -1, -1, -1], [-1, 2, -1, -1], [1, -1, 3, -1], [-1, 0, -1, -1], [2, -1, -1, -1], [-1, -1, 4, -1]],
+    },
+    sun: {
+      id: 'sun', name: '晴昼', glyph: '晴', sub: 'C major · 84 BPM',
+      desc: '明亮晴日，轻快拨弦，适合轻松的一世。', style: 'bright', beat: 60 / 84,
+      progression: [
+        { bass: 65.41, root: 130.81, fifth: 196.00 },
+        { bass: 87.31, root: 174.61, fifth: 261.63 },
+        { bass: 98.00, root: 196.00, fifth: 293.66 },
+        { bass: 110.00, root: 220.00, fifth: 329.63 },
+      ],
+      scale: [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66, 1318.51],
+      melody: [[0, -1, 2, -1], [-1, 3, -1, -1], [4, -1, 3, -1], [-1, 2, -1, -1], [5, -1, 3, -1], [-1, 2, -1, -1], [0, -1, 1, -1], [-1, 2, -1, 3]],
+    },
+    stars: {
+      id: 'stars', name: '星潮', glyph: '星', sub: 'E minor · 92 BPM',
+      desc: '电子脉冲，深空航行，适合赛博与星舰。', style: 'pulse', beat: 60 / 92,
+      progression: [
+        { bass: 82.41, root: 164.81, fifth: 246.94 },
+        { bass: 65.41, root: 130.81, fifth: 196.00 },
+        { bass: 98.00, root: 196.00, fifth: 293.66 },
+        { bass: 73.42, root: 146.83, fifth: 220.00 },
+      ],
+      scale: [659.25, 783.99, 880.00, 987.77, 1174.66, 1318.51, 1567.98, 1760.00],
+      melody: [[4, -1, 5, -1], [-1, 3, -1, 6], [2, -1, 4, -1], [-1, 1, -1, 5], [4, -1, 5, -1], [-1, 2, -1, 3], [0, -1, 2, -1], [-1, 4, -1, 6]],
+    },
+  };
+  const MUSIC_TRACK_ORDER = ['rain', 'clouds', 'sun', 'stars'];
+
+  function storedTrack() {
+    try {
+      return window.localStorage.getItem(TRACK_KEY) || 'rain';
+    } catch {
+      return 'rain';
+    }
+  }
+
+  function currentTrack() {
+    return MUSIC_TRACKS[state.track] || MUSIC_TRACKS.rain;
+  }
+
+  if (!MUSIC_TRACKS[state.track]) state.track = 'rain';
 
   function makeImpulse(ctx) {
     const seconds = 2.8;
@@ -16700,14 +16804,16 @@
     try {
       const now = music.ctx.currentTime + 0.02;
       if (kind === 'quest' || kind === 'battle') {
+        const cueScale = currentTrack().scale;
         drumVoice(now, 0.12);
         drumVoice(now + 0.16, 0.075);
-        pluckVoice(MUSIC_SCALE[5], now + 0.04, 0.09, 0);
+        pluckVoice(cueScale[5], now + 0.04, 0.09, 0);
       } else if (kind === 'scene') {
+        const cueScale = currentTrack().scale;
         drumVoice(now, 0.08);
-        pluckVoice(MUSIC_SCALE[2], now + 0.12, 0.06, 0);
+        pluckVoice(cueScale[2], now + 0.12, 0.06, 0);
       } else {
-        pluckVoice(MUSIC_SCALE[3], now + 0.06, 0.05, 0);
+        pluckVoice(currentTrack().scale[3], now + 0.06, 0.05, 0);
       }
     } catch {
       /* Audio is optional. */
@@ -16734,30 +16840,47 @@
 
   function scheduleMusicBar(index, when) {
     if (!music) return;
-    const chord = MUSIC_PROGRESSION[index % MUSIC_PROGRESSION.length];
-    padVoice(chord.root, when, MUSIC_BAR + 1.6, 0.014, -0.18, -3);
-    padVoice(chord.fifth, when + 0.06, MUSIC_BAR + 1.4, 0.009, 0.18, 3);
-    bassVoice(chord.bass, when, MUSIC_BAR * 0.95);
+    const track = currentTrack();
+    const beat = track.beat;
+    const bar = beat * 4;
+    const chord = track.progression[index % track.progression.length];
+    padVoice(chord.root, when, bar + 1.6, 0.014, -0.18, -3);
+    padVoice(chord.fifth, when + 0.06, bar + 1.4, 0.009, 0.18, 3);
+    bassVoice(chord.bass, when, bar * 0.95);
     if (music.mood !== 'life') {
       for (let step = 0; step < 8; step += 1) {
-        drumVoice(when + step * (MUSIC_BEAT / 2), step % 4 === 0 ? 0.07 : step % 2 === 0 ? 0.038 : 0.024);
+        drumVoice(when + step * (beat / 2), step % 4 === 0 ? 0.07 : step % 2 === 0 ? 0.038 : 0.024);
       }
     }
-    const melody = MUSIC_MELODY[index % MUSIC_MELODY.length];
+    const melody = track.melody[index % track.melody.length];
     melody.forEach((noteIndex, step) => {
       if (noteIndex < 0) return;
-      pluckVoice(MUSIC_SCALE[noteIndex], when + 0.3 + step * MUSIC_BEAT, 0.044, step % 2 === 0 ? -0.1 : 0.1);
+      pluckVoice(track.scale[noteIndex], when + 0.3 + step * beat, 0.044, step % 2 === 0 ? -0.1 : 0.1);
     });
+    if (track.style === 'cloud') {
+      for (let step = 0; step < 8; step += 1) {
+        pluckVoice(track.scale[(step + index) % track.scale.length], when + step * (beat / 2), 0.016, step % 2 === 0 ? -0.22 : 0.22);
+      }
+    } else if (track.style === 'bright') {
+      [0, 2, 4, 6].forEach((step, offset) => {
+        pluckVoice(track.scale[(offset + index) % track.scale.length], when + step * (beat / 2), 0.02, offset % 2 === 0 ? -0.16 : 0.16);
+      });
+    } else if (track.style === 'pulse') {
+      for (let step = 0; step < 4; step += 1) {
+        pluckVoice(track.scale[(step * 2 + index) % track.scale.length], when + step * beat, 0.024, step % 2 === 0 ? -0.12 : 0.12);
+      }
+    }
   }
 
   function pumpMusic() {
     if (!music || !music.playing) return;
     try {
       const now = music.ctx.currentTime;
-      if (music.nextBar < now - MUSIC_BAR) music.nextBar = now + 0.2;
+      const bar = currentTrack().beat * 4;
+      if (music.nextBar < now - bar) music.nextBar = now + 0.2;
       while (music.nextBar < now + 1.2) {
         scheduleMusicBar(music.barIndex, music.nextBar);
-        music.nextBar += MUSIC_BAR;
+        music.nextBar += bar;
         music.barIndex += 1;
       }
     } catch {
@@ -16841,6 +16964,46 @@
       + '<span class="music-glyph">♫</span><span class="music-label">' + (on ? '音乐开' : '音乐关') + '</span></button>';
   }
 
+  function trackButton() {
+    return '<button class="track-btn" data-action="open-tracks" aria-label="选择背景曲" title="选择背景曲">'
+      + '<span>曲</span><em>' + esc(currentTrack().name) + '</em></button>';
+  }
+
+  function musicControls() {
+    return '<div class="music-controls">' + musicButton() + trackButton() + '</div>';
+  }
+
+  function setMusicTrack(id) {
+    if (!MUSIC_TRACKS[id]) return;
+    state.track = id;
+    state.showTracks = false;
+    try { window.localStorage.setItem(TRACK_KEY, id); } catch { /* Private mode can refuse persistence. */ }
+    if (music && music.playing) {
+      music.barIndex = 0;
+      music.nextBar = music.ctx.currentTime + 0.15;
+    }
+    showToast('背景曲：' + MUSIC_TRACKS[id].name);
+    render();
+  }
+
+  function tracksHtml() {
+    const cards = MUSIC_TRACK_ORDER.map(id => {
+      const track = MUSIC_TRACKS[id];
+      const active = state.track === id;
+      return '<button class="track-card" data-action="pick-track" data-track="' + id + '" data-active="' + (active ? 'true' : 'false') + '">'
+        + '<span class="track-glyph">' + track.glyph + '</span>'
+        + '<span class="track-copy"><b>' + esc(track.name) + '</b><em>' + esc(track.sub) + '</em><p>' + esc(track.desc) + '</p></span>'
+        + '<span class="track-pick">' + (active ? '正在播放' : '选择') + '</span>'
+        + '</button>';
+    }).join('');
+    return '<div class="modal track-modal" role="dialog" aria-modal="true" aria-label="选择背景曲">'
+      + '<section class="track-sheet">'
+      + '<div class="track-head"><div><span class="modal-kicker">SOUNDTRACK</span><h2>选择这一世的背景曲</h2><p>四种风格，切换后从下一小节开始播放。</p></div><button class="close-btn" data-action="close-tracks" aria-label="关闭">×</button></div>'
+      + '<div class="track-list">' + cards + '</div>'
+      + '<div class="track-note">音乐开关仍由音符按钮控制；选择会保存在本机浏览器。</div>'
+      + '</section></div>';
+  }
+
   function scrollAfterRender() {
     const mode = state.pendingScroll;
     state.pendingScroll = 'preserve';
@@ -16860,11 +17023,12 @@
         ? setupHtml()
         : gameHtml();
     let overlay = ''
-    if (state.replay) overlay = replayHtml()
+    if (state.showTracks) overlay = tracksHtml()
+    else if (state.replay) overlay = replayHtml()
     else if (state.run && state.run.pendingScene) overlay = sceneHtml()
     else if (state.run && state.run.pendingChoice) overlay = choiceHtml()
     app.innerHTML = html + overlay
-    document.body.classList.toggle('modal-open', Boolean(state.replay || (state.run && (state.run.pendingScene || state.run.pendingChoice))))
+    document.body.classList.toggle('modal-open', Boolean(state.showTracks || state.replay || (state.run && (state.run.pendingScene || state.run.pendingChoice))))
     updateMusicMood(state.run)
     scrollAfterRender();
   }
@@ -16918,7 +17082,7 @@
 
     return '<div class="screen no-bottom">'
       + '<header class="hero">'
-      + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicButton() + '</div>'
+      + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
@@ -17017,7 +17181,7 @@
     const talentPct = Math.round((selectedCount / TALENT_PICK_COUNT) * 100);
 
     return '<div class="screen setup">'
-      + '<div class="topbar"><div class="topbar-left"><button class="icon-btn" data-action="home" aria-label="返回开始界面">‹</button><div class="topbar-copy"><b>准备这一生</b><span>' + esc(world.name) + ' · 十五点投胎 · 十选五</span></div></div><div class="topbar-actions">' + musicButton() + '<span class="mode-chip" data-mode="' + state.playMode + '">' + (state.playMode === 'text' ? '纯文本' : '互动') + '</span><span class="mode-chip">' + (state.legacy ? '继承' : '重开') + '</span></div></div>'
+      + '<div class="topbar"><div class="topbar-left"><button class="icon-btn" data-action="home" aria-label="返回开始界面">‹</button><div class="topbar-copy"><b>准备这一生</b><span>' + esc(world.name) + ' · 十五点投胎 · 十选五</span></div></div><div class="topbar-actions">' + musicControls() + '<span class="mode-chip" data-mode="' + state.playMode + '">' + (state.playMode === 'text' ? '纯文本' : '互动') + '</span><span class="mode-chip">' + (state.legacy ? '继承' : '重开') + '</span></div></div>'
       + '<div class="setup-head"><div><h1>投胎之前</h1><p>把十五点押在你想成为的样子上。</p></div><span class="mode-chip">' + esc(world.en) + '</span></div>'
       + '<div class="world-scroll">' + worlds + '</div>'
       + genderHtml
@@ -17326,7 +17490,7 @@
     return '<div class="screen game' + (death ? ' no-advance' : '') + '">'
       + '<header class="game-head"><div class="game-head-row">'
       + '<div class="game-head-left"><span class="topbar-brand" data-world="' + esc(run.worldId) + '">' + esc(world.name.slice(0, 1)) + '</span><div class="game-head-title"><b>' + esc(world.name) + '</b><span>' + esc(stage.label) + ' · RUN ' + String(run.no).padStart(2, '0') + '</span></div>' + (run.legacy ? '<span class="mode-chip">继承</span>' : '') + '</div>'
-      + '<div class="topbar-actions">' + musicButton() + '<button class="icon-btn" data-action="home" aria-label="返回开始界面">⌂</button></div>'
+      + '<div class="topbar-actions">' + musicControls() + '<button class="icon-btn" data-action="home" aria-label="返回开始界面">⌂</button></div>'
       + '</div>'
       + statsHtml(run)
       + '<div class="age-line"><b>' + run.age + '</b><span>岁 · ' + esc(stage.label) + '</span></div>'
@@ -17722,6 +17886,9 @@
     }
     switch (action) {
       case 'toggle-music': toggleMusic(); break;
+      case 'open-tracks': state.showTracks = true; render(); break;
+      case 'close-tracks': state.showTracks = false; render(); break;
+      case 'pick-track': setMusicTrack(target.dataset.track); break;
       case 'set-mode': setPlayMode(target.dataset.mode); break;
       case 'start-setup': startSetup(); break;
       case 'home': goHome(); break;
