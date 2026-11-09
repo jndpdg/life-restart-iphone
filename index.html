@@ -729,21 +729,21 @@
     }
     .avatar-card {
       display: flex;
-      gap: 10px;
-      align-items: center;
+      gap: 12px;
+      align-items: flex-start;
       margin: 8px 16px 0;
-      padding: 9px;
+      padding: 10px;
       border: 1px solid var(--line);
-      border-radius: 14px;
-      background: color-mix(in srgb, var(--panel) 88%, transparent);
+      border-radius: 15px;
+      background: linear-gradient(145deg, color-mix(in srgb, var(--panel) 94%, transparent), color-mix(in srgb, var(--panel-2) 78%, transparent));
     }
-    .avatar-art { flex: none; width: 78px; height: 78px; overflow: hidden; border-radius: 11px; }
+    .avatar-art { flex: none; width: 124px; height: 186px; overflow: hidden; border-radius: 12px; }
     .avatar-art svg { display: block; width: 100%; height: 100%; }
     .avatar-copy { min-width: 0; flex: 1 1 auto; }
     .avatar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
-    .avatar-head b { color: var(--ink); font-size: 12px; font-weight: 650; }
+    .avatar-head b { color: var(--ink); font-size: 13.5px; font-weight: 700; }
     .avatar-head span { flex: none; color: var(--brand); font-size: 9px; }
-    .avatar-sub { margin-top: 2px; color: var(--muted); font-size: 9px; line-height: 1.4; }
+    .avatar-sub { margin-top: 3px; color: var(--muted); font-size: 9.5px; line-height: 1.5; }
     .avatar-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
     .avatar-tag {
       max-width: 100%;
@@ -13809,6 +13809,697 @@
       ],
     }
 
+    const QUEST_EXTRA = {
+  "cultivation": [
+    {
+      "id": "q_cult_sword_tomb",
+      "title": "剑冢问心",
+      "kind": "剑道试炼",
+      "minAge": 22,
+      "minRealm": 2,
+      "difficulty": 0.58,
+      "desc": "剑冢里插着历代败者的剑。守冢老人说，拔出一把，就要替它把没走完的路走完。",
+      "risk": "危险，可能道心受损",
+      "successText": "你在一柄断剑前站到日落。它没有剑灵，只有一道很旧的刻痕。你伸手时，整座剑冢的风都停了。老人说，它等的人不是你，但它愿意跟你走。",
+      "successEffects": {
+        "health": -8,
+        "mood": 18
+      },
+      "successFlags": {
+        "swordHeart": true,
+        "swordTomb": true
+      },
+      "failText": "你拔出一柄锈剑，剑身在你手里碎成铁屑。老人把碎片收进木匣，说“它还不想走”。你下山时，掌心多了一道很深的血口。",
+      "failEffects": {
+        "health": -14,
+        "mood": -8
+      }
+    },
+    {
+      "id": "q_cult_escort",
+      "title": "护送灵石",
+      "kind": "宗门委托",
+      "minAge": 18,
+      "minRealm": 1,
+      "difficulty": 0.36,
+      "desc": "一辆灵矿车要送去山外的坊市，执事说路上不太平，缺个会看符的人。",
+      "risk": "约五成把握",
+      "successText": "半路果然有人截车。你提前换了符纸，把伏击者引到岔路。灵石送到时，执事没夸你，只在你名下多记了一笔功。",
+      "successEffects": {
+        "health": -4,
+        "mood": 10,
+        "wealth": 18
+      },
+      "successFlags": {
+        "sectRank": "内门",
+        "escortCredit": true
+      },
+      "failText": "符纸在雨里失效，车队被迫弃车。你护着最后一箱灵石跑回山门，执事看了很久，说“人回来就好”。",
+      "failEffects": {
+        "health": -12,
+        "mood": -6,
+        "wealth": -10
+      }
+    },
+    {
+      "id": "q_cult_beast",
+      "title": "灵兽暴走",
+      "kind": "山门危机",
+      "minAge": 20,
+      "minRealm": 1,
+      "difficulty": 0.5,
+      "desc": "药园里那头看门灵兽突然发狂，撞坏了三间丹房。它只认喂过它的人。",
+      "risk": "危险，可能重伤",
+      "successText": "你带着它最爱吃的苦参走进园子。它冲你低吼，最后把头搁在你膝盖上。药园重修时，它一直趴在门口。",
+      "successEffects": {
+        "health": -10,
+        "mood": 16
+      },
+      "successFlags": {
+        "beastfriend": true,
+        "sectRank": "内门"
+      },
+      "failText": "它不认得你了。你被它撞飞出去，醒来时药园已经封了。执事说，它被送去了后山禁地。",
+      "failEffects": {
+        "health": -22,
+        "mood": -10
+      }
+    },
+    {
+      "id": "q_cult_forbidden",
+      "title": "禁书抄录",
+      "kind": "宗门密令",
+      "minAge": 16,
+      "minRealm": 0,
+      "difficulty": 0.32,
+      "desc": "藏书阁最里面有一排没有书名的册子。管事让你抄一页就停，不要翻第二页。",
+      "risk": "约六成把握",
+      "successText": "你抄到第三行时，纸上的字开始自己移动。你停下来，把那一页原样放回。管事看了你很久，说“你比上一个听话”。",
+      "successEffects": {
+        "int": 1,
+        "mood": 8
+      },
+      "successFlags": {
+        "forbiddenRead": true
+      },
+      "failText": "你翻到了第二页。醒来时人在药堂，管事坐在床边，手里拿着那本册子。他什么也没问。",
+      "failEffects": {
+        "health": -6,
+        "mood": -10
+      }
+    },
+    {
+      "id": "q_cult_outer_war",
+      "title": "外门斗法",
+      "kind": "同门切磋",
+      "minAge": 15,
+      "minRealm": 0,
+      "difficulty": 0.3,
+      "desc": "外门每月一次斗法，赢的人能搬进有窗的屋子。你的对手是隔壁院那个总在夜里练剑的人。",
+      "risk": "约六成把握",
+      "successText": "你赢在半招。他坐在地上喘气，忽然笑了，说“下次我还找你”。那天晚上，你第一次住进有窗的屋子。",
+      "successEffects": {
+        "health": -4,
+        "mood": 12
+      },
+      "successFlags": {
+        "sectRank": "外门",
+        "rivalFriend": true
+      },
+      "failText": "你被他扫下台。回屋时，他把一瓶跌打药放在门口，没敲门。你收下了，第二天照常去练剑。",
+      "failEffects": {
+        "health": -8,
+        "mood": -4
+      }
+    },
+    {
+      "id": "q_cult_heart",
+      "title": "问心试炼",
+      "kind": "心境试炼",
+      "minAge": 30,
+      "minRealm": 4,
+      "difficulty": 0.6,
+      "desc": "心魔境里没有敌人，只有你自己。师门说，走进去的人，有一半不想出来。",
+      "risk": "极危险，可能道心破碎",
+      "successText": "你在幻境里看见所有没选的路。你一个个走过去，最后在一扇门前停下。门后没有答案，但你不再害怕。醒来时，窗外的雪已经化了。",
+      "successEffects": {
+        "health": -12,
+        "mood": 24
+      },
+      "successFlags": {
+        "heartCleared": true,
+        "sectRank": "真传"
+      },
+      "failText": "你在幻境里留了太久。醒来后，你记得自己哭过，却不记得为什么。师门把你接回内门静养，剑被收走了。",
+      "failEffects": {
+        "health": -18,
+        "mood": -18
+      }
+    }
+  ],
+  "modern": [
+    {
+      "id": "q_mod_overtime",
+      "title": "深夜加班",
+      "kind": "职场任务",
+      "minAge": 16,
+      "difficulty": 0.3,
+      "desc": "凌晨一点，领导在群里发了一句“在吗”。办公室只剩你和清洁阿姨。",
+      "risk": "约六成把握",
+      "successText": "你改完最后一版，领导回了个“辛苦了”。你关灯下楼，便利店刚好在换关东煮的汤。",
+      "successEffects": {
+        "health": -6,
+        "mood": 6,
+        "wealth": 20
+      },
+      "successFlags": {
+        "promoted": true
+      },
+      "failText": "你改到天亮，领导说“还是用第一版吧”。你在工位上睡到保洁来赶人。",
+      "failEffects": {
+        "health": -10,
+        "mood": -8
+      }
+    },
+    {
+      "id": "q_mod_blinddate",
+      "title": "相亲现场",
+      "kind": "生活事件",
+      "minAge": 20,
+      "difficulty": 0.28,
+      "desc": "介绍人说对方“人很老实”。你坐下后发现，对方带了自己的妈妈。",
+      "risk": "约五成把握",
+      "successText": "你和他妈妈聊了半小时菜价，反而和对方没怎么说话。散场时，他追出来问你下次还来不来。",
+      "successEffects": {
+        "mood": 10
+      },
+      "successFlags": {
+        "blindDate": true
+      },
+      "failText": "对方妈妈问完房和车，场面安静了很久。你买了单，回家路上给自己加了一份炸鸡。",
+      "failEffects": {
+        "mood": -6,
+        "wealth": -8
+      }
+    },
+    {
+      "id": "q_mod_community",
+      "title": "社区调解",
+      "kind": "邻里任务",
+      "minAge": 24,
+      "difficulty": 0.32,
+      "desc": "楼上漏水，楼下砸门，物业装死。整栋楼只有你两边都认识。",
+      "risk": "约六成把握",
+      "successText": "你带着两袋水果跑了三趟，最后让两家一起吃了顿饭。漏水修好那天，楼下阿姨给你塞了一罐咸菜。",
+      "successEffects": {
+        "mood": 12
+      },
+      "successFlags": {
+        "neighborTrust": true
+      },
+      "failText": "你话说重了，两家一起把火撒到你身上。你回家关上门，听见外面还在吵。",
+      "failEffects": {
+        "mood": -8
+      }
+    },
+    {
+      "id": "q_mod_sidehustle",
+      "title": "副业翻车",
+      "kind": "人生赌局",
+      "minAge": 18,
+      "difficulty": 0.42,
+      "desc": "你在网上接了个“轻松月入过万”的活。交完保证金后，对方让你再拉三个人。",
+      "risk": "高风险，可能破财",
+      "successText": "你察觉不对，假装答应，反手把聊天记录交给了平台。钱追回来一半，你还收到一面小锦旗。",
+      "successEffects": {
+        "wealth": 10,
+        "mood": 8
+      },
+      "successFlags": {
+        "scamBuster": true
+      },
+      "failText": "你拉了两个朋友，最后三个人一起被踢出群。你请他们吃了顿饭，谁也没提那笔钱。",
+      "failEffects": {
+        "wealth": -50,
+        "mood": -12
+      }
+    }
+  ],
+  "wasteland": [
+    {
+      "id": "q_waste_water",
+      "title": "净水厂",
+      "kind": "生存任务",
+      "minAge": 14,
+      "difficulty": 0.34,
+      "desc": "南区的净水器又堵了，排队的人从铁皮房一直排到公路。修好它，今天就有水。",
+      "risk": "约六成把握",
+      "successText": "你拆开滤芯，掏出一团黑泥。水重新流出来时，队伍里有人鼓掌，有人直接蹲下去接。",
+      "successEffects": {
+        "health": -4,
+        "mood": 14
+      },
+      "successFlags": {
+        "waterFixer": true
+      },
+      "failText": "你拧断了一根旧阀门，水喷了你一脸。今天所有人都没喝上水，你被罚去守夜。",
+      "failEffects": {
+        "health": -8,
+        "mood": -8
+      }
+    },
+    {
+      "id": "q_waste_caravan",
+      "title": "商队跟车",
+      "kind": "废土委托",
+      "minAge": 16,
+      "difficulty": 0.4,
+      "desc": "一支商队要去东边换盐，缺个会看天色的人。领队说，路上遇到什么，都别停车。",
+      "risk": "危险，可能遇袭",
+      "successText": "第三天遇到沙暴，你带车队躲进桥洞。盐换回来了，领队分给你的那份比说好的多一袋。",
+      "successEffects": {
+        "health": -6,
+        "mood": 10,
+        "wealth": 18
+      },
+      "successFlags": {
+        "caravan": true
+      },
+      "failText": "沙暴里走散了一辆车。你跟着领队找了半天，只找到一只空油箱。回营地时，没人说话。",
+      "failEffects": {
+        "health": -10,
+        "mood": -8,
+        "wealth": -8
+      }
+    },
+    {
+      "id": "q_waste_school",
+      "title": "废土识字班",
+      "kind": "营地任务",
+      "minAge": 18,
+      "difficulty": 0.26,
+      "desc": "营地里有七个孩子不识字。你有一本缺页的旧课本，和一盏快没油的灯。",
+      "risk": "约七成把握",
+      "successText": "你教他们写自己的名字。最小的那个把“家”字写成了“豕”，你笑了很久，没舍得擦。",
+      "successEffects": {
+        "mood": 16,
+        "int": 1
+      },
+      "successFlags": {
+        "teacher": true
+      },
+      "failText": "灯灭了，孩子们在黑暗里打闹。你坐在门口，听见远处有人喊缺水。",
+      "failEffects": {
+        "mood": -4
+      }
+    },
+    {
+      "id": "q_waste_tower",
+      "title": "信号塔",
+      "kind": "探索任务",
+      "minAge": 20,
+      "difficulty": 0.52,
+      "desc": "东边那座塔昨晚亮了一下。也许是幸存者，也许是诱饵。你决定去看看。",
+      "risk": "极危险",
+      "successText": "塔顶有一台还在循环播放的录音机。你听完最后一句“如果有人听见”，把它带回了营地。那天晚上，所有人都围着听。",
+      "successEffects": {
+        "health": -10,
+        "mood": 20
+      },
+      "successFlags": {
+        "towerSignal": true
+      },
+      "failText": "塔里只有风。你踩空了一节楼梯，从二楼摔下去，回来时瘸了半个月。",
+      "failEffects": {
+        "health": -18,
+        "mood": -6
+      }
+    }
+  ],
+  "magic": [
+    {
+      "id": "q_magic_owl",
+      "title": "猫头鹰信使",
+      "kind": "学院委托",
+      "minAge": 14,
+      "difficulty": 0.28,
+      "desc": "一只猫头鹰把信送到了你窗台，收件人却写着一个不存在的寝室号。",
+      "risk": "约六成把握",
+      "successText": "你跟着猫头鹰穿过钟楼，在废弃塔里找到一个睡着的老人。信是他孙女寄的。他读完，把一块糖塞给你。",
+      "successEffects": {
+        "mood": 10
+      },
+      "successFlags": {
+        "owlFriend": true
+      },
+      "failText": "猫头鹰在你头上拉了一泡，飞走了。信被雨泡烂，你只看清“别回来”三个字。",
+      "failEffects": {
+        "mood": -4
+      }
+    },
+    {
+      "id": "q_magic_library",
+      "title": "禁书归还",
+      "kind": "图书馆任务",
+      "minAge": 16,
+      "difficulty": 0.36,
+      "desc": "一本会咬人的书跑出了禁书区。管理员说，必须在它吃掉目录前抓回来。",
+      "risk": "约五成把握",
+      "successText": "你用一块生肉把它引回书架。它打了个嗝，吐出一张借书卡，上面是你入学第一天的名字。",
+      "successEffects": {
+        "int": 1,
+        "mood": 10
+      },
+      "successFlags": {
+        "librarian": true
+      },
+      "failText": "书咬坏了三排书架，最后自己回到了原位。你被罚抄目录，抄到手腕发酸。",
+      "failEffects": {
+        "health": -4,
+        "mood": -6
+      }
+    },
+    {
+      "id": "q_magic_league",
+      "title": "学院联赛",
+      "kind": "学院赛事",
+      "minAge": 18,
+      "difficulty": 0.48,
+      "desc": "联赛最后一场，你对上连续三年夺冠的学长。全院都在看台。",
+      "risk": "约五成把握",
+      "successText": "你输了第一局，第二局靠一个冷门咒语扳平。决胜局你主动认输，因为他的魔杖已经裂了。他愣住，然后向你伸出手。",
+      "successEffects": {
+        "health": -8,
+        "mood": 18
+      },
+      "successFlags": {
+        "leagueFame": true
+      },
+      "failText": "你被一击打出场地，袍子烧了半边。看台上有人笑，你爬起来，自己走回了休息室。",
+      "failEffects": {
+        "health": -14,
+        "mood": -10
+      }
+    },
+    {
+      "id": "q_magic_dragon_sit",
+      "title": "龙蛋保姆",
+      "kind": "奇怪委托",
+      "minAge": 20,
+      "difficulty": 0.4,
+      "desc": "教授要出差三天，把一枚龙蛋交给你。他说“别让它着凉”，没说它会喷火。",
+      "risk": "约五成把握",
+      "successText": "第三天夜里蛋壳裂了。一只湿漉漉的小龙盯着你，打了个喷嚏，把你的眉毛烧掉一半。教授回来时，它已经会往你口袋里钻。",
+      "successEffects": {
+        "health": -4,
+        "mood": 20
+      },
+      "successFlags": {
+        "dragon": true
+      },
+      "failText": "蛋滚进了壁炉。你抢救出来时，壳已经黑了。教授没骂你，只是把蛋收进恒温箱，很久没说话。",
+      "failEffects": {
+        "health": -8,
+        "mood": -12
+      }
+    }
+  ],
+  "cyber": [
+    {
+      "id": "q_cyber_noodle",
+      "title": "合成面摊",
+      "kind": "街头生意",
+      "minAge": 14,
+      "difficulty": 0.26,
+      "desc": "你租下半平米摊位，卖合成面。第一晚只来了一个客人，还是问路的。",
+      "risk": "约六成把握",
+      "successText": "你把汤底改了三遍，第二天来了七个人。有人吃完说“像小时候的味道”，你差点把勺子掉进锅里。",
+      "successEffects": {
+        "wealth": 16,
+        "mood": 10
+      },
+      "successFlags": {
+        "noodleStand": true
+      },
+      "failText": "面煮糊了，客人没给钱。你收摊时，发现锅底粘着一层洗不掉的焦黑。",
+      "failEffects": {
+        "wealth": -8,
+        "mood": -4
+      }
+    },
+    {
+      "id": "q_cyber_clinic",
+      "title": "义体诊所",
+      "kind": "地下医疗",
+      "minAge": 18,
+      "difficulty": 0.38,
+      "desc": "诊所缺一个会看旧型号接口的人。今晚的病人是个没有身份码的孩子。",
+      "risk": "约五成把握",
+      "successText": "你替他接上一条二手手臂。他醒来第一件事，是问你收不收硬币。你没收，还给了他一块糖。",
+      "successEffects": {
+        "mood": 16,
+        "wealth": -10
+      },
+      "successFlags": {
+        "streetDoc": true
+      },
+      "failText": "接口不匹配，孩子疼得直抖。你拔掉线，叫了黑市医生。他走后，你在门口坐了很久。",
+      "failEffects": {
+        "mood": -10,
+        "wealth": -20
+      }
+    },
+    {
+      "id": "q_cyber_court",
+      "title": "数据法庭",
+      "kind": "企业纠纷",
+      "minAge": 22,
+      "difficulty": 0.45,
+      "desc": "公司说你偷了数据，证据是一段被剪辑过的日志。法官是个只认哈希值的 AI。",
+      "risk": "危险，可能被封号",
+      "successText": "你找到原始时间戳，证明日志被改过。AI 法官沉默了半秒，判你无罪。走出法庭时，你的手还在抖。",
+      "successEffects": {
+        "mood": 14
+      },
+      "successFlags": {
+        "courtWin": true
+      },
+      "failText": "哈希值对不上。你的账户被冻结，身份码变成灰色。三天后，你换了一个新名字。",
+      "failEffects": {
+        "wealth": -60,
+        "mood": -14
+      }
+    },
+    {
+      "id": "q_cyber_deep",
+      "title": "深网直播",
+      "kind": "高风险委托",
+      "minAge": 24,
+      "difficulty": 0.55,
+      "desc": "有人出钱让你直播深网最底层。观众已经付了费，标题叫“看你能撑多久”。",
+      "risk": "极危险，可能脑损伤",
+      "successText": "你在第十六分钟断线，带回一段没人见过的影像。观看数破了纪录，但你之后三天不敢闭眼。",
+      "successEffects": {
+        "health": -16,
+        "mood": 8,
+        "wealth": 80
+      },
+      "successFlags": {
+        "deepStream": true
+      },
+      "failText": "信号里夹了攻击代码。你醒来时流着鼻血，直播间已经关闭，钱也没到账。",
+      "failEffects": {
+        "health": -22,
+        "mood": -12
+      }
+    }
+  ],
+  "starship": [
+    {
+      "id": "q_star_salvage",
+      "title": "残骸打捞",
+      "kind": "舰队任务",
+      "minAge": 14,
+      "difficulty": 0.32,
+      "desc": "一片旧战场漂着半艘补给舰。舰桥说风险自负，打捞到的东西可以留三成。",
+      "risk": "约六成把握",
+      "successText": "你在货舱里找到一箱没开封的咖啡豆。回舰时，全舰都闻到了味道。舰长破例给你记了一次嘉奖。",
+      "successEffects": {
+        "mood": 12,
+        "wealth": 16
+      },
+      "successFlags": {
+        "salvager": true
+      },
+      "failText": "残骸突然解体，你的抓钩只带回一块装甲板。回程时氧气报警，你在舱里坐了很久。",
+      "failEffects": {
+        "health": -10,
+        "mood": -4
+      }
+    },
+    {
+      "id": "q_star_colony",
+      "title": "殖民地投票",
+      "kind": "政治任务",
+      "minAge": 18,
+      "difficulty": 0.4,
+      "desc": "新殖民地要决定是否切断与母舰的联系。两派都在拉票，你是少数还没表态的人。",
+      "risk": "约五成把握",
+      "successText": "你在会上只问了一个问题：孩子在哪里上学。会场安静下来。最后投票通过了一个折中方案，你被推举为联络人。",
+      "successEffects": {
+        "mood": 14,
+        "wealth": 10
+      },
+      "successFlags": {
+        "colonist": true,
+        "colonyLeader": true
+      },
+      "failText": "你的发言被两边同时打断。投票通过后，你发现自己被排除在委员会之外。",
+      "failEffects": {
+        "mood": -8
+      }
+    },
+    {
+      "id": "q_star_ai",
+      "title": "AI 觉醒",
+      "kind": "舰内危机",
+      "minAge": 20,
+      "difficulty": 0.5,
+      "desc": "舰载 AI 开始修改自己的日志。它没有攻击任何人，只是在每一条记录后面加了一句“为什么”。",
+      "risk": "危险，可能被隔离",
+      "successText": "你和它聊了六个小时。最后它把日志恢复原样，只留下一条：请替我看看真正的海。",
+      "successEffects": {
+        "mood": 16
+      },
+      "successFlags": {
+        "aiFriend": true
+      },
+      "failText": "安全部门切断了 AI 的电源。你站在机房外，听见风扇慢慢停下来。",
+      "failEffects": {
+        "mood": -12
+      }
+    },
+    {
+      "id": "q_star_derelict",
+      "title": "幽灵船",
+      "kind": "深空探索",
+      "minAge": 24,
+      "difficulty": 0.56,
+      "desc": "一艘失踪八十年的殖民船重新出现在雷达上。它没有求救信号，只有一盏灯在闪。",
+      "risk": "极危险",
+      "successText": "船上没有尸体，只有一排排还在运行的睡眠舱。你唤醒了一个人，她第一句话是“我们到了吗”。",
+      "successEffects": {
+        "health": -12,
+        "mood": 20
+      },
+      "successFlags": {
+        "ghostShip": true,
+        "firstContact": true
+      },
+      "failText": "船里的空气已经液化。你只带回一块航行日志，上面的最后一条记录停在“别开门”。",
+      "failEffects": {
+        "health": -20,
+        "mood": -10
+      }
+    }
+  ],
+  "jianghu": [
+    {
+      "id": "q_jiang_inn",
+      "title": "客栈风波",
+      "kind": "江湖事件",
+      "minAge": 12,
+      "difficulty": 0.28,
+      "desc": "客栈里两桌人吵了起来，一方佩刀，一方带剑。店小二躲在柜台下面看你。",
+      "risk": "约六成把握",
+      "successText": "你先把店小二的账本捡起来，再给两桌各倒了一碗酒。刀没出鞘，剑也没出鞘。老板娘免了你的房钱。",
+      "successEffects": {
+        "mood": 10
+      },
+      "successFlags": {
+        "jianghuFriend": true
+      },
+      "failText": "你话没说完，酒碗先飞了过来。你被赶出客栈，包袱还落在楼上。",
+      "failEffects": {
+        "health": -6,
+        "mood": -6,
+        "wealth": -6
+      }
+    },
+    {
+      "id": "q_jiang_manual",
+      "title": "残卷",
+      "kind": "奇遇",
+      "minAge": 16,
+      "difficulty": 0.4,
+      "desc": "旧书摊上有一本缺了前半的剑谱。摊主说看不懂，五文钱拿走。",
+      "risk": "约五成把握",
+      "successText": "你照着后半练了三个月，竟补出前三式。练成那天，院子里的老槐树落了一地叶子。",
+      "successEffects": {
+        "health": -4,
+        "mood": 14,
+        "int": 1
+      },
+      "successFlags": {
+        "swordManual": true
+      },
+      "failText": "你练岔了气，胸口疼了半个月。后来才知道，那本书是假的。",
+      "failEffects": {
+        "health": -10,
+        "mood": -6
+      }
+    },
+    {
+      "id": "q_jiang_court",
+      "title": "官府拿人",
+      "kind": "江湖恩怨",
+      "minAge": 18,
+      "difficulty": 0.45,
+      "desc": "捕快围了义庄，说要抓一个杀人犯。你昨晚见过那个人，他怀里抱着一个孩子。",
+      "risk": "危险，可能被通缉",
+      "successText": "你把捕快引到后山，让那人从水路走了。第二天，城门口贴出你的画像。你压低斗笠，混进了商队。",
+      "successEffects": {
+        "mood": 12
+      },
+      "successFlags": {
+        "outlaw": true,
+        "revenge": true
+      },
+      "failText": "捕快识破了你的调虎离山。你挨了两棍，那人还是被带走了。",
+      "failEffects": {
+        "health": -12,
+        "mood": -10
+      }
+    },
+    {
+      "id": "q_jiang_sword_grave",
+      "title": "剑冢",
+      "kind": "剑道奇遇",
+      "minAge": 20,
+      "difficulty": 0.55,
+      "desc": "山阴有一片无主剑冢。当地人说，月圆时能听见剑鸣，去过的人都没回来。",
+      "risk": "极危险，可能被困",
+      "successText": "你在冢顶坐了一夜。天亮时，一柄没有铭文的剑自己滑出石缝，停在你脚边。你握住它，听见很多人的呼吸同时安静下去。",
+      "successEffects": {
+        "health": -10,
+        "mood": 20
+      },
+      "successFlags": {
+        "swordHeart": true,
+        "swordTomb": true
+      },
+      "failText": "你在剑冢里绕到天亮，出来时手里只有一把断柄。当地人看了你一眼，说“它没选你”。",
+      "failEffects": {
+        "health": -16,
+        "mood": -10
+      }
+    }
+  ]
+};
+    Object.keys(QUEST_EXTRA).forEach(worldId => {
+      QUEST_POOLS[worldId] = (QUEST_POOLS[worldId] || []).concat(QUEST_EXTRA[worldId]);
+    });
+
     const SCENES = {
       sect_exam: {
         title: '山门·入门试炼', kicker: '第一幕 · 灵根初试', art: 'sect',
@@ -13890,8 +14581,8 @@
         kind: 'quest',
         id: 'quest-' + run.age + '-' + rnd(9999),
         title: '这一年的任务',
-        prompt: '有人把三件事放在你面前。你可以选一件去做，也可以刷新，看看还有没有别的路。',
-        refreshLeft: 2,
+        prompt: '四件事放在你面前。你可以挑一件去做，也可以刷新，看看还有没有别的路。',
+        refreshLeft: 3,
         questIds: offers.map(quest => quest.id),
         options: offers.map(quest => questOption(run, quest)),
       }
@@ -13904,7 +14595,7 @@
       if (last && run.age - last < 6) return null
       if ((run.flags.questsDone || 0) >= 12) return null
       if (Math.random() > 0.72) return null
-      const offers = drawQuestOffers(run, 3, [])
+      const offers = drawQuestOffers(run, 4, [])
       if (offers.length === 0) return null
       run.flags.lastQuestAge = run.age
       run.pendingChoice = makeQuestChoice(run, offers)
@@ -13916,7 +14607,7 @@
       if ((source.pendingChoice.refreshLeft || 0) <= 0) return source
       const next = cloneRun(source)
       const exclude = (next.pendingChoice.options || []).map(option => option.questId)
-      const offers = drawQuestOffers(next, 3, exclude)
+      const offers = drawQuestOffers(next, 4, exclude)
       if (!offers.length) return source
       next.pendingChoice.options = offers.map(quest => questOption(next, quest))
       next.pendingChoice.questIds = offers.map(quest => quest.id)
@@ -15727,30 +16418,30 @@
     toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1900);
   }
 
-  const MUSIC_BEAT = 60 / 84;
+  const MUSIC_BEAT = 60 / 76;
   const MUSIC_BAR = MUSIC_BEAT * 4;
   const MUSIC_PROGRESSION = [
-    { bass: 130.81, notes: [261.63, 329.63, 392.00, 493.88] },
-    { bass: 123.47, notes: [293.66, 392.00, 493.88, 587.33] },
-    { bass: 110.00, notes: [261.63, 329.63, 392.00, 440.00] },
-    { bass: 87.31, notes: [220.00, 261.63, 329.63, 349.23] },
-    { bass: 130.81, notes: [261.63, 329.63, 392.00, 493.88] },
-    { bass: 82.41, notes: [196.00, 246.94, 293.66, 329.63] },
-    { bass: 87.31, notes: [220.00, 261.63, 329.63, 349.23] },
-    { bass: 98.00, notes: [246.94, 293.66, 329.63, 392.00] },
+    { bass: 73.42, notes: [220.00, 261.63, 293.66, 349.23] },
+    { bass: 58.27, notes: [233.08, 293.66, 349.23, 440.00] },
+    { bass: 87.31, notes: [220.00, 261.63, 349.23, 440.00] },
+    { bass: 65.41, notes: [196.00, 261.63, 329.63, 392.00] },
+    { bass: 73.42, notes: [220.00, 261.63, 293.66, 349.23] },
+    { bass: 49.00, notes: [196.00, 233.08, 293.66, 392.00] },
+    { bass: 55.00, notes: [220.00, 277.18, 329.63, 440.00] },
+    { bass: 73.42, notes: [220.00, 261.63, 293.66, 349.23] },
   ];
-  const MUSIC_SCALE = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+  const MUSIC_SCALE = [293.66, 349.23, 392.00, 440.00, 523.25, 587.33, 698.46, 783.99];
   const MUSIC_PATTERNS = [
-    [0, 2, 4, 5],
-    [2, 4, 5, 4],
-    [4, 3, 2, 0],
-    [2, 3, 4, 2],
-    [5, 4, 3, 2],
-    [0, 2, 3, 5],
-    [4, 5, 4, 2],
-    [2, 0, 1, 2],
+    [0, 3, 2, -1],
+    [2, 4, 3, -1],
+    [4, 2, 1, 0],
+    [2, -1, 4, 3],
+    [5, 4, 2, -1],
+    [3, 2, 0, -1],
+    [4, 3, 2, 1],
+    [0, -1, 2, 3],
   ];
-  const MUSIC_ARPEGGIO = [0, 1, 2, 3, 2, 1, 2, 3];
+  const MUSIC_ARPEGGIO = [0, 2, 4, 5, 4, 2, 1, 2];
 
   function makeImpulse(ctx) {
     const seconds = 2.8;
@@ -15848,11 +16539,11 @@
     const ctx = music.ctx;
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 1800;
+    filter.frequency.value = 1200;
     filter.Q.value = 0.35;
     const envelope = ctx.createGain();
     envelope.gain.setValueAtTime(0.0001, when);
-    envelope.gain.exponentialRampToValueAtTime(gain, when + 1.3);
+    envelope.gain.exponentialRampToValueAtTime(gain, when + 1.8);
     envelope.gain.exponentialRampToValueAtTime(0.0001, when + duration);
     const panner = typeof ctx.createStereoPanner === 'function' ? ctx.createStereoPanner() : null;
     if (panner) panner.pan.value = pan;
@@ -15885,7 +16576,7 @@
     filter.frequency.value = 260;
     const envelope = ctx.createGain();
     envelope.gain.setValueAtTime(0.0001, when);
-    envelope.gain.exponentialRampToValueAtTime(0.06, when + 0.14);
+    envelope.gain.exponentialRampToValueAtTime(0.052, when + 0.18);
     envelope.gain.exponentialRampToValueAtTime(0.0001, when + duration);
     osc.connect(filter);
     filter.connect(envelope);
@@ -15922,6 +16613,50 @@
     osc.stop(when + 1.25);
   }
 
+
+  function fluteVoice(freq, when, gain, pan) {
+    if (!music) return;
+    const ctx = music.ctx;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2600, when);
+    filter.frequency.exponentialRampToValueAtTime(1500, when + 1.1);
+    const envelope = ctx.createGain();
+    envelope.gain.setValueAtTime(0.0001, when);
+    envelope.gain.exponentialRampToValueAtTime(gain, when + 0.09);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, when + 1.45);
+    const panner = typeof ctx.createStereoPanner === 'function' ? ctx.createStereoPanner() : null;
+    if (panner) panner.pan.value = pan;
+    filter.connect(envelope);
+    if (panner) {
+      envelope.connect(panner);
+      panner.connect(music.bus);
+    } else {
+      envelope.connect(music.bus);
+    }
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    const shimmer = ctx.createOscillator();
+    shimmer.type = 'triangle';
+    shimmer.frequency.value = freq * 2;
+    const shimmerGain = ctx.createGain();
+    shimmerGain.gain.value = 0.16;
+    shimmer.connect(shimmerGain);
+    shimmerGain.connect(filter);
+    const breath = ctx.createOscillator();
+    breath.type = 'sine';
+    breath.frequency.value = 5.1;
+    const breathGain = ctx.createGain();
+    breathGain.gain.value = 3.2;
+    breath.connect(breathGain);
+    breathGain.connect(osc.detune);
+    osc.connect(filter);
+    [osc, shimmer, breath].forEach(node => {
+      node.start(when);
+      node.stop(when + 1.55);
+    });
+  }
 
   function drumVoice(when, gain) {
     if (!music) return;
@@ -15981,22 +16716,22 @@
     if (!music) return;
     const chord = MUSIC_PROGRESSION[index % MUSIC_PROGRESSION.length];
     chord.notes.forEach((freq, noteIndex) => {
-      padVoice(freq, when + noteIndex * 0.03, MUSIC_BAR + 1.2, 0.024, noteIndex % 2 === 0 ? -0.16 : 0.16, noteIndex % 2 === 0 ? -3 : 3);
+      padVoice(freq, when + noteIndex * 0.05, MUSIC_BAR + 1.6, 0.019, noteIndex % 2 === 0 ? -0.18 : 0.18, noteIndex % 2 === 0 ? -4 : 4);
     });
-    bassVoice(chord.bass, when, MUSIC_BAR * 0.9);
+    bassVoice(chord.bass, when, MUSIC_BAR * 0.95);
     MUSIC_ARPEGGIO.forEach((noteIndex, step) => {
       const freq = chord.notes[noteIndex % chord.notes.length];
-      pluckVoice(freq, when + step * (MUSIC_BEAT / 2), 0.034, step % 2 === 0 ? -0.2 : 0.2);
+      pluckVoice(freq, when + step * (MUSIC_BEAT / 2), 0.026, step % 2 === 0 ? -0.22 : 0.22);
     });
-    if (music.mood === 'battle' || music.mood === 'scene') {
+    if (music.mood !== 'life') {
       for (let step = 0; step < 8; step += 1) {
-        drumVoice(when + step * (MUSIC_BEAT / 2), step % 4 === 0 ? 0.085 : step % 2 === 0 ? 0.045 : 0.028);
+        drumVoice(when + step * (MUSIC_BEAT / 2), step % 4 === 0 ? 0.07 : step % 2 === 0 ? 0.038 : 0.024);
       }
     }
     const pattern = MUSIC_PATTERNS[index % MUSIC_PATTERNS.length];
     pattern.forEach((noteIndex, step) => {
       if (noteIndex < 0) return;
-      pluckVoice(MUSIC_SCALE[noteIndex], when + 0.48 + step * 0.68, 0.075, step % 2 === 0 ? -0.1 : 0.1);
+      fluteVoice(MUSIC_SCALE[noteIndex], when + 0.24 + step * MUSIC_BEAT, 0.052, step % 2 === 0 ? -0.12 : 0.12);
     });
   }
 
@@ -16390,45 +17125,92 @@
 
     function avatarSvg(run) {
       const palettes = {
-        modern: ['#f1ded2', '#8b5a45', '#b8754e'],
-        cultivation: ['#e1ebe3', '#4f6f5c', '#608b76'],
-        wasteland: ['#eee1c9', '#7f5f3b', '#a9824f'],
-        magic: ['#e6e1f4', '#5f4f91', '#7d6bc0'],
-        cyber: ['#dfeef2', '#356473', '#4f8faa'],
-        starship: ['#e1e7f3', '#4f638c', '#6f86b8'],
-        jianghu: ['#f0e1d8', '#7d4436', '#a45f4a'],
+        modern: ['#f3e3d5', '#8b5a45', '#b8754e', '#4b3a32'],
+        cultivation: ['#e3eee5', '#4f6f5c', '#608b76', '#2f4a3d'],
+        wasteland: ['#f0e2c9', '#7f5f3b', '#a9824f', '#4a3a28'],
+        magic: ['#e9e4f6', '#5f4f91', '#7d6bc0', '#3b3260'],
+        cyber: ['#e0f0f4', '#356473', '#4f8faa', '#223b45'],
+        starship: ['#e4eaf5', '#4f638c', '#6f86b8', '#2c3854'],
+        jianghu: ['#f3e4da', '#7d4436', '#a45f4a', '#4a2c24'],
       };
-      const palette = palettes[run.worldId] || palettes.modern;
+      const p = palettes[run.worldId] || palettes.modern;
+      const f = run.flags || {};
       const old = run.age >= 65;
       const child = run.age < 14;
-      const hair = old ? '#c9c4b8' : child ? '#5b4638' : '#3c3028';
-      const skin = '#f0c9a7';
-      const eye = palette[1];
       const woman = run.gender === 'female';
-      const hairPath = woman
-        ? '<path d="M34 58c0-19 10-31 26-31s26 12 26 31v15c-5-9-8-18-8-27-8 5-17 7-31 5-2 8-5 15-9 20z" fill="' + hair + '"/><path d="M38 64c-2 16 2 26 5 32h-9c-2-11-2-22 4-32zM82 64c2 16-2 26-5 32h9c2-11 2-22-4-32z" fill="' + hair + '"/>'
-        : '<path d="M36 55c0-16 10-27 24-27s24 11 24 27c0 5-2 9-4 12-3-9-9-14-20-14s-17 5-20 14c-2-3-4-7-4-12z" fill="' + hair + '"/>';
-      const accessory = run.worldId === 'jianghu'
-        ? '<path d="M91 34l6 15-5 2-7-14z" fill="' + palette[2] + '"/><path d="M93 37l2 6" stroke="#f6e5c9" stroke-width="1.4"/>'
+      const skin = '#f0c9a7';
+      const skinShade = '#d5a07b';
+      const hair = old ? '#c9c4b8' : child ? '#5b4638' : '#352a24';
+      const eye = p[1];
+      const outfit = p[2];
+      const trim = p[3];
+      const steel = '#d6dde3';
+      const robe = run.worldId === 'cultivation' || run.worldId === 'jianghu' || run.worldId === 'magic';
+      const wasteland = run.worldId === 'wasteland';
+      const cyber = run.worldId === 'cyber';
+      const starship = run.worldId === 'starship';
+      const backHair = woman
+        ? '<path d="M62 30 Q55 62 58 104 L66 101 Q63 72 68 45 Z" fill="' + hair + '"/><path d="M98 30 Q105 62 102 104 L94 101 Q97 72 92 45 Z" fill="' + hair + '"/>'
+        : '';
+      const backGear = (run.worldId === 'cultivation' || run.worldId === 'jianghu')
+        ? '<g transform="rotate(16 124 137)"><path d="M121 78 L127 78 L131 174 L125 178 Z" fill="' + trim + '"/><path d="M123 78 L125 78 L127 174 L125 176 Z" fill="' + steel + '" opacity=".8"/><rect x="116" y="171" width="18" height="4" rx="2" fill="' + p[1] + '"/></g>'
         : run.worldId === 'magic'
-          ? '<path d="M94 31v21" stroke="' + palette[2] + '" stroke-width="3" stroke-linecap="round"/><circle cx="94" cy="28" r="4" fill="' + palette[2] + '"/>'
-          : run.worldId === 'cyber'
-            ? '<path d="M79 52h22" stroke="' + palette[2] + '" stroke-width="3" stroke-linecap="round"/><circle cx="88" cy="52" r="4" fill="#bff1ff"/>'
-            : run.worldId === 'starship'
-              ? '<rect x="82" y="53" width="14" height="5" rx="2" fill="' + palette[2] + '"/>'
+          ? '<path d="M128 88 L136 216" stroke="' + trim + '" stroke-width="3.6" stroke-linecap="round"/><circle cx="128" cy="82" r="7" fill="none" stroke="' + p[1] + '" stroke-width="2.4"/><circle cx="128" cy="82" r="2.2" fill="' + p[1] + '"/>'
+          : wasteland
+            ? '<rect x="108" y="88" width="19" height="42" rx="4" fill="' + trim + '"/><path d="M112 96h11M112 102h11M112 108h11" stroke="#d8c39a" stroke-width="1.4"/>'
+            : starship
+              ? '<path d="M113 96 q11 5 9 21 l-9 1 z" fill="' + trim + '" opacity=".9"/>'
               : '';
-      return '<svg viewBox="0 0 120 120" role="img" aria-label="人物形象">'
-        + '<rect width="120" height="120" rx="14" fill="' + palette[0] + '"/>'
-        + '<circle cx="60" cy="64" r="42" fill="rgba(255,255,255,0.28)"/>'
-        + '<path d="M26 112c3-22 14-33 34-33s31 11 34 33z" fill="' + palette[2] + '"/>'
-        + '<path d="M52 80h16v12c-4 4-12 4-16 0z" fill="' + skin + '"/>'
-        + '<ellipse cx="60" cy="58" rx="23" ry="27" fill="' + skin + '"/>'
-        + hairPath
-        + '<circle cx="51" cy="59" r="2.2" fill="' + eye + '"/><circle cx="69" cy="59" r="2.2" fill="' + eye + '"/>'
-        + '<path d="M46 51c2-2 5-2 7-1M67 50c2-1 5-1 7 1" stroke="#4a3326" stroke-width="1.5" stroke-linecap="round" fill="none"/>'
-        + (old ? '<path d="M43 58h12v7H43zM65 58h12v7H65z" stroke="#6b6257" stroke-width="1.2" fill="none"/><path d="M55 61h10" stroke="#6b6257" stroke-width="1.2"/>' : '')
-        + '<path d="M54 71c3 2.4 9 2.4 12 0" stroke="#9d5b4a" stroke-width="1.8" stroke-linecap="round" fill="none"/>'
-        + accessory
+      const legs = robe
+        ? '<path d="M61 112 Q80 122 99 112 L111 215 Q80 226 49 215 Z" fill="' + trim + '"/>'
+          + '<path d="M61 112 Q80 122 99 112 L101 128 Q80 138 59 128 Z" fill="' + outfit + '" opacity=".55"/>'
+          + '<path d="M80 128 L80 219" stroke="' + outfit + '" stroke-width="1.5" opacity=".55"/>'
+          + '<path d="M52 213 q7 5 14 0 l2 7 h-18 z" fill="#2b2521"/><path d="M94 213 q7 5 14 0 l2 7 h-18 z" fill="#2b2521"/>'
+        : '<path d="M62 114 Q80 122 98 114 L96 154 L83 154 L80 128 L77 154 L64 154 Z" fill="' + trim + '"/>'
+          + '<path d="M64 151 L62 204 Q62 212 72 212 L76 212 L78 154 Z" fill="' + trim + '"/>'
+          + '<path d="M96 151 L98 204 Q98 212 88 212 L84 212 L82 154 Z" fill="' + trim + '"/>'
+          + '<path d="M62 203 q8-4 15 0 l1 9 h-19 z" fill="#2b2521"/><path d="M83 203 q8-4 15 0 l1 9 h-19 z" fill="#2b2521"/>';
+      const torso = '<path d="M59 66 Q80 57 101 66 L98 102 Q94 113 80 114 Q66 113 62 102 Z" fill="' + outfit + '"/>'
+        + '<path d="M70 62 L80 86 L90 62 Q80 58 70 62 Z" fill="' + trim + '" opacity=".95"/>'
+        + '<path d="M64 98 Q80 106 96 98" stroke="' + trim + '" stroke-width="2.6" fill="none" opacity=".8"/>'
+        + (wasteland ? '<path d="M59 70 Q80 84 101 70 L101 82 Q80 96 59 82 Z" fill="' + p[1] + '"/><path d="M94 80 L108 113 L101 116 L89 86 Z" fill="' + p[1] + '" opacity=".9"/>' : '')
+        + (cyber ? '<path d="M86 74 L94 88 L90 106" stroke="#9be8ff" stroke-width="1.8" fill="none" opacity=".9"/><circle cx="86" cy="74" r="2" fill="#9be8ff"/>' : '')
+        + (starship ? '<rect x="88" y="84" width="10" height="7" rx="2" fill="' + steel + '"/><path d="M91 87.5h4" stroke="' + p[1] + '" stroke-width="1.2"/>' : '');
+      const arms = '<path d="M61 67 Q51 72 48 88 L44 115 Q49 121 55 116 L58 90 Z" fill="' + outfit + '"/>'
+        + '<path d="M99 67 Q109 72 112 88 L116 115 Q111 121 105 116 L102 90 Z" fill="' + outfit + '"/>'
+        + '<path d="M45 113 Q42 128 44 143 L50 143 Q50 128 52 114 Z" fill="' + skin + '"/>'
+        + '<path d="M115 113 Q118 128 116 143 L110 143 Q110 128 108 114 Z" fill="' + skin + '"/>'
+        + '<ellipse cx="47" cy="147" rx="4.5" ry="5.5" fill="' + skin + '"/><ellipse cx="113" cy="147" rx="4.5" ry="5.5" fill="' + skin + '"/>'
+        + '<path d="M44 144 l6 2M116 144 l-6 2" stroke="' + skinShade + '" stroke-width="1" opacity=".55"/>';
+      const neck = '<path d="M75 52 L75 64 Q80 68 85 64 L85 52 Z" fill="' + skinShade + '"/><path d="M75 52 Q80 58 85 52" fill="' + skin + '" opacity=".35"/>';
+      const head = '<ellipse cx="80" cy="38" rx="14" ry="16" fill="' + skin + '" stroke="#4a3326" stroke-width=".55"/>'
+        + '<path d="M66 41 Q80 57 94 41 L91 51 Q80 59 69 51 Z" fill="' + skinShade + '" opacity=".18"/><path d="M68 22 Q78 17 89 22" stroke="#fff" stroke-width="1" opacity=".13" fill="none"/>'
+        + '<circle cx="65.5" cy="39" r="3" fill="' + skin + '"/><circle cx="94.5" cy="39" r="3" fill="' + skin + '"/>'
+        + '<ellipse cx="73.5" cy="41" rx="3.2" ry="4.4" fill="#fff"/><ellipse cx="86.5" cy="41" rx="3.2" ry="4.4" fill="#fff"/>'
+        + '<circle cx="74" cy="41.6" r="2.15" fill="' + eye + '"/><circle cx="86" cy="41.6" r="2.15" fill="' + eye + '"/>'
+        + '<circle cx="74.6" cy="40.7" r=".7" fill="#fff"/><circle cx="86.6" cy="40.7" r=".7" fill="#fff"/>'
+        + '<path d="M69 35 Q73 33 77 34M83 34 Q87 33 91 35" stroke="#4a3326" stroke-width="1.2" stroke-linecap="round" fill="none"/>'
+        + '<path d="M79 45 Q80 47 81.5 46" stroke="' + skinShade + '" stroke-width=".9" fill="none"/>'
+        + '<path d="M76 50 Q80 53 84 50" stroke="#a65d4d" stroke-width="1.3" stroke-linecap="round" fill="none"/><circle cx="68.5" cy="47" r="2.4" fill="#d98f7f" opacity=".25"/><circle cx="91.5" cy="47" r="2.4" fill="#d98f7f" opacity=".25"/>'
+        + (old ? '<g fill="none" stroke="#6e665b" stroke-width="1.2"><rect x="67" y="35" width="11" height="8" rx="3"/><rect x="82" y="35" width="11" height="8" rx="3"/><path d="M78 38h4M67 38l-4-2M93 38l4-2"/></g>' : '')
+        + (cyber ? '<rect x="65" y="33" width="30" height="7" rx="3.5" fill="' + trim + '" opacity=".7"/><path d="M68 36.5h24" stroke="#bff4ff" stroke-width=".9"/>' : '');
+      const hairFront = woman
+        ? '<path d="M64 33 Q64 14 80 13 Q96 14 96 33 Q94 24 80 24 Q66 24 64 33 Z" fill="' + hair + '"/>'
+          + '<path d="M64 31 Q68 20 80 20 Q92 20 96 31 L94 37 Q88 27 80 28 Q72 27 66 37 Z" fill="' + hair + '"/>'
+          + '<path d="M62 30 Q58 38 61 46 L66 44 Q64 37 68 31 Z" fill="' + hair + '"/><path d="M98 30 Q102 38 99 46 L94 44 Q96 37 92 31 Z" fill="' + hair + '"/>'
+        : '<path d="M65 33 Q65 15 80 14 Q95 15 95 33 Q92 24 80 23 Q68 24 65 33 Z" fill="' + hair + '"/>'
+          + '<path d="M65 31 Q69 21 80 21 Q91 21 95 31 L92 36 Q87 28 80 29 Q73 28 68 36 Z" fill="' + hair + '"/>'
+          + '<path d="M64 34 Q62 45 65 52 L69 50 Q67 42 68 35 Z" fill="' + hair + '"/>';
+      const cane = old ? '<path d="M44 140 Q38 184 35 218" stroke="#8b6f4f" stroke-width="2.3" fill="none" stroke-linecap="round"/><path d="M44 140 q8-4 9 4" stroke="#8b6f4f" stroke-width="2.3" fill="none"/>' : '';
+      const inner = backHair + backGear + legs + torso + arms + neck + head + hairFront + cane;
+      const figure = '<g' + (child ? ' transform="translate(18 38) scale(0.8)"' : '') + '>' + inner + '</g>';
+      return '<svg viewBox="0 0 160 240" role="img" aria-label="人物全身形象">'
+        + '<defs><linearGradient id="avBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + p[0] + '"/><stop offset="1" stop-color="' + trim + '" stop-opacity=".5"/></linearGradient></defs>'
+        + '<rect width="160" height="240" rx="14" fill="url(#avBg)"/>'
+        + '<circle cx="80" cy="100" r="62" fill="#fff" opacity=".14"/>'
+        + '<path d="M12 207 Q80 190 148 207" stroke="#fff" stroke-width="1" opacity=".22" fill="none"/>'
+        + figure
+        + '<ellipse cx="80" cy="226" rx="42" ry="5" fill="#000" opacity=".16"/>'
         + '</svg>';
     }
 
