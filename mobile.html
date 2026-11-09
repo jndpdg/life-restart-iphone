@@ -1296,6 +1296,58 @@
     .world-pill[data-world='jianghu'], .world-chip[data-world='jianghu'], .topbar-brand[data-world='jianghu'] { --world: var(--world-jianghu); }
 
 
+    .task-chip { border-color: rgba(239, 207, 155, 0.36); color: var(--gold); }
+    .quest-toolbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      margin: 0 0 12px; padding: 9px 12px; border: 1px solid var(--line);
+      border-radius: 12px; background: rgba(255, 255, 255, 0.03);
+      color: var(--muted-2); font-size: 11px;
+    }
+    .quest-toolbar button {
+      min-height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line);
+      background: transparent; color: var(--text); font: inherit; font-weight: 650;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .quest-toolbar button[disabled] { opacity: .35; }
+    .choice-sheet[data-kind="quest"] { border-color: rgba(239, 207, 155, .3); }
+    .choice-sheet[data-kind="quest"] .choice-kicker { color: var(--gold); }
+    .scene-modal {
+      position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center;
+      padding: calc(14px + var(--safe-top)) 12px calc(14px + var(--safe-bottom));
+      background: rgba(5, 7, 10, .82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      overflow-y: auto;
+    }
+    .scene-sheet {
+      width: min(560px, 100%); max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 28px);
+      overflow-y: auto; border: 1px solid rgba(239, 207, 155, .28); border-radius: 18px;
+      background: #0b0e13; box-shadow: 0 30px 90px rgba(0, 0, 0, .65);
+      animation: sceneIn .42s cubic-bezier(.2, .8, .2, 1) both;
+    }
+    .scene-frame { position: relative; overflow: hidden; background: #080a0f; }
+    .scene-art svg { display: block; width: 100%; height: auto; }
+    .scene-scan {
+      position: absolute; inset: 0; pointer-events: none; opacity: .16;
+      background: repeating-linear-gradient(0deg, rgba(255,255,255,.08) 0 1px, transparent 1px 4px);
+      mix-blend-mode: screen;
+    }
+    .scene-stamp {
+      position: absolute; top: 12px; right: 12px; padding: 4px 8px; border: 1px solid rgba(255,255,255,.3);
+      color: #fff; font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .18em;
+      background: rgba(0,0,0,.28);
+    }
+    .scene-caption { padding: 16px 18px 4px; }
+    .scene-kicker { color: var(--gold); font-size: 10px; font-weight: 800; letter-spacing: .18em; }
+    .scene-caption h2 { margin: 6px 0 8px; font: 400 30px/1.08 var(--serif); color: var(--text); }
+    .scene-caption p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.85; }
+    .scene-actions { padding: 14px 18px calc(18px + var(--safe-bottom)); display: flex; gap: 10px; }
+    .scene-actions .btn { flex: 1; }
+    @keyframes sceneIn { from { opacity: 0; transform: translateY(16px) scale(.98); } to { opacity: 1; transform: none; } }
+    @media (max-width: 430px) {
+      .scene-caption h2 { font-size: 26px; }
+      .scene-caption p { font-size: 12px; }
+    }
+
+
     html, body { overscroll-behavior-y: contain; }
     @media (pointer: coarse) {
       .step-btn { width: 40px; height: 40px; }
@@ -13620,9 +13672,12 @@
         tone: result.tone || 'normal',
         deltas,
         isChoice: true,
+        isQuest: pending.kind === 'quest',
+        questResult: result.questResult || null,
         autoChoice: Boolean(meta && meta.auto),
         choiceLabel: pending.title,
       })
+      if (result.sceneId && next.alive) openScene(next, result.sceneId)
       if (next.ascending) {
         finishLife(next, { silent: true })
         return next
@@ -13643,6 +13698,309 @@
         return next
       }
       return resolveChoice(source, pick(options).id, { auto: true })
+    }
+
+
+    const QUEST_POOLS = {
+      cultivation: [
+        {
+          id: 'q_cult_herb', title: '山门采药', kind: '宗门委托', minAge: 12, minRealm: 0, difficulty: 0.28,
+          desc: '外门药园缺一味夜露草，管事把竹篓塞给你，说后山雾大，别走太深。',
+          risk: '约六成把握', successText: '你在后山雾散前找到了那丛夜露草，裤脚湿透，手心全是泥。管事多看了你一眼，把名牌从外门末席往前挪了两格。',
+          successEffects: { mood: 8, wealth: 6 }, successFlags: { sectRank: '外门' },
+          failText: '雾里绕了半日，你带回一把认错的草。管事没骂人，只是把竹篓倒空，让你明天重来。',
+          failEffects: { health: -6, mood: -3 },
+        },
+        {
+          id: 'q_cult_chores', title: '外门杂役', kind: '宗门日常', minAge: 12, minRealm: 0, difficulty: 0.2,
+          desc: '挑水、劈柴、扫山门。管事说修行不只在打坐，也在这些没人愿意做的事里。',
+          risk: '约七成把握', successText: '你把水缸挑满，又把山门前的落叶扫成两堆。傍晚管事路过，往你门口放了两个热馒头。',
+          successEffects: { mood: 6, health: 2 }, successFlags: { sectRank: '外门' },
+          failText: '扁担在半山腰断了，水洒了一路。你坐在石阶上，把湿透的鞋脱下来晾了很久。',
+          failEffects: { health: -4, mood: -2 },
+        },
+        {
+          id: 'q_cult_lecture', title: '听道', kind: '宗门讲道', minAge: 12, minRealm: 0, difficulty: 0.24,
+          desc: '内门长老每月开讲一次。外门弟子只能站在廊下听，去晚了连廊下都没位置。',
+          risk: '约六成把握', successText: '你站在最后一排，把长老说的“气随意走”记在袖口上。回去试着运了一遍，竟然真的走通了半条经脉。',
+          successEffects: { int: 1, mood: 8 }, successFlags: { heardDao: true },
+          failText: '你站得太远，只听见一半。回去照着练，气在胸口堵了三天。',
+          failEffects: { health: -3, mood: -4 },
+        },
+        {
+          id: 'q_cult_patrol', title: '巡山', kind: '宗门值守', minAge: 13, minRealm: 0, difficulty: 0.3,
+          desc: '后山最近有野兽出没。执事给了你一盏灯和一根木棍，让你守到天亮。',
+          risk: '约六成把握', successText: '后半夜，你在溪边赶走了一头下山找食的野猪。天亮交班时，执事看了看你破掉的袖口，没说什么，给你记了一功。',
+          successEffects: { health: -3, mood: 8 }, successFlags: { sectRank: '外门', patrolCredit: true },
+          failText: '你在树下睡着了，灯烧到天亮。执事扣了你三天例钱，让你把山道重扫一遍。',
+          failEffects: { health: -2, mood: -5, wealth: -4 },
+        },
+        {
+          id: 'q_cult_wood', title: '劈柴', kind: '宗门日常', minAge: 12, minRealm: 0, difficulty: 0.22,
+          desc: '伙房要三十担干柴，后山那棵枯松已经倒了半年。你提着斧头过去，发现树根比人还粗。',
+          risk: '约六成把握', successText: '你劈到太阳偏西，终于把枯松拆成一堆整齐的柴。伙房师傅留你吃了一碗有油花的汤。',
+          successEffects: { health: -2, mood: 7, wealth: 3 }, successFlags: { sectRank: '外门' },
+          failText: '斧头卡进树节，你拔了半天，最后连斧柄一起断了。伙房扣了你半天工。',
+          failEffects: { health: -4, mood: -3, wealth: -2 },
+        },
+        {
+          id: 'q_cult_market', title: '下山采买', kind: '宗门委托', minAge: 12, minRealm: 0, difficulty: 0.26,
+          desc: '药房缺几味凡间药材，管事把一张单子和一小袋碎银交给你。山下镇子今天有集。',
+          risk: '约六成把握', successText: '你按单子买齐了药，还剩几文钱，给同屋的人带了一包糖。回去交差时，管事说你算得比上一个弟子清楚。',
+          successEffects: { mood: 8, wealth: 2 }, successFlags: { sectRank: '外门', marketTrust: true },
+          failText: '你把两味药认混了，回到山门才发觉。管事没让你赔，只让你把药名抄一百遍。',
+          failEffects: { mood: -5, wealth: -4 },
+        },
+        {
+          id: 'q_cult_secret', title: '秘境·洞天', kind: '秘境试炼', minAge: 16, minRealm: 1, difficulty: 0.42,
+          desc: '宗门试炼境每十年开一次。石门上刻着“入者自负生死”，队伍里没人先迈步。',
+          risk: '约五成把握，重伤风险', successText: '你在洞天深处摘到一株会发光的灵草，回程时石桥塌了半截。你抱着草从水里爬出来，听见山门钟响了三声。',
+          successEffects: { health: -8, mood: 14, wealth: 24 }, successFlags: { secretRealm: true },
+          failText: '洞天里的雾气会让人走回原地。你转了三天，最后被巡山弟子拖出来，怀里只有一块湿石头。',
+          failEffects: { health: -14, mood: -8 }, scene: 'secret_realm',
+        },
+        {
+          id: 'q_cult_duel', title: '外门大比', kind: '宗门大比', minAge: 18, minRealm: 1, difficulty: 0.46,
+          desc: '演武台上，外门弟子按签号捉对。赢了进内门，输了下山守矿。',
+          risk: '约五成把握，可能受伤', successText: '你连赢三场。最后一场对手比你高一境，你靠一记险招把他逼下台。执事念你名字时，你听见台下有人先鼓了掌。',
+          successEffects: { health: -10, mood: 18, wealth: 12 }, successFlags: { sectRank: '内门', tournamentWin: true },
+          failText: '你止步第二轮。对手收剑时说了句“再练练”，你点头，回房把剑擦了半宿。',
+          failEffects: { health: -8, mood: -10 }, scene: 'tournament',
+        },
+        {
+          id: 'q_cult_alchemy', title: '丹会', kind: '丹道比试', minAge: 20, minRealm: 2, difficulty: 0.4,
+          desc: '丹会开炉，三炷香内成丹者入榜。你分到一炉受潮的赤灵芝，旁边人都在看笑话。',
+          risk: '约五成把握', successText: '你临时改了火候，丹成时只有六颗，却颗颗带纹。监考长老捏起一颗闻了闻，把你的名字写进了丹房名册。',
+          successEffects: { mood: 12, wealth: 30 }, successFlags: { alchemist: true },
+          failText: '炉温失控，丹炸成一地黑渣。你赔了材料钱，袖口烧出一个洞，回去缝了两针。',
+          failEffects: { health: -4, mood: -6, wealth: -18 },
+        },
+        {
+          id: 'q_cult_demon', title: '魔道冲突', kind: '边境冲突', minAge: 24, minRealm: 2, difficulty: 0.56,
+          desc: '边境传来魔修结阵的消息。宗门问谁愿去，堂里安静了很久。',
+          risk: '危险，重伤或道心受损', successText: '你在阵眼处截住那名魔修。斗法打到天亮，你废了一条经脉，也把他的阵旗钉进山壁。回来时，山门为你开了中门。',
+          successEffects: { health: -20, mood: 16 }, successFlags: { demonSlain: true, sectRank: '真传' },
+          failText: '阵里全是熟悉的脸。你醒过来时已躺在药堂，师父坐在床边，只说了一句“活着回来就好”。',
+          failEffects: { health: -26, mood: -14 },
+        },
+        {
+          id: 'q_cult_tribulation', title: '天劫试炼', kind: '生死试炼', minAge: 36, minRealm: 6, difficulty: 0.66,
+          desc: '师门长辈说，化神之后每一境都要问一次天。你站在雷台中央，云层低得像要压下来。',
+          risk: '极危险，可能身死道消', successText: '第一道雷落下时你没有躲，第二道劈开护体灵光，第三道过去，云层从中间裂开一线。你跪在焦土里，听见自己心跳得很慢，却还活着。',
+          successEffects: { health: -22, mood: 24 }, successFlags: { tribulationSurvived: true },
+          failText: '雷光停时，台上只剩一截焦黑的剑柄。师门把你的名字刻在碑上，每年有人来扫。',
+          failEffects: { health: -45, mood: -20 },
+        },
+      ],
+      modern: [
+        { id: 'q_mod_project', title: '项目竞标', kind: '职场任务', minAge: 22, difficulty: 0.34, desc: '公司把最后一版方案交给你，甲方明天上午听汇报。', risk: '约六成把握', successText: '你把方案讲到第七页时，甲方负责人第一次抬头。合同签下来那天，你在楼梯间站了很久，才想起来给自己买瓶水。', successEffects: { wealth: 60, mood: 10 }, successFlags: { projectWon: true }, failText: '方案被打回，领导没说什么，只让你把会议纪要整理好。你加班到十一点，地铁已经停了。', failEffects: { health: -6, mood: -8 } },
+        { id: 'q_mod_marathon', title: '城市马拉松', kind: '身体挑战', minAge: 24, difficulty: 0.38, desc: '你报了半马。报名页上写着“量力而行”，你盯着那四个字看了很久。', risk: '约五成把握', successText: '最后三公里你几乎是走过去的，但终点线还是被你踩在脚下。志愿者递来一块奖牌，你笑得像个傻子。', successEffects: { health: 8, mood: 16 }, successFlags: { marathon: true }, failText: '十五公里处你抽筋了。坐在路边看别人跑过去，你有点不甘心，但还是给自己叫了辆车。', failEffects: { health: -8, mood: -5 } },
+        { id: 'q_mod_rescue', title: '暴雨救援', kind: '突发事件', minAge: 28, difficulty: 0.48, desc: '暴雨把老城区淹了。社区群里在招会游泳的志愿者，你盯着屏幕，雨声越来越大。', risk: '危险，可能受伤', successText: '你和几个人把一位老人从一楼背出来。水到胸口，老人一直说家里还有一只猫。后来猫也找到了，缩在空调外机上发抖。', successEffects: { health: -10, mood: 20 }, successFlags: { hero: true }, failText: '你被水里的杂物划伤，提前上了岸。后面的事你没看见，只在新闻里看到“无人员伤亡”。', failEffects: { health: -14, mood: -4 } },
+        { id: 'q_mod_startup', title: '创业路演', kind: '人生赌局', minAge: 30, difficulty: 0.52, desc: '你把所有积蓄押在一个小产品上。今天见最后一轮投资人。', risk: '高风险，可能破产', successText: '投资人问了你三个问题，最后一个你答得并不好，但他还是签了。走出写字楼时，你发现手一直在抖。', successEffects: { wealth: 180, mood: 18 }, successFlags: { founder: true }, failText: '对方说“再联系”，你知道那就是不联系。回去的路上你算了一遍账，够撑三个月。', failEffects: { wealth: -80, mood: -14 } },
+      ],
+      wasteland: [
+        { id: 'q_waste_scavenge', title: '废墟搜刮', kind: '生存任务', minAge: 14, difficulty: 0.3, desc: '北区超市的顶棚还没塌，里面也许有罐头，也许有变异鼠。', risk: '约六成把握', successText: '你从货架底下拖出两箱午餐肉，又找到一盒没受潮的火柴。回营地时，守门的人第一次没搜你的包。', successEffects: { health: 4, mood: 10, wealth: 12 }, successFlags: { scavenger: true }, failText: '顶棚在你进去后塌了一半。你只抢出一只空罐头，手臂划了一道口子。', failEffects: { health: -10, mood: -4 } },
+        { id: 'q_waste_raider', title: '匪帮谈判', kind: '废土冲突', minAge: 20, difficulty: 0.44, desc: '匪帮堵住了水源。他们说要一半的水，否则明天来取。', risk: '危险，可能开战', successText: '你一个人走到他们营地，把水票和一把旧枪放在桌上。谈了很久，最后他们拿走三成，还留下一个受伤的人让你带走。', successEffects: { mood: 12, wealth: -20 }, successFlags: { raiderTruce: true }, failText: '话没谈拢，枪先响了。你带着人撤回来，水没保住，还少了两个同伴。', failEffects: { health: -18, mood: -16 } },
+        { id: 'q_waste_radio', title: '电台抢修', kind: '技术任务', minAge: 18, difficulty: 0.4, desc: '北岸电台停了三天。会修真空管的人只剩你一个，塔上风很大。', risk: '约五成把握', successText: '你换掉烧黑的电容，重新接上天线。电流声过去后，一个很远的女声说“这里是北岸”。营地里有人哭了。', successEffects: { mood: 18, wealth: 8 }, successFlags: { radioFixed: true }, failText: '你被电了一下，从梯子上摔下来。电台没修好，但第二天它自己响了几分钟，又断了。', failEffects: { health: -12, mood: -6 } },
+        { id: 'q_waste_mutant', title: '变异体追踪', kind: '猎杀任务', minAge: 24, difficulty: 0.55, desc: '一头变异体拖走了营地的小孩。脚印一直延伸到盐碱地深处。', risk: '极危险', successText: '你在废弃加油站找到它。孩子还活着，缩在油罐后面。你开了三枪，最后一枪离自己只有半步。', successEffects: { health: -18, mood: 20 }, successFlags: { beastSlain: true, hero: true }, failText: '你追到盐碱地边缘，脚印断了。回去时，营地门口多了一双小鞋。', failEffects: { health: -10, mood: -20 } },
+      ],
+      magic: [
+        { id: 'q_magic_duel', title: '学院决斗', kind: '学院比试', minAge: 16, difficulty: 0.4, desc: '决斗社在钟楼后约战。你如果不去，明天全院都会知道你怕了。', risk: '约五成把握', successText: '你用了一个没人见过的偏移咒，把对手的魔杖打飞。围观的人安静了一秒，然后开始鼓掌。', successEffects: { mood: 16, wealth: 6 }, successFlags: { duelWin: true }, failText: '你的护盾碎得太快，醒来时躺在医务室。窗外有人在笑，你假装没听见。', failEffects: { health: -8, mood: -8 } },
+        { id: 'q_magic_ruins', title: '古代遗迹', kind: '遗迹探索', minAge: 20, difficulty: 0.48, desc: '图书馆的地图背面标着一座没被登记的塔。你借了盏灯，决定去看看。', risk: '危险，可能迷失', successText: '塔顶有一面镜子，照出的不是你。你带回一块刻着古代文字的砖，教授看了很久，把办公室门关上了。', successEffects: { mood: 14, wealth: 20 }, successFlags: { ancientRuin: true }, failText: '塔里的楼梯一直在转。你走了两个小时，最后从入口出来，灯已经灭了。', failEffects: { health: -10, mood: -6 } },
+        { id: 'q_magic_potion', title: '魔药大赛', kind: '学院赛事', minAge: 18, difficulty: 0.38, desc: '比赛要求在三小时内配出“清醒剂”。你的坩埚昨天刚裂了一条缝。', risk: '约六成把握', successText: '最后一分钟，药液从紫色变成透明的蓝。评委闻了一下，问你愿不愿意去药剂系做助手。', successEffects: { mood: 12, wealth: 18 }, successFlags: { potionMaster: true }, failText: '坩埚在你手里炸了。你顶着一头绿烟走出赛场，院长说“至少人没事”。', failEffects: { health: -6, mood: -8 } },
+        { id: 'q_magic_dragon', title: '幼龙失控', kind: '危险委托', minAge: 24, difficulty: 0.55, desc: '龙舍的幼龙撞破了围栏，往禁林去了。它只认喂过它的人。', risk: '极危险', successText: '你在溪边找到它。它冲你喷了一小团火，你伸手摸了摸它的角。回程时，它趴在你肩上睡着了。', successEffects: { health: -10, mood: 22 }, successFlags: { dragonFriend: true }, failText: '它不认识你了。火球擦着你的脸过去，你滚进沟里，看着它飞进禁林深处。', failEffects: { health: -20, mood: -12 } },
+      ],
+      cyber: [
+        { id: 'q_cyber_heist', title: '数据劫案', kind: '地下委托', minAge: 20, difficulty: 0.45, desc: '有人出高价买一段公司内网数据。你知道这是脏活，但房租明天到期。', risk: '高风险，可能被追踪', successText: '你把数据切成七份，从七个不同节点送出去。最后一笔钱到账时，你删掉了所有痕迹，也删掉了那个中间人的联系方式。', successEffects: { wealth: 120, mood: 8 }, successFlags: { dataHeist: true }, failText: '追踪程序比你快一步。你切断了整层楼的电源才跑掉，钱没拿到，终端也烧了。', failEffects: { health: -8, mood: -12, wealth: -20 } },
+        { id: 'q_cyber_arena', title: '地下竞技场', kind: '义体格斗', minAge: 18, difficulty: 0.5, desc: '八角笼里没有规则，只有下注声。你签了免责协议，义体还在保修期内。', risk: '危险，义体损伤', successText: '你撑到第三回合，用一条几乎报废的左臂把对手锁住。裁判举起你的手时，观众席在喊一个你从没听过的名字。', successEffects: { health: -14, mood: 18, wealth: 60 }, successFlags: { arenaChampion: true }, failText: '你被一记过载拳打飞。醒来时在维修台，技师说左臂得换新的，费用从奖金里扣。', failEffects: { health: -20, mood: -8, wealth: -30 } },
+        { id: 'q_cyber_ghost', title: '幽灵追猎', kind: '网络任务', minAge: 24, difficulty: 0.52, desc: '城市网络里出现了一个没有注册码的幽灵。它正在读取整栋楼的住户数据。', risk: '约五成把握', successText: '你把它逼进一个废弃服务器。它最后传出一段乱码，解开是你小时候住过的地址。你删掉它，也删掉那段记忆。', successEffects: { mood: 10 }, successFlags: { ghostTraced: true }, failText: '幽灵反过来锁定了你。你拔掉网线，晚了半秒，身份信息已经被挂到黑市上。', failEffects: { wealth: -40, mood: -10 } },
+        { id: 'q_cyber_corp', title: '公司渗透', kind: '企业任务', minAge: 28, difficulty: 0.55, desc: '你收到一枚员工卡，照片是你的脸，名字不是。任务只有一句：进 47 层，别问。', risk: '极危险', successText: '47 层没有窗，只有一排排睡眠舱。你找到要找的人，她睁开眼说的第一句话是“你终于来了”。', successEffects: { health: -8, mood: 14 }, successFlags: { corpSecret: true }, failText: '电梯停在 46 层，门开后全是保安。你从消防通道跑了十七层，员工卡在兜里烧成一团塑料。', failEffects: { health: -16, mood: -12 } },
+      ],
+      starship: [
+        { id: 'q_star_scout', title: '深空侦察', kind: '舰队任务', minAge: 18, difficulty: 0.4, desc: '舰桥派你去边缘星域确认一个失联信标。单人侦察舱，燃料只够来回。', risk: '约五成把握', successText: '信标来自一艘百年前的殖民船。你带回一张完整的星图，舰长在日志里记了你的名字。', successEffects: { mood: 14, wealth: 10 }, successFlags: { scout: true }, failText: '信标是假的，你被引到一片碎石带。回程时燃料报警，你关掉生命维持，靠手动对接回来。', failEffects: { health: -12, mood: -6 } },
+        { id: 'q_star_repair', title: '舰外维修', kind: '工程任务', minAge: 16, difficulty: 0.44, desc: '三号散热片卡死，舱外服只有四小时氧气。你是当班最熟悉那截管线的人。', risk: '危险，可能失压', successText: '你把自己系在扶手上，敲开结冰的阀门。警报停下时，你的手套已经冻硬，但舰体温度开始回落。', successEffects: { health: -10, mood: 14 }, successFlags: { engineer: true }, failText: '碎片划破了你的一根氧气管。你提前回舱，散热片还是卡着，舰上热了三天。', failEffects: { health: -18, mood: -8 } },
+        { id: 'q_star_first', title: '第一次接触', kind: '外交任务', minAge: 24, difficulty: 0.5, desc: '侦察队带回一个没有语言的生命体。它只在你靠近时发光。', risk: '约五成把握', successText: '你在隔离舱里坐了一夜。它慢慢伸出一条触须，在你掌心写下一个坐标。舰桥把那里标成了“新家”。', successEffects: { mood: 20 }, successFlags: { firstContact: true }, failText: '它突然剧烈发光，隔离舱自动封锁。你被送进医疗舱观察了两周，它被送进了冷冻库。', failEffects: { health: -10, mood: -10 } },
+        { id: 'q_star_mutiny', title: '舰内哗变', kind: '危机任务', minAge: 30, difficulty: 0.58, desc: '舰尾三个舱区拒绝执行配给令。有人把通道封了，舰长让你去谈。', risk: '极危险，可能死亡', successText: '你一个人走进舱区，听了四十分钟的抱怨。最后你把配给表改了两行，放下对讲机说“先吃饭”。通道在夜里重新打开。', successEffects: { mood: 16, health: -8 }, successFlags: { mutinySolved: true }, failText: '谈崩了。你被推下楼梯，醒来时舰长已经宣布戒严。通道是开了，但没人再和你说话。', failEffects: { health: -22, mood: -12 } },
+      ],
+      jianghu: [
+        { id: 'q_jiang_escort', title: '走镖', kind: '江湖委托', minAge: 16, difficulty: 0.34, desc: '镖局缺一个押车的。货不重，路却要穿过三不管的地界。', risk: '约六成把握', successText: '一路还算太平。到地方时，镖头多给了你二钱银子，说下次还找你。', successEffects: { health: -4, mood: 8, wealth: 14 }, successFlags: { escort: true }, failText: '半路遇上山匪，你护着车退到河边，货丢了一半。镖局扣了你的工钱。', failEffects: { health: -10, mood: -6, wealth: -8 } },
+        { id: 'q_jiang_duel', title: '武林大会', kind: '擂台比武', minAge: 20, difficulty: 0.48, desc: '各派在洛阳摆擂。你原本只是去看热闹，报名表却被人塞进了手里。', risk: '约五成把握', successText: '你一路打到第四轮，最后输给一个用双刀的老者。他扶你起来，说“你的剑太直了”，然后请你喝了碗酒。', successEffects: { health: -12, mood: 18 }, successFlags: { tournamentFame: true }, failText: '第一场你就被扫下台。人群散得很快，你躺在青石板上，看见天很蓝。', failEffects: { health: -8, mood: -8 } },
+        { id: 'q_jiang_secret', title: '秘境寻宝', kind: '秘境探索', minAge: 22, difficulty: 0.5, desc: '山洪冲开一座古墓，江湖人都在往那边赶。你到的时候，洞口已经有人守着。', risk: '危险，可能被困', successText: '你从侧面裂缝摸进去，在一口枯井里找到半部剑谱。出来时洞口塌了，你从水渠钻出去，浑身泥水，剑谱还在怀里。', successEffects: { health: -10, mood: 16 }, successFlags: { swordManual: true }, failText: '你在墓道里迷了路，火折子燃尽，摸黑走了一夜。天亮时从一片坟地爬出来，两手空空。', failEffects: { health: -14, mood: -8 } },
+        { id: 'q_jiang_sect', title: '门派试炼', kind: '入门试炼', minAge: 14, difficulty: 0.36, desc: '山门今日收徒。你排在长队末尾，前面的人不是带了荐书，就是有人领。', risk: '约六成把握', successText: '你打完一套最基础的拳，掌门的师弟看了你很久，说“根骨不算好，但肯站到最后一个”。你被留在了外门。', successEffects: { mood: 12, health: -4 }, successFlags: { sect: true, sectRank: '外门' }, failText: '你被安排在明日再来。下山时，守门弟子给你塞了两个馒头，说“今年不行，明年再试”。', failEffects: { mood: -6 } },
+      ],
+    }
+
+    const SCENES = {
+      sect_exam: {
+        title: '山门·入门试炼', kicker: '第一幕 · 灵根初试', art: 'sect',
+        text: '石阶从山脚一直铺到云里，你走到一半时，听见钟声从很远的山顶传来。守门弟子让你把手放在测灵石上，石头亮起一层很淡的青光。',
+        effects: { mood: 8, flags: { sect: true, sectRank: '外门' } },
+      },
+      first_realm: {
+        title: '破境·灵气入海', kicker: '第二幕 · 第一次筑基', art: 'realm',
+        text: '灵气在经脉里转了一夜，天亮时你听见体内有什么东西轻轻打开。窗外的山雀叫了一声，你睁开眼，发现能看清它翅膀上的每一根羽毛。',
+        effects: { mood: 10, health: 6 },
+      },
+      secret_realm: {
+        title: '秘境·洞天', kicker: '支线 · 洞天福地', art: 'secret',
+        text: '洞天里的天没有太阳，却一直亮着。你沿着石阶往下走，看见一株发光的草长在枯骨中间，风从很深的地方吹上来。',
+      },
+      tournament: {
+        title: '大比·演武台', kicker: '支线 · 外门大比', art: 'battle',
+        text: '演武台四周插满旗子，风一吹，旗面像一片翻动的海。你握剑上台，听见台下有人喊你的名字，也听见有人押你输。',
+      },
+    }
+
+
+    function questRealm(run) {
+      return (run && run.flags && run.flags.realmIndex) || 0
+    }
+
+    function questChance(run, quest) {
+      const int = run.attrs.int || 0
+      const body = run.attrs.body || 0
+      const realm = questRealm(run)
+      const luck = run.luck || 0
+      const base = 0.5 + int * 0.012 + body * 0.008 + realm * 0.03 + luck * 0.008
+      return clamp(base - quest.difficulty * 0.82, 0.1, 0.92)
+    }
+
+    function questEligible(run, quest) {
+      if (!quest || run.age < (quest.minAge || 0)) return false
+      if (questRealm(run) < (quest.minRealm || 0)) return false
+      if (quest.when && !quest.when(run)) return false
+      if (quest.requires && !choiceRequirementEntries(run, { requires: quest.requires }).every(item => item.ok)) return false
+      return true
+    }
+
+    function drawQuestOffers(run, count, exclude) {
+      const pool = (QUEST_POOLS[run.worldId] || []).filter(quest => questEligible(run, quest))
+      if (!pool.length) return []
+      const seen = run.flags._questSeen || {}
+      const excluded = exclude || []
+      let source = pool.filter(quest => !seen[quest.id] && !excluded.includes(quest.id))
+      if (source.length < count) source = pool.filter(quest => !excluded.includes(quest.id))
+      if (source.length < count) source = pool.slice()
+      if (!source.length) return []
+      const picks = []
+      while (picks.length < count && source.length) {
+        picks.push(source.splice(rnd(source.length), 1)[0])
+      }
+      return picks
+    }
+
+    function questOption(run, quest) {
+      const req = { ...(quest.requires || {}) }
+      if (quest.minRealm) req.realm = Math.max(req.realm || 0, quest.minRealm)
+      const chance = Math.round(questChance(run, quest) * 100)
+      return {
+        id: quest.id,
+        label: quest.title,
+        desc: quest.kind + ' · ' + quest.desc,
+        risk: '当前成功率约 ' + chance + '%',
+        requires: Object.keys(req).length ? req : null,
+        questId: quest.id,
+        resolve(next) {
+          return resolveQuest(next, quest)
+        },
+      }
+    }
+
+    function makeQuestChoice(run, offers) {
+      return {
+        kind: 'quest',
+        id: 'quest-' + run.age + '-' + rnd(9999),
+        title: '这一年的任务',
+        prompt: '有人把三件事放在你面前。你可以选一件去做，也可以刷新，看看还有没有别的路。',
+        refreshLeft: 2,
+        questIds: offers.map(quest => quest.id),
+        options: offers.map(quest => questOption(run, quest)),
+      }
+    }
+
+    function maybeOfferQuest(run) {
+      if (!run || !run.alive || run.pendingChoice || run.pendingScene) return null
+      if (run.age < 12) return null
+      const last = run.flags.lastQuestAge || 0
+      if (last && run.age - last < 6) return null
+      if ((run.flags.questsDone || 0) >= 12) return null
+      if (Math.random() > 0.72) return null
+      const offers = drawQuestOffers(run, 3, [])
+      if (offers.length === 0) return null
+      run.flags.lastQuestAge = run.age
+      run.pendingChoice = makeQuestChoice(run, offers)
+      return run.pendingChoice
+    }
+
+    function refreshPendingQuest(source) {
+      if (!source || !source.pendingChoice || source.pendingChoice.kind !== 'quest') return source
+      if ((source.pendingChoice.refreshLeft || 0) <= 0) return source
+      const next = cloneRun(source)
+      const exclude = (next.pendingChoice.options || []).map(option => option.questId)
+      const offers = drawQuestOffers(next, 3, exclude)
+      if (!offers.length) return source
+      next.pendingChoice.options = offers.map(quest => questOption(next, quest))
+      next.pendingChoice.questIds = offers.map(quest => quest.id)
+      next.pendingChoice.refreshLeft = Math.max(0, (next.pendingChoice.refreshLeft || 0) - 1)
+      return next
+    }
+
+    function resolveQuest(run, quest) {
+      const ok = Math.random() < questChance(run, quest)
+      run.flags.lastQuestAge = run.age
+      run.flags.questsDone = (run.flags.questsDone || 0) + 1
+      run.flags._questSeen = { ...(run.flags._questSeen || {}), [quest.id]: true }
+      if (ok) {
+        if (quest.successFlags) Object.assign(run.flags, quest.successFlags)
+        return {
+          tone: 'good',
+          text: quest.successText,
+          effects: quest.successEffects || {},
+          questResult: 'success',
+          sceneId: quest.scene || null,
+        }
+      }
+      if (quest.failFlags) Object.assign(run.flags, quest.failFlags)
+      return {
+        tone: 'tragic',
+        text: quest.failText,
+        effects: quest.failEffects || {},
+        questResult: 'fail',
+        sceneId: null,
+      }
+    }
+
+    function openScene(run, sceneId) {
+      const scene = SCENES[sceneId]
+      if (!scene || !run) return false
+      const seen = run.flags._scenes || (run.flags._scenes = {})
+      if (seen[sceneId]) return false
+      seen[sceneId] = true
+      const text = typeof scene.text === 'function' ? scene.text(run) : scene.text
+      pushEntry(run, { kind: 'scene', age: run.age, text, tone: 'milestone', sceneId, title: scene.title })
+      if (scene.effects) applyEffects(run, scene.effects)
+      if (run.playMode !== 'text' && run.alive) {
+        run.pendingScene = {
+          id: sceneId,
+          title: scene.title,
+          kicker: scene.kicker,
+          text,
+          art: scene.art || 'sect',
+          stamp: 'SCENE ' + String(run.age).padStart(2, '0'),
+        }
+      }
+      return true
+    }
+
+    function maybeTriggerScene(run, source) {
+      if (!run || !run.alive || run.worldId !== 'cultivation') return false
+      if (run.age >= 10 && !(run.flags._scenes && run.flags._scenes.sect_exam)) {
+        return openScene(run, 'sect_exam')
+      }
+      if (source === 'milestone' && (run.flags.realmIndex || 0) >= 1 && !(run.flags._scenes && run.flags._scenes.first_realm)) {
+        return openScene(run, 'first_realm')
+      }
+      return false
     }
 
     const REALM_NAMES = ['凡人', '炼气期', '筑基期', '结丹期', '元婴期', '化神期', '炼虚期', '合体期', '大乘期', '渡劫期', '真仙']
@@ -14090,6 +14448,11 @@
       if (flags.partnerName == null) flags.partnerName = null
       flags.partnerLost = false
       flags._partnerSeen = {}
+      if (flags.questsDone == null) flags.questsDone = 0
+      if (flags.lastQuestAge == null) flags.lastQuestAge = 0
+      if (flags.sectRank == null) flags.sectRank = ''
+      if (flags._questSeen == null) flags._questSeen = {}
+      if (flags._scenes == null) flags._scenes = {}
       aggregate.flags.forEach(flag => { flags[flag] = true })
       if (!flags._choiceSeen) flags._choiceSeen = {}
       if (legacy) {
@@ -14193,6 +14556,7 @@
         stage: 'child',
         lastYears: 1,
         pendingChoice: null,
+        pendingScene: null,
         playMode: 'interactive',
         alive: true,
         deathAge,
@@ -14233,6 +14597,8 @@
           ...(run.flags._milestones ? { _milestones: { ...run.flags._milestones } } : {}),
           ...(run.flags._choiceSeen ? { _choiceSeen: { ...run.flags._choiceSeen } } : {}),
           ...(run.flags._partnerSeen ? { _partnerSeen: { ...run.flags._partnerSeen } } : {}),
+          ...(run.flags._questSeen ? { _questSeen: { ...run.flags._questSeen } } : {}),
+          ...(run.flags._scenes ? { _scenes: { ...run.flags._scenes } } : {}),
         },
         log: run.log.slice(),
         seen: run.seen.slice(),
@@ -14671,13 +15037,16 @@
       if (run.age >= run.deathAge || run.health <= 0) {
         finishLife(run)
       }
+      if (run.alive && !run.pendingChoice && !run.pendingScene) maybeTriggerScene(run, source)
+      if (run.alive && !run.pendingChoice && !run.pendingScene) maybeOfferQuest(run)
+      if (run.pendingScene) return run
       if (run.alive && !run.pendingChoice) maybeOfferChoice(run)
       if (run.pendingChoice && run.playMode === 'text') return autoResolveChoice(run)
       return run
     }
 
     function advanceRun(run) {
-      if (run.pendingChoice) return run
+      if (run.pendingChoice || run.pendingScene) return run
       const next = cloneRun(run)
       return addYear(next)
     }
@@ -15487,6 +15856,7 @@
         timer: null,
         nextBar: 0,
         barIndex: 0,
+        mood: 'life',
       };
       return music;
     } catch {
@@ -15573,6 +15943,61 @@
     osc.stop(when + 1.25);
   }
 
+
+  function drumVoice(when, gain) {
+    if (!music) return;
+    const ctx = music.ctx;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(116, when);
+    osc.frequency.exponentialRampToValueAtTime(42, when + 0.16);
+    const envelope = ctx.createGain();
+    envelope.gain.setValueAtTime(0.0001, when);
+    envelope.gain.exponentialRampToValueAtTime(gain, when + 0.006);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, when + 0.24);
+    osc.connect(envelope);
+    envelope.connect(music.bus);
+    osc.start(when);
+    osc.stop(when + 0.28);
+  }
+
+  function playCue(kind) {
+    if (!music || !music.playing) return;
+    try {
+      const now = music.ctx.currentTime + 0.02;
+      if (kind === 'quest' || kind === 'battle') {
+        drumVoice(now, 0.12);
+        drumVoice(now + 0.16, 0.075);
+        pluckVoice(MUSIC_SCALE[5], now + 0.04, 0.09, 0);
+      } else if (kind === 'scene') {
+        drumVoice(now, 0.08);
+        pluckVoice(MUSIC_SCALE[2], now + 0.12, 0.06, 0);
+      } else {
+        pluckVoice(MUSIC_SCALE[3], now + 0.06, 0.05, 0);
+      }
+    } catch {
+      /* Audio is optional. */
+    }
+  }
+
+  function musicMoodFor(run) {
+    if (!run) return 'life';
+    if (run.pendingScene) return 'scene';
+    if (run.pendingChoice && run.pendingChoice.kind === 'quest') return 'battle';
+    return 'life';
+  }
+
+  function setMusicMood(mood) {
+    if (!music || !mood) return;
+    if (music.mood === mood) return;
+    music.mood = mood;
+    if (music.playing) playCue(mood);
+  }
+
+  function updateMusicMood(run) {
+    setMusicMood(musicMoodFor(run));
+  }
+
   function scheduleMusicBar(index, when) {
     if (!music) return;
     const chord = MUSIC_PROGRESSION[index % MUSIC_PROGRESSION.length];
@@ -15584,6 +16009,11 @@
       const freq = chord.notes[noteIndex % chord.notes.length];
       pluckVoice(freq, when + step * (MUSIC_BEAT / 2), 0.034, step % 2 === 0 ? -0.2 : 0.2);
     });
+    if (music.mood === 'battle' || music.mood === 'scene') {
+      for (let step = 0; step < 8; step += 1) {
+        drumVoice(when + step * (MUSIC_BEAT / 2), step % 4 === 0 ? 0.085 : step % 2 === 0 ? 0.045 : 0.028);
+      }
+    }
     const pattern = MUSIC_PATTERNS[index % MUSIC_PATTERNS.length];
     pattern.forEach((noteIndex, step) => {
       if (noteIndex < 0) return;
@@ -15613,6 +16043,7 @@
     try {
       if (audio.ctx.state !== 'running') audio.ctx.resume().catch(() => {});
       if (audio.playing) return true;
+      audio.mood = musicMoodFor(state.run);
       if (audio.stopped) {
         const nextBus = audio.ctx.createGain();
         nextBus.gain.value = 0.0001;
@@ -15699,8 +16130,13 @@
       : state.view === 'setup'
         ? setupHtml()
         : gameHtml();
-    app.innerHTML = html + (state.replay ? replayHtml() : (!state.replay && state.run && state.run.pendingChoice ? choiceHtml() : ''));
-    document.body.classList.toggle('modal-open', Boolean(state.replay || (state.run && state.run.pendingChoice)));
+    let overlay = ''
+    if (state.replay) overlay = replayHtml()
+    else if (state.run && state.run.pendingScene) overlay = sceneHtml()
+    else if (state.run && state.run.pendingChoice) overlay = choiceHtml()
+    app.innerHTML = html + overlay
+    document.body.classList.toggle('modal-open', Boolean(state.replay || (state.run && (state.run.pendingScene || state.run.pendingChoice))))
+    updateMusicMood(state.run)
     scrollAfterRender();
   }
 
@@ -16118,7 +16554,7 @@
       + '</div>'
       + statsHtml(run)
       + '<div class="age-line"><b>' + run.age + '</b><span>岁 · ' + esc(stage.label) + '</span></div>'
-      + '<div class="game-chips"><span class="run-chip">性别：' + esc(run.genderLabel || '未知') + '</span><span class="run-chip">' + esc(world.dossier[0]) + '：' + esc(educationLabel(run)) + '</span><span class="run-chip">' + esc(world.dossier[1]) + '：' + esc(jobLabel(run)) + '</span></div>'
+      + '<div class="game-chips"><span class="run-chip task-chip">任务 ' + (run.flags.questsDone || 0) + (run.flags.sectRank ? ' · ' + esc(run.flags.sectRank) : '') + '</span><span class="run-chip">性别：' + esc(run.genderLabel || '未知') + '</span><span class="run-chip">' + esc(world.dossier[0]) + '：' + esc(educationLabel(run)) + '</span><span class="run-chip">' + esc(world.dossier[1]) + '：' + esc(jobLabel(run)) + '</span></div>'
       + '</header>'
       + avatarHtml(run)
       + '<main class="log">' + logHtml(run) + (run.ending ? endingHtml(run) : '') + '</main>'
@@ -16130,6 +16566,7 @@
     const run = state.run;
     const pending = run && run.pendingChoice;
     if (!pending) return '';
+    const isQuest = pending.kind === 'quest';
     const options = pending.options.map(option => {
       const requirements = choiceRequirementEntries(run, option);
       const available = canChooseOption(run, option);
@@ -16144,11 +16581,78 @@
         + (!available ? '<span class="choice-locked">属性或资源不足，暂时无法选择。</span>' : '')
         + '</button>';
     }).join('');
+    const toolbar = isQuest
+      ? '<div class="quest-toolbar"><span>可刷新 ' + (pending.refreshLeft || 0) + ' 次 · 任务会消耗这一年的时间</span><button data-action="refresh-quest" ' + ((pending.refreshLeft || 0) <= 0 ? 'disabled' : '') + '>刷新任务</button></div>'
+      : '';
     return '<div class="modal choice-modal" role="presentation">'
-      + '<section class="choice-sheet" role="dialog" aria-modal="true" aria-label="' + esc(pending.title) + '">'
-      + '<div class="choice-head"><div><span class="choice-kicker">CHOICE · ' + run.age + ' 岁</span><h2>' + esc(pending.title) + '</h2><p>' + esc(pending.prompt) + '</p></div><span class="mode-chip">命运岔路</span></div>'
+      + '<section class="choice-sheet" data-kind="' + (isQuest ? 'quest' : 'choice') + '" role="dialog" aria-modal="true" aria-label="' + esc(pending.title) + '">'
+      + '<div class="choice-head"><div><span class="choice-kicker">' + (isQuest ? 'QUEST · ' : 'CHOICE · ') + run.age + ' 岁</span><h2>' + esc(pending.title) + '</h2><p>' + esc(pending.prompt) + '</p></div><span class="mode-chip">' + (isQuest ? '任务委托' : '命运岔路') + '</span></div>'
+      + toolbar
       + '<div class="choice-options">' + options + '</div>'
-      + '<p class="choice-note">选择会立刻改变这一生。灰掉的项目代表当前属性或资源还不够。</p>'
+      + '<p class="choice-note">' + (isQuest ? '任务有成功与失败两种结果。刷新会换一批任务，但不会增加年份。' : '选择会立刻改变这一生。灰掉的项目代表当前属性或资源还不够。') + '</p>'
+      + '</section></div>';
+  }
+
+
+  function sceneSvg(art) {
+    if (art === 'battle') {
+      return '<svg viewBox="0 0 360 210" role="img" aria-label="演武台">'
+        + '<defs><linearGradient id="sceneSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#241426"/><stop offset="1" stop-color="#0b0d14"/></linearGradient></defs>'
+        + '<rect width="360" height="210" fill="url(#sceneSky)"/>'
+        + '<circle cx="286" cy="48" r="25" fill="#f0c58a" opacity=".85"/>'
+        + Array.from({ length: 14 }).map((_, i) => '<path d="M' + (i * 34 - 20) + ' 0 L' + (i * 34 + 70) + ' 210" stroke="rgba(255,255,255,.10)" stroke-width="' + (i % 3 === 0 ? 2 : 1) + '"/>').join('')
+        + '<path d="M0 168 L80 140 L152 166 L226 132 L300 160 L360 145 L360 210 L0 210Z" fill="#11121a"/>'
+        + '<g opacity=".9"><circle cx="148" cy="112" r="10" fill="#0b0c12"/><path d="M136 154 Q148 120 160 154Z" fill="#0b0c12"/><path d="M150 126 L178 96" stroke="#e9d7b4" stroke-width="3"/></g>'
+        + '<g opacity=".9"><circle cx="218" cy="118" r="9" fill="#090a0f"/><path d="M207 156 Q218 124 230 156Z" fill="#090a0f"/><path d="M216 130 L190 102" stroke="#b9c7d8" stroke-width="3"/></g>'
+        + '<g fill="#f3cf8c">' + Array.from({ length: 18 }).map((_, i) => '<circle cx="' + (40 + (i * 53) % 280) + '" cy="' + (30 + (i * 31) % 120) + '" r="' + (i % 3 === 0 ? 2 : 1) + '"/>').join('') + '</g>'
+        + '</svg>'
+    }
+    if (art === 'realm') {
+      return '<svg viewBox="0 0 360 210" role="img" aria-label="破境">'
+        + '<defs><radialGradient id="sceneSky" cx="50%" cy="45%" r="65%"><stop offset="0" stop-color="#2b3a4d"/><stop offset="1" stop-color="#080a10"/></radialGradient></defs>'
+        + '<rect width="360" height="210" fill="url(#sceneSky)"/>'
+        + '<g fill="none" stroke="#a9d5e8" opacity=".34"><circle cx="180" cy="100" r="34"/><circle cx="180" cy="100" r="52"/><circle cx="180" cy="100" r="72"/></g>'
+        + '<g fill="#cfe8f4" opacity=".7">' + Array.from({ length: 26 }).map((_, i) => '<circle cx="' + (30 + (i * 47) % 300) + '" cy="' + (22 + (i * 37) % 170) + '" r="' + (i % 4 === 0 ? 2 : 1) + '"/>').join('') + '</g>'
+        + '<circle cx="180" cy="104" r="16" fill="#0b0d14"/><path d="M156 166 Q180 112 204 166Z" fill="#0b0d14"/>'
+        + '<path d="M180 66 L186 94 L214 100 L186 106 L180 134 L174 106 L146 100 L174 94Z" fill="#f3d39a" opacity=".9"/>'
+        + '</svg>'
+    }
+    if (art === 'secret') {
+      return '<svg viewBox="0 0 360 210" role="img" aria-label="秘境">'
+        + '<defs><linearGradient id="sceneSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1717"/><stop offset="1" stop-color="#07100e"/></linearGradient></defs>'
+        + '<rect width="360" height="210" fill="url(#sceneSky)"/>'
+        + '<path d="M0 0 H360 V210 H0Z" fill="#071010"/>'
+        + '<path d="M48 210 Q64 38 180 26 Q296 38 312 210Z" fill="#0d1b18"/>'
+        + '<path d="M84 210 Q96 78 180 64 Q264 78 276 210Z" fill="#10231d"/>'
+        + '<ellipse cx="180" cy="172" rx="86" ry="22" fill="#2a6b58" opacity=".6"/>'
+        + '<ellipse cx="180" cy="170" rx="52" ry="12" fill="#7fe0bf" opacity=".36"/>'
+        + '<g stroke="#2c5c4d" stroke-width="2" fill="none" opacity=".8"><path d="M92 0 Q88 52 112 78"/><path d="M276 0 Q282 48 258 88"/></g>'
+        + '<g fill="#bdf5dd">' + Array.from({ length: 20 }).map((_, i) => '<circle cx="' + (105 + (i * 43) % 150) + '" cy="' + (90 + (i * 29) % 84) + '" r="' + (i % 4 === 0 ? 2 : 1) + '"/>').join('') + '</g>'
+        + '<path d="M180 112 L188 126 L180 168 L172 126Z" fill="#e6f8e9"/>'
+        + '</svg>'
+    }
+    return '<svg viewBox="0 0 360 210" role="img" aria-label="山门">'
+      + '<defs><linearGradient id="sceneSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#10172a"/><stop offset="1" stop-color="#241824"/></linearGradient></defs>'
+      + '<rect width="360" height="210" fill="url(#sceneSky)"/>'
+      + '<circle cx="282" cy="46" r="20" fill="#f5dfb6" opacity=".9"/>'
+      + '<path d="M0 158 L72 96 L124 140 L190 78 L254 138 L318 104 L360 144 L360 210 L0 210Z" fill="#0b101a"/>'
+      + '<path d="M0 176 L64 128 L118 166 L184 118 L248 168 L312 136 L360 164 L360 210 L0 210Z" fill="#070a11"/>'
+      + '<g fill="#111521"><rect x="142" y="94" width="12" height="86"/><rect x="206" y="94" width="12" height="86"/><rect x="130" y="82" width="100" height="10"/><rect x="124" y="70" width="112" height="8"/></g>'
+      + '<g fill="none" stroke="#3a3f4d" opacity=".75"><path d="M92 210 L180 150 L268 210"/><path d="M110 210 L180 160 L250 210"/></g>'
+      + '<circle cx="180" cy="150" r="7" fill="#0a0c12"/><path d="M170 186 Q180 154 190 186Z" fill="#0a0c12"/>'
+      + '<g fill="#f4d8a5">' + Array.from({ length: 15 }).map((_, i) => '<circle cx="' + (28 + (i * 61) % 300) + '" cy="' + (18 + (i * 37) % 110) + '" r="' + (i % 3 === 0 ? 2 : 1) + '"/>').join('') + '</g>'
+      + '</svg>'
+  }
+
+  function sceneHtml() {
+    const run = state.run;
+    const scene = run && run.pendingScene;
+    if (!scene) return '';
+    return '<div class="modal scene-modal" role="presentation">'
+      + '<section class="scene-sheet" role="dialog" aria-modal="true" aria-label="' + esc(scene.title) + '">'
+      + '<div class="scene-frame"><div class="scene-art">' + sceneSvg(scene.art) + '</div><div class="scene-scan"></div><span class="scene-stamp">' + esc(scene.stamp || 'SCENE') + '</span></div>'
+      + '<div class="scene-caption"><span class="scene-kicker">' + esc(scene.kicker) + '</span><h2>' + esc(scene.title) + '</h2><p>' + esc(scene.text) + '</p></div>'
+      + '<div class="scene-actions"><button class="btn btn-primary" data-action="close-scene">继续这一生</button></div>'
       + '</section></div>';
   }
 
@@ -16183,10 +16687,10 @@
 
   function startAuto() {
     stopAuto();
-    if (!state.run || !state.run.alive || state.run.pendingChoice) return;
+    if (!state.run || !state.run.alive || state.run.pendingChoice || state.run.pendingScene) return;
     state.auto = true;
     autoTimer = setInterval(() => {
-      if (!state.run || !state.run.alive || state.run.pendingChoice) {
+      if (!state.run || !state.run.alive || state.run.pendingChoice || state.run.pendingScene) {
         stopAuto();
         return;
       }
@@ -16195,7 +16699,7 @@
   }
 
   function advanceLife() {
-    if (!state.run || !state.run.alive || state.run.pendingChoice) return;
+    if (!state.run || !state.run.alive || state.run.pendingChoice || state.run.pendingScene) return;
     state.run = advanceRun(state.run);
     if (!state.run.alive) {
       stopAuto();
@@ -16466,6 +16970,8 @@
       case 'start-life': startLife(); break;
       case 'advance': advanceLife(); break;
       case 'choose-option': chooseOption(target.dataset.id); break;
+      case 'refresh-quest': stopAuto(); state.run = refreshPendingQuest(state.run); render(); break;
+      case 'close-scene': if (state.run) { state.run.pendingScene = null; state.pendingScroll = 'bottom'; render(); } break;
       case 'toggle-auto':
         if (state.auto) {
           stopAuto();
