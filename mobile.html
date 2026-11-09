@@ -700,6 +700,66 @@
     .attr-line small { color: var(--faint); font-size: 8px; }
     .attr-line em { margin-left: auto; color: var(--attr, var(--brand)); font-size: 13px; font-style: normal; font-weight: 650; font-variant-numeric: tabular-nums; }
     .attr-desc { margin-top: 1px; color: var(--muted); font-size: 9px; line-height: 1.45; }
+    .gender-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 0 0 7px;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--panel-2) 60%, transparent);
+    }
+    .gender-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .gender-copy b { color: var(--ink); font-size: 10px; font-weight: 650; }
+    .gender-copy span { color: var(--muted); font-size: 8px; }
+    .gender-options { display: flex; flex: none; gap: 5px; }
+    .gender-btn {
+      min-width: 44px;
+      min-height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .gender-btn[data-active="true"] {
+      border-color: var(--brand);
+      background: var(--brand-soft);
+      color: var(--brand);
+      font-weight: 650;
+    }
+    .avatar-card {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin: 8px 16px 0;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--panel) 88%, transparent);
+    }
+    .avatar-art { flex: none; width: 78px; height: 78px; overflow: hidden; border-radius: 11px; }
+    .avatar-art svg { display: block; width: 100%; height: 100%; }
+    .avatar-copy { min-width: 0; flex: 1 1 auto; }
+    .avatar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+    .avatar-head b { color: var(--ink); font-size: 12px; font-weight: 650; }
+    .avatar-head span { flex: none; color: var(--brand); font-size: 9px; }
+    .avatar-sub { margin-top: 2px; color: var(--muted); font-size: 9px; line-height: 1.4; }
+    .avatar-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+    .avatar-tag {
+      max-width: 100%;
+      overflow: hidden;
+      padding: 2px 5px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: var(--muted);
+      font-size: 8px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .entry-tag.partner { color: var(--good); }
     .segments { display: flex; gap: 2px; margin-top: 5px; }
     .segments i { flex: 1 1 0; height: 3px; border-radius: 99px; background: var(--line); }
     .segments i[data-on="true"] {
@@ -1260,8 +1320,17 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script>
     const STORAGE_KEY = 'dsh.life-restart.record.v1';
-    const TOTAL_POINTS = 10
+    const TOTAL_POINTS = 15
+    const ALLOC_MAX = 15
+    const AUTO_PLAY_MS = 2800
     const ATTR_MAX = 40
+
+    const GENDERS = [
+      { key: 'male', label: '男', pronoun: '他' },
+      { key: 'female', label: '女', pronoun: '她' },
+    ]
+    const GENDER_MAP = Object.fromEntries(GENDERS.map(item => [item.key, item]))
+    const PARTNER_NAMES = ['林晚', '沈青', '周野', '程雾', '苏禾', '许棠', '江临', '唐栖', '白榆', '温言', '顾川', '叶舟']
 
     const ATTRS = [
       {
@@ -11151,7 +11220,7 @@
         resolve() {
           return {
             tone: "good",
-            text: "你在江南遇见一个人。你们一起走过雨巷，吃过一碗很甜的酒酿。分别时她/他没有说等你，你也没有说会回来。",
+            text: "你在江南遇见一个人。你们一起走过雨巷，吃过一碗很甜的酒酿。分别时对方没有说等你，你也没有说会回来。",
             effects: {"mood": 6, "flags": {"daoPartner": true}},
           }
         },
@@ -11750,7 +11819,7 @@
         name: '现代人生',
         en: 'Modern Life',
         icon: 'city',
-        tagline: '十点投胎，认真活一次。',
+        tagline: '十五点投胎，认真活一次。',
         description: '从一间出租屋出发。读书、工作、爱人、变老，看看命运会给普通人发什么牌。',
         attrs: ATTRS,
         stages: MODERN_STAGES,
@@ -13114,6 +13183,347 @@
       ],
     }
 
+    const FILLER_LINES = {
+      modern: [
+        '你在楼下便利店站了很久，最后只买了一瓶水。',
+        '你把手机里很久没联系的人翻了一遍，又关掉了。',
+        '你花了一个下午修一把旧椅子，修好时天已经黑了。',
+        '你在地铁上看见一个很像旧同学的人，直到下车也没敢认。',
+        '你把衣柜清了一遍，留下几件真正会穿的。',
+        '你给自己做了一顿饭，味道一般，但吃得很慢。',
+      ],
+      cultivation: [
+        '你在洞府里打坐，灵气像潮水一样来了又退。',
+        '你翻出一本旧功法，发现边角上还有前人留下的批注。',
+        '你下山采买，在集市上听见两个散修议论某个秘境。',
+        '你把飞剑擦了一遍，剑身上有一道很浅的旧痕。',
+        '你在药园里忙了半日，灵草没长多少，泥土倒沾了一手。',
+        '你夜里听见山风穿过阵旗，像有人在很远的地方说话。',
+      ],
+      wasteland: [
+        '你在废弃服务区找到半箱还能喝的罐头，日期早就过了。',
+        '你花了一整天修净水器，最后只接出半杯浑水。',
+        '你在公路边看见一排被风沙埋了半截的路牌。',
+        '你数了数子弹，又原样放回去。',
+        '你在一间空屋里睡了一夜，门后用椅子顶着。',
+        '你听见远处有狗叫，等了很久，什么也没有。',
+      ],
+      magic: [
+        '你在图书馆抄了一下午咒语，最后发现抄错了一个音节。',
+        '你的魔杖又卡住了，这次是在最不该卡住的时候。',
+        '你在温室里给一株会咬人的植物换了盆。',
+        '你收到一封猫头鹰送来的账单。',
+        '你在走廊里遇见一幅会打呼噜的画像。',
+        '你试着把茶杯变成青蛙，茶杯只是瞪了你一眼。',
+      ],
+      cyber: [
+        '你在地铁口站了十分钟，广告牌一直在向你推销同一种义体。',
+        '你接了一个小单，修好一台旧终端，对方只给了半价。',
+        '你在街边吃了一碗合成面，味道像记忆里的某样东西。',
+        '你把今天的账单翻了一遍，又把屏幕关掉。',
+        '你路过一家已经关门的义体店，橱窗里还亮着一只假眼。',
+        '你在雨里等一辆永远不会准时的高架。',
+      ],
+      starship: [
+        '你在舷窗前站了很久，星图上的一个点比昨天亮了一点。',
+        '你值完一班巡检，在走廊尽头听见引擎低低的嗡鸣。',
+        '你收到一封延迟了三个月的家书。',
+        '你在食堂吃到一种和地球完全不像的蔬菜。',
+        '你把旧制服补了补，针脚歪得很明显。',
+        '你和舰上的孩子讲了一个关于海的故事，他们不太相信。',
+      ],
+      jianghu: [
+        '你在客栈里听了一下午说书，故事里的剑客比你穷。',
+        '你给马刷了毛，它很不耐烦，但没踢你。',
+        '你在山门前扫落叶，扫到一半又下起了雨。',
+        '你路过一个镇子，吃了碗阳春面，汤很淡。',
+        '你把剑鞘上的旧绳换了一根新的。',
+        '你在夜里听见更夫敲了三下，翻个身又睡了。',
+      ],
+    }
+
+    const COMMON_CHOICE_NODES = [
+      {
+        id: 'common_direction',
+        at: 27,
+        chance: 0.8,
+        title: '二十七岁的岔路',
+        prompt: '你已经不是刚出发的那个人了。接下来这一段，你想怎么走？',
+        options: [
+          {
+            id: 'settle',
+            label: '留在熟悉的地方',
+            desc: '把根扎深一点，日子会慢，但也会稳。',
+            resolve() {
+              return {
+                tone: 'good',
+                text: '你决定留下来。房子不大，路也不宽，但你知道每一家店什么时候开门。日子没有突然变好，只是终于有了形状。',
+                effects: { mood: 8, wealth: 8, flags: { rooted: true } },
+              }
+            },
+          },
+          {
+            id: 'roam',
+            label: '去更远的地方',
+            desc: '身体还撑得住，心也还没服气。',
+            requires: { body: 10 },
+            resolve() {
+              return {
+                tone: 'normal',
+                text: '你收拾了一个不大的包，去了一个没人替你安排生活的地方。起步比想象中难，但你第一次觉得，路是自己选的。',
+                effects: { health: -4, mood: 6, wealth: 12, flags: { restless: true } },
+              }
+            },
+          },
+          {
+            id: 'partner',
+            label: '把日子过成两个人的',
+            desc: '有些决定，要两个人一起做。',
+            requires: { flag: 'partner' },
+            resolve() {
+              return {
+                tone: 'good',
+                text: '你把这件事拿去和伴侣商量。你们在桌边坐到很晚，最后没有谁说服谁，只是把各自害怕的东西说清楚了。第二天，你们一起做了决定。',
+                effects: { health: 4, mood: 12, flags: { familyFirst: true } },
+              }
+            },
+          },
+        ],
+      },
+      {
+        id: 'common_crossroads',
+        at: 47,
+        chance: 0.8,
+        title: '四十七岁的一次选择',
+        prompt: '你开始听见身体和时间的声音。剩下的路，要拿什么去换？',
+        options: [
+          {
+            id: 'career',
+            label: '再往前一步',
+            desc: '你知道代价，但还是想试试。',
+            resolve() {
+              return {
+                tone: 'normal',
+                text: '你把更多时间放进了工作。有人夸你稳，有人劝你别太拼。你只是把桌上的灯又开晚了一点。',
+                effects: { wealth: 80, health: -8, mood: -2, flags: { lateCareer: true } },
+              }
+            },
+          },
+          {
+            id: 'health',
+            label: '先把身体照顾好',
+            desc: '慢下来，不等于认输。',
+            resolve() {
+              return {
+                tone: 'good',
+                text: '你开始按时吃饭、走路、睡觉。世界没有因此停下来，但你终于跟上了自己的呼吸。',
+                effects: { health: 12, mood: 10, wealth: -8, flags: { slowDown: true } },
+              }
+            },
+          },
+          {
+            id: 'secret',
+            label: '做一件没人知道的事',
+            desc: '你还有一点不甘心，想留给某个很远的以后。',
+            requires: { int: 16 },
+            resolve() {
+              return {
+                tone: 'normal',
+                text: '你开始做一件没有告诉任何人的事。它很小，进展很慢，却让你在很长一段时间里，重新有了起床的理由。',
+                effects: { wealth: 140, mood: -6, flags: { secretProject: true } },
+              }
+            },
+          },
+        ],
+      },
+      {
+        id: 'common_late',
+        at: 68,
+        chance: 0.8,
+        title: '六十八岁，还想做什么',
+        prompt: '你已经过了需要向谁证明什么的年纪。剩下的日子，想怎么用？',
+        options: [
+          {
+            id: 'travel',
+            label: '去没去过的地方',
+            desc: '趁还走得动，去看一眼。',
+            requires: { body: 12, wealth: 30 },
+            resolve() {
+              return {
+                tone: 'good',
+                text: '你去了一个很早就想去的地方。风景没有照片里那么完美，但你在那里坐了很久，觉得这一趟值得。',
+                effects: { health: -5, mood: 20, wealth: -20, flags: { lateTravel: true } },
+              }
+            },
+          },
+          {
+            id: 'teach',
+            label: '把会的东西留下来',
+            desc: '总有人要走你走过的路。',
+            requires: { int: 12 },
+            resolve() {
+              return {
+                tone: 'good',
+                text: '你开始教别人。有人学得快，有人学得慢，你都不着急。你第一次发现，自己知道的那些事，原来真的能帮到人。',
+                effects: { mood: 12, flags: { mentor: true } },
+              }
+            },
+          },
+          {
+            id: 'stay',
+            label: '就在原地，过好每一天',
+            desc: '不折腾，也是一种答案。',
+            resolve() {
+              return {
+                tone: 'good',
+                text: '你没有再去很远的地方。每天差不多，但你把每一顿饭、每一次见面都认真过了。',
+                effects: { mood: 8, health: 5 },
+              }
+            },
+          },
+        ],
+      },
+    ]
+
+    const PARTNER_STORIES = [
+      {
+        id: 'partner_meet',
+        when: run => run.age >= 24 && !run.flags.partner && !run.flags.partnerLost && !run.flags.lonewolf,
+        resolve(run) {
+          const name = ensurePartnerName(run)
+          run.flags.partner = true
+          run.flags.partnerMetAge = run.age
+          if (run.worldId === 'cultivation' || run.worldId === 'jianghu') run.flags.daoPartner = true
+          return {
+            tone: 'good',
+            text: run.age + ' 岁这年，你遇见了' + name + '。你们从一件很小的事聊起，后来一起走了很远。你没有立刻意识到那意味着什么，只是开始习惯身边多一个人。',
+            effects: { mood: 10, health: 3 },
+          }
+        },
+      },
+      {
+        id: 'partner_wed',
+        when: run => run.flags.partner && !run.flags.married && run.age >= 28,
+        resolve(run) {
+          const name = ensurePartnerName(run)
+          run.flags.married = true
+          return {
+            tone: 'good',
+            text: '你和' + name + '把这件事定了下来。仪式不大，来的都是真正认识你们的人。散场以后，你们一起收拾桌子，谁也没有说以后，但都知道那是什么意思。',
+            effects: { mood: 14, wealth: -10 },
+          }
+        },
+      },
+      {
+        id: 'partner_child',
+        when: run => run.flags.partner && run.flags.married && (run.flags.children || 0) < 2 && run.age >= 32,
+        resolve(run) {
+          const name = ensurePartnerName(run)
+          run.flags.children = (run.flags.children || 0) + 1
+          return {
+            tone: 'good',
+            text: '你和' + name + '有了一个孩子。那一年你们几乎没睡过整觉，家里到处是奶味和小衣服。你抱着孩子站在窗边，忽然明白以后原来这么具体。',
+            effects: { mood: 10, health: -4, wealth: -10 },
+          }
+        },
+      },
+      {
+        id: 'partner_daily',
+        when: run => run.flags.partner && run.flags.married && !run.flags.partnerLost && run.age >= 40,
+        resolve(run) {
+          const name = ensurePartnerName(run)
+          return {
+            tone: 'good',
+            text: '你和' + name + '已经过了很多差不多的日子。早上谁先起，晚上谁关灯，都成了不用商量的默契。偶尔你们也会吵架，但总会有人先把饭热上。',
+            effects: { mood: 6, health: 2 },
+          }
+        },
+      },
+      {
+        id: 'partner_crisis',
+        when: run => run.flags.partner && run.flags.married && !run.flags.partnerLost && run.age >= 50,
+        resolve(run) {
+          const name = ensurePartnerName(run)
+          const rough = Math.random() < 0.55
+          return {
+            tone: rough ? 'bad' : 'good',
+            text: rough
+              ? '你和' + name + '有过一段很难的时候。话说重了，门也摔过。后来你们坐在同一个桌边，把最难听的那部分重新说了一遍，才慢慢把日子接回去。'
+              : '你和' + name + '一起扛过了一段难日子。没有谁突然变成英雄，只是两个人都没有先走。',
+            effects: rough ? { mood: -8, health: -3 } : { mood: 8, health: 2 },
+          }
+        },
+      },
+      {
+        id: 'partner_old',
+        when: run => run.flags.partner && run.flags.married && !run.flags.partnerLost && run.age >= 65,
+        resolve(run) {
+          const name = ensurePartnerName(run)
+          return {
+            tone: 'good',
+            text: '你和' + name + '都老了。你们走路慢了下来，开始为一些很小的事高兴：今天的菜很新鲜，楼下的树又发了芽。你们还是会为电视遥控器争两句，然后一起笑。',
+            effects: { mood: 8 },
+          }
+        },
+      },
+      {
+        id: 'partner_loss',
+        when: run => run.flags.partner && !run.flags.partnerLost && run.age >= 78,
+        resolve(run) {
+          const name = ensurePartnerName(run)
+          run.flags.partnerLost = true
+          run.flags.partner = false
+          return {
+            tone: 'tragic',
+            text: name + '走在了你前面。屋子里忽然多出很多声音：钟表、冰箱、窗外的风。你花了很久才习惯，饭只煮一个人的份。',
+            effects: { mood: -14, health: -2 },
+          }
+        },
+      },
+      {
+        id: 'partner_memory',
+        when: run => run.flags.partnerLost && run.age >= 85,
+        resolve(run) {
+          const name = run.flags.partnerName || '你的伴侣'
+          return {
+            tone: 'normal',
+            text: '你又梦见了' + name + '。梦里你们还在那间旧屋子里，桌上有两副碗筷。醒来以后，你在床边坐了一会儿，没有难过，只是不太想动。',
+            effects: { mood: 10 },
+          }
+        },
+      },
+    ]
+
+    function ensurePartnerName(run) {
+      if (!run.flags.partnerName) run.flags.partnerName = pick(PARTNER_NAMES)
+      return run.flags.partnerName
+    }
+
+    function choosePartnerStory(run) {
+      const seen = run.flags._partnerSeen || (run.flags._partnerSeen = {})
+      for (const story of PARTNER_STORIES) {
+        if (seen[story.id]) continue
+        if (story.when && !story.when(run)) continue
+        seen[story.id] = true
+        return story
+      }
+      return null
+    }
+
+    function pickFresh(run, pool) {
+      if (!pool || !pool.length) return null
+      const recent = run.recentTexts || []
+      const fresh = pool.filter(item => item && item.text && !recent.includes(item.text))
+      return pick(fresh.length ? fresh : pool)
+    }
+
+    function fillerText(run) {
+      const pool = FILLER_LINES[run.worldId] || FILLER_LINES.modern
+      const recent = run.recentTexts || []
+      const fresh = pool.filter(text => !recent.includes(text))
+      return pick(fresh.length ? fresh : pool)
+    }
+
     function choiceRequirementEntries(run, option) {
       const req = option && option.requires
       if (!req || typeof req !== 'object') return []
@@ -13153,7 +13563,7 @@
 
     function maybeOfferChoice(run) {
       if (!run || !run.alive || run.pendingChoice) return null
-      const nodes = CHOICE_NODES[run.worldId] || []
+      const nodes = (CHOICE_NODES[run.worldId] || []).concat(COMMON_CHOICE_NODES)
       const seen = run.flags._choiceSeen || {}
       const eligible = nodes.filter(node => {
         if (seen[node.id]) return false
@@ -13310,12 +13720,12 @@
     }
 
     function quietChance(age) {
-      if (age < 12) return 0.12
-      if (age < 18) return 0.1
-      if (age < 30) return 0.16
-      if (age < 50) return 0.24
-      if (age < 65) return 0.26
-      return 0.3
+      if (age < 12) return 0.08
+      if (age < 18) return 0.07
+      if (age < 30) return 0.11
+      if (age < 50) return 0.16
+      if (age < 65) return 0.18
+      return 0.22
     }
 
     function cultivationYears(run) {
@@ -13583,8 +13993,9 @@
       }
     }
 
-    function createRun(alloc, talents, worldId, number, legacy) {
+    function createRun(alloc, talents, worldId, number, legacy, genderArg) {
       const world = WORLD_BY_ID[worldId] || WORLDS[0]
+      const gender = GENDER_MAP[genderArg] ? genderArg : pick(GENDERS).key
       const aggregate = aggregateTalents(talents)
       const attrs = {}
       ATTRS.forEach(attr => {
@@ -13672,6 +14083,13 @@
         flags.baseLeader = false
         flags.tyrant = false
       }
+      if (flags.partner == null) flags.partner = false
+      if (flags.married == null) flags.married = false
+      if (typeof flags.children !== 'number') flags.children = 0
+      if (flags.daoPartner == null) flags.daoPartner = false
+      if (flags.partnerName == null) flags.partnerName = null
+      flags.partnerLost = false
+      flags._partnerSeen = {}
       aggregate.flags.forEach(flag => { flags[flag] = true })
       if (!flags._choiceSeen) flags._choiceSeen = {}
       if (legacy) {
@@ -13751,21 +14169,26 @@
       const openingLog = [
         { id: 0, kind: 'chapter', age: 0, text: chapter },
         { id: 1, kind: 'birth', age: 0, text: birth },
+        { id: 2, kind: 'event', age: 0, tone: 'normal', text: '这一世，你是一个' + (gender === 'female' ? '女孩' : '男孩') + '。' },
       ]
       if (legacy) {
         openingLog.push({
-          id: 2,
+          id: 3,
           kind: 'event',
           age: 0,
           tone: 'good',
           text: '你带着上一世的余荫出生。某种说不清的熟悉感还在，像一件没有完全脱下的旧衣服。',
         })
       }
+      openingLog.forEach((entry, index) => { entry.id = index })
 
       return {
         id: 'lr-' + Date.now().toString(36) + '-' + rnd(9999),
         no: number,
         worldId: world.id,
+        gender,
+        genderLabel: GENDER_MAP[gender].label,
+        pronoun: GENDER_MAP[gender].pronoun,
         age: 0,
         stage: 'child',
         lastYears: 1,
@@ -13789,6 +14212,8 @@
         legacy: legacy ? { ...legacy } : null,
         flags,
         seen: [],
+        recentTexts: [],
+        recentEventIds: [],
         lastEventId: null,
         seq: openingLog.length,
         log: openingLog,
@@ -13807,9 +14232,12 @@
           ...run.flags,
           ...(run.flags._milestones ? { _milestones: { ...run.flags._milestones } } : {}),
           ...(run.flags._choiceSeen ? { _choiceSeen: { ...run.flags._choiceSeen } } : {}),
+          ...(run.flags._partnerSeen ? { _partnerSeen: { ...run.flags._partnerSeen } } : {}),
         },
         log: run.log.slice(),
         seen: run.seen.slice(),
+        recentTexts: (run.recentTexts || []).slice(),
+        recentEventIds: (run.recentEventIds || []).slice(),
         achievements: run.achievements ? run.achievements.slice() : [],
         ending: run.ending ? { ...run.ending, achievements: run.ending.achievements.slice() } : null,
       }
@@ -13818,6 +14246,7 @@
     function pushEntry(run, entry) {
       const span = entry.kind === 'event' && (run.lastYears || 1) > 1 ? run.lastYears : null
       run.log = run.log.concat({ ...entry, span, id: run.seq })
+      if (entry.text) run.recentTexts = (run.recentTexts || []).concat(entry.text).slice(-12)
       run.seq += 1
     }
 
@@ -13849,7 +14278,8 @@
       const world = worldOf(run)
       let pool = world.events.filter(event => matchesEvent(event, run))
       if (pool.length > 1) {
-        const fresh = pool.filter(event => event.id !== run.lastEventId)
+        const recent = run.recentEventIds || []
+        const fresh = pool.filter(event => event.id !== run.lastEventId && !recent.includes(event.id))
         if (fresh.length > 0) pool = fresh
       }
       if (pool.length === 0) {
@@ -14123,8 +14553,12 @@
       if (milestone) {
         source = 'milestone'
       } else {
-        const twist = Math.random() < world.twistChance ? chooseTwist(run) : null
-        if (twist) {
+        const partnerStory = choosePartnerStory(run)
+        const twist = !partnerStory && Math.random() < world.twistChance ? chooseTwist(run) : null
+        if (partnerStory) {
+          source = 'partner'
+          current = partnerStory
+        } else if (twist) {
           source = 'twist'
           current = twist
         } else if (Math.random() < quietChance(run.age)) {
@@ -14137,7 +14571,7 @@
 
       if (source === 'quiet') {
         const pool = world.quiet[run.stage] || world.quiet.child || []
-        const quiet = pick(pool)
+        const quiet = pickFresh(run, pool) || { text: fillerText(run), effects: { mood: 1 } }
         const before = snapshotNumbers(run)
         applyEffects(run, quiet.effects)
         pushEntry(run, {
@@ -14171,10 +14605,14 @@
           deltas,
           milestone: source === 'milestone',
           isTwist: source === 'twist',
+          isPartner: source === 'partner',
           title: source === 'twist' ? current.title : undefined,
         })
-        if (source !== 'milestone' && !current.repeatable) run.seen.push(current.id)
-        run.lastEventId = current.id
+        if (source !== 'milestone' && source !== 'partner' && !current.repeatable) run.seen.push(current.id)
+        if (source !== 'milestone' && source !== 'partner') {
+          run.recentEventIds = (run.recentEventIds || []).concat(current.id).slice(-4)
+          run.lastEventId = current.id
+        }
         if (source === 'milestone' && world.id === 'cultivation') {
           const marks = run.flags._milestones || (run.flags._milestones = {})
           const progressed = (run.flags.realmIndex || 0) > realmBefore || (!ascendedBefore && run.flags.ascended)
@@ -14185,7 +14623,7 @@
           kind: 'event',
           age: run.age,
           tone: 'normal',
-          text: '这一年过得很快。你忙着一些后来想不起来的小事，日子就从指缝里过去了。',
+          text: fillerText(run),
           deltas: [],
         })
       }
@@ -14906,6 +15344,7 @@
       choices: drawTalents(worldId || 'modern', TALENT_DRAW_COUNT),
       selectedIds: [],
       refreshes: TALENT_REFRESH_LIMIT,
+      gender: pick(GENDERS).key,
     };
   }
 
@@ -15370,18 +15809,22 @@
     const realmGuide = world.id === 'cultivation'
       ? '<div class="realm-guide"><b>寿元阶梯</b> · 凡人约百岁 / 炼气120 / 筑基250 / 结丹500 / 元婴1000 / 化神2000 / 炼虚3000 / 合体5000 / 大乘1万 / 渡劫1.2万</div>'
       : '';
-    const growthGuide = '<div class="growth-guide">属性上限 40 · 出生仍分配 10 点 · 游戏内成长收益小幅提升 · 遇到岔路时按当前属性解锁选项</div>';
+    const growthGuide = '<div class="growth-guide">属性上限 40 · 出生仍分配 15 点 · 游戏内成长收益小幅提升 · 遇到岔路时按当前属性解锁选项</div>';
+    const gender = GENDER_MAP[state.draft.gender] ? state.draft.gender : 'male';
+    const genderHtml = '<div class="gender-row"><div class="gender-copy"><b>这一世的性别</b><span>每次人生随机；也可以自己选。</span></div><div class="gender-options">'
+      + GENDERS.map(item => '<button class="gender-btn" data-action="set-gender" data-gender="' + item.key + '" data-active="' + (item.key === gender ? 'true' : 'false') + '">' + item.label + '</button>').join('')
+      + '</div></div>';
 
     const attrs = world.attrs.map(attr => {
       const value = state.draft.alloc[attr.key] || 0;
-      const segments = Array.from({ length: 10 }, (_, index) => '<i data-on="' + (index < value ? 'true' : 'false') + '"></i>').join('');
+      const segments = Array.from({ length: ALLOC_MAX }, (_, index) => '<i data-on="' + (index < value ? 'true' : 'false') + '"></i>').join('');
       return '<div class="attr-row" data-key="' + attr.key + '">'
         + '<span class="attr-icon">' + esc(attr.name.slice(0, 1)) + '</span>'
-        + '<div class="attr-main"><div class="attr-line"><b>' + esc(attr.name) + '</b><small>' + esc(attr.en) + '</small><em>' + value + ' / 10</em></div>'
+        + '<div class="attr-main"><div class="attr-line"><b>' + esc(attr.name) + '</b><small>' + esc(attr.en) + '</small><em>' + value + ' / ' + ALLOC_MAX + '</em></div>'
         + '<div class="attr-desc">' + esc(attr.desc) + '</div>'
         + '<div class="segments">' + segments + '</div></div>'
         + '<div class="stepper"><button class="step-btn" data-action="alloc" data-key="' + attr.key + '" data-dir="-1" ' + (value <= 0 ? 'disabled' : '') + '>−</button>'
-        + '<button class="step-btn" data-action="alloc" data-key="' + attr.key + '" data-dir="1" ' + (remaining <= 0 || value >= 10 ? 'disabled' : '') + '>+</button></div>'
+        + '<button class="step-btn" data-action="alloc" data-key="' + attr.key + '" data-dir="1" ' + (remaining <= 0 || value >= ALLOC_MAX ? 'disabled' : '') + '>+</button></div>'
         + '</div>';
     }).join('');
 
@@ -15405,13 +15848,14 @@
       ? '还有 ' + remaining + ' 点没有分配。'
       : selectedCount < TALENT_PICK_COUNT
         ? '还需要选择 ' + (TALENT_PICK_COUNT - selectedCount) + ' 个天赋。'
-        : '十点已分完，五张命运签也已落定。';
+        : '十五点已分完，五张命运签也已落定。';
     const talentPct = Math.round((selectedCount / TALENT_PICK_COUNT) * 100);
 
     return '<div class="screen setup">'
-      + '<div class="topbar"><div class="topbar-left"><button class="icon-btn" data-action="home" aria-label="返回开始界面">‹</button><div class="topbar-copy"><b>准备这一生</b><span>' + esc(world.name) + ' · 十点投胎 · 十选五</span></div></div><div class="topbar-actions">' + musicButton() + '<span class="mode-chip" data-mode="' + state.playMode + '">' + (state.playMode === 'text' ? '纯文本' : '互动') + '</span><span class="mode-chip">' + (state.legacy ? '继承' : '重开') + '</span></div></div>'
-      + '<div class="setup-head"><div><h1>投胎之前</h1><p>把十点押在你想成为的样子上。</p></div><span class="mode-chip">' + esc(world.en) + '</span></div>'
+      + '<div class="topbar"><div class="topbar-left"><button class="icon-btn" data-action="home" aria-label="返回开始界面">‹</button><div class="topbar-copy"><b>准备这一生</b><span>' + esc(world.name) + ' · 十五点投胎 · 十选五</span></div></div><div class="topbar-actions">' + musicButton() + '<span class="mode-chip" data-mode="' + state.playMode + '">' + (state.playMode === 'text' ? '纯文本' : '互动') + '</span><span class="mode-chip">' + (state.legacy ? '继承' : '重开') + '</span></div></div>'
+      + '<div class="setup-head"><div><h1>投胎之前</h1><p>把十五点押在你想成为的样子上。</p></div><span class="mode-chip">' + esc(world.en) + '</span></div>'
       + '<div class="world-scroll">' + worlds + '</div>'
+      + genderHtml
       + loreHtml
       + realmGuide
       + growthGuide
@@ -15463,6 +15907,138 @@
       + '</div>';
   }
 
+    function realmText(run) {
+      if (run.worldId === 'cultivation') return run.flags.realmName || '凡人';
+      if (run.worldId === 'starship') {
+        if (run.flags.captain) return '舰长';
+        if (run.flags.pilot) return '领航员';
+        if (run.flags.engineer) return '工程师';
+        if (run.flags.medic) return '医官';
+        return (worldOf(run).stages[run.stage] || {}).label || '舰员';
+      }
+      if (run.worldId === 'jianghu') {
+        if (run.flags.sectMaster) return '掌门';
+        if (run.flags.swordHeart) return '剑客';
+        if (run.flags.doctor) return '医者';
+        if (run.flags.teacher) return '教习';
+        return (worldOf(run).stages[run.stage] || {}).label || '江湖人';
+      }
+      return jobLabel(run);
+    }
+
+    function equipmentLabel(run) {
+      const f = run.flags || {};
+      if (run.worldId === 'modern') {
+        if (f.house) return '房产证';
+        if (run.wealth >= 100) return '车钥匙';
+        if (f.scholar) return '旧书';
+        return '手机';
+      }
+      if (run.worldId === 'cultivation') {
+        if (f.swordHeart) return '本命剑';
+        if (f.alchemist) return '丹炉';
+        if (f.sect) return '宗门令牌';
+        return '储物袋';
+      }
+      if (run.worldId === 'wasteland') {
+        if (f.radioContact) return '旧电台';
+        if (f.beastfriend) return '猎犬';
+        if (f.mutant) return '抗辐射针';
+        return '防毒面具';
+      }
+      if (run.worldId === 'magic') {
+        if (f.dragon) return '幼龙';
+        if (f.familiar) return '使魔';
+        if (f.professor) return '教授徽章';
+        return '魔杖';
+      }
+      if (run.worldId === 'cyber') {
+        if (f.digitalGhost) return '幽灵接口';
+        if (f.uploaded) return '云端备份';
+        if (f.chrome && f.chrome !== '原装身体') return '义体';
+        return '二手终端';
+      }
+      if (run.worldId === 'starship') {
+        if (f.captain) return '舰长密钥';
+        if (f.pilot) return '航行徽章';
+        if (f.engineer) return '维修臂甲';
+        return '制式制服';
+      }
+      if (run.worldId === 'jianghu') {
+        if (f.swordHeart) return '佩剑';
+        if (f.sect) return '门派令牌';
+        if (f.doctor) return '药箱';
+        return '斗笠';
+      }
+      return '随身物';
+    }
+
+    function avatarSvg(run) {
+      const palettes = {
+        modern: ['#f1ded2', '#8b5a45', '#b8754e'],
+        cultivation: ['#e1ebe3', '#4f6f5c', '#608b76'],
+        wasteland: ['#eee1c9', '#7f5f3b', '#a9824f'],
+        magic: ['#e6e1f4', '#5f4f91', '#7d6bc0'],
+        cyber: ['#dfeef2', '#356473', '#4f8faa'],
+        starship: ['#e1e7f3', '#4f638c', '#6f86b8'],
+        jianghu: ['#f0e1d8', '#7d4436', '#a45f4a'],
+      };
+      const palette = palettes[run.worldId] || palettes.modern;
+      const old = run.age >= 65;
+      const child = run.age < 14;
+      const hair = old ? '#c9c4b8' : child ? '#5b4638' : '#3c3028';
+      const skin = '#f0c9a7';
+      const eye = palette[1];
+      const woman = run.gender === 'female';
+      const hairPath = woman
+        ? '<path d="M34 58c0-19 10-31 26-31s26 12 26 31v15c-5-9-8-18-8-27-8 5-17 7-31 5-2 8-5 15-9 20z" fill="' + hair + '"/><path d="M38 64c-2 16 2 26 5 32h-9c-2-11-2-22 4-32zM82 64c2 16-2 26-5 32h9c2-11 2-22-4-32z" fill="' + hair + '"/>'
+        : '<path d="M36 55c0-16 10-27 24-27s24 11 24 27c0 5-2 9-4 12-3-9-9-14-20-14s-17 5-20 14c-2-3-4-7-4-12z" fill="' + hair + '"/>';
+      const accessory = run.worldId === 'jianghu'
+        ? '<path d="M91 34l6 15-5 2-7-14z" fill="' + palette[2] + '"/><path d="M93 37l2 6" stroke="#f6e5c9" stroke-width="1.4"/>'
+        : run.worldId === 'magic'
+          ? '<path d="M94 31v21" stroke="' + palette[2] + '" stroke-width="3" stroke-linecap="round"/><circle cx="94" cy="28" r="4" fill="' + palette[2] + '"/>'
+          : run.worldId === 'cyber'
+            ? '<path d="M79 52h22" stroke="' + palette[2] + '" stroke-width="3" stroke-linecap="round"/><circle cx="88" cy="52" r="4" fill="#bff1ff"/>'
+            : run.worldId === 'starship'
+              ? '<rect x="82" y="53" width="14" height="5" rx="2" fill="' + palette[2] + '"/>'
+              : '';
+      return '<svg viewBox="0 0 120 120" role="img" aria-label="人物形象">'
+        + '<rect width="120" height="120" rx="14" fill="' + palette[0] + '"/>'
+        + '<circle cx="60" cy="64" r="42" fill="rgba(255,255,255,0.28)"/>'
+        + '<path d="M26 112c3-22 14-33 34-33s31 11 34 33z" fill="' + palette[2] + '"/>'
+        + '<path d="M52 80h16v12c-4 4-12 4-16 0z" fill="' + skin + '"/>'
+        + '<ellipse cx="60" cy="58" rx="23" ry="27" fill="' + skin + '"/>'
+        + hairPath
+        + '<circle cx="51" cy="59" r="2.2" fill="' + eye + '"/><circle cx="69" cy="59" r="2.2" fill="' + eye + '"/>'
+        + '<path d="M46 51c2-2 5-2 7-1M67 50c2-1 5-1 7 1" stroke="#4a3326" stroke-width="1.5" stroke-linecap="round" fill="none"/>'
+        + (old ? '<path d="M43 58h12v7H43zM65 58h12v7H65z" stroke="#6b6257" stroke-width="1.2" fill="none"/><path d="M55 61h10" stroke="#6b6257" stroke-width="1.2"/>' : '')
+        + '<path d="M54 71c3 2.4 9 2.4 12 0" stroke="#9d5b4a" stroke-width="1.8" stroke-linecap="round" fill="none"/>'
+        + accessory
+        + '</svg>';
+    }
+
+    function avatarHtml(run) {
+      if (!run) return '';
+      const world = worldOf(run);
+      const stage = world.stages[run.stage] || world.stages.child || { label: '' };
+      const genderLabel = run.genderLabel || (run.gender === 'female' ? '女' : '男');
+      const talents = (run.talents || []).slice(0, 2).map(item => item.name);
+      const extraTalents = Math.max(0, (run.talents || []).length - talents.length);
+      const talentText = talents.length ? talents.join(' · ') + (extraTalents ? ' +' + extraTalents : '') : '无';
+      const partner = run.flags.partnerName
+        ? '伴侣 · ' + run.flags.partnerName + (run.flags.partnerLost ? '（已故）' : '')
+        : run.flags.partnerLost
+          ? '伴侣已远行'
+          : '还没有遇见伴侣';
+      const childText = (run.flags.children || 0) > 0 ? ' · ' + run.flags.children + ' 个孩子' : '';
+      return '<section class="avatar-card" data-world="' + esc(run.worldId) + '" data-gender="' + esc(run.gender || 'male') + '">'
+        + '<div class="avatar-art">' + avatarSvg(run) + '</div>'
+        + '<div class="avatar-copy"><div class="avatar-head"><b>' + esc(genderLabel) + ' · ' + run.age + ' 岁</b><span>' + esc(realmText(run)) + '</span></div>'
+        + '<p class="avatar-sub">' + esc(partner) + esc(childText) + ' · ' + esc(stage.label) + '</p>'
+        + '<div class="avatar-tags"><span class="avatar-tag">性别 ' + esc(genderLabel) + '</span><span class="avatar-tag">' + esc(realmText(run)) + '</span><span class="avatar-tag">天赋 ' + esc(talentText) + '</span><span class="avatar-tag">装备 ' + esc(equipmentLabel(run)) + '</span></div></div>'
+        + '</section>';
+    }
+
   function deltaHtml(entry) {
     if (!Array.isArray(entry.deltas) || entry.deltas.length === 0) return '';
     return '<div class="deltas">' + entry.deltas.map(delta => '<span class="delta" data-kind="' + esc(delta.kind || '') + '">' + esc(delta.label) + ' ' + (delta.value > 0 ? '+' : '') + delta.value + (delta.money ? (delta.unit || '') : '') + '</span>').join('') + '</div>';
@@ -15483,10 +16059,10 @@
         html += '<div class="death-entry"><small>终局 · ' + esc(entry.cause || '') + '</small>' + esc(entry.text) + '</div>';
         continue;
       }
-      const tag = entry.isChoice ? (entry.autoChoice ? '命运选择 · ' : '抉择 · ') + (entry.choiceLabel || '命运岔路') : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '';
+      const tag = entry.isChoice ? (entry.autoChoice ? '命运选择 · ' : '抉择 · ') + (entry.choiceLabel || '命运岔路') : entry.isPartner ? '相伴' : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '';
       html += '<div class="entry" data-tone="' + esc(entry.tone || 'normal') + '">'
         + '<div class="entry-age">' + entry.age + ' 岁' + (entry.span ? '<small>+' + entry.span + '年</small>' : '') + '</div>'
-        + '<div class="entry-body">' + (tag ? '<span class="entry-tag ' + (entry.isTwist ? 'twist' : entry.isChoice ? 'choice' : '') + '">' + tag + '</span>' : '')
+        + '<div class="entry-body">' + (tag ? '<span class="entry-tag ' + (entry.isTwist ? 'twist' : entry.isChoice ? 'choice' : entry.isPartner ? 'partner' : '') + '">' + tag + '</span>' : '')
         + '<div class="entry-text">' + esc(entry.text) + '</div>' + deltaHtml(entry) + '</div></div>';
     }
     return html;
@@ -15542,8 +16118,9 @@
       + '</div>'
       + statsHtml(run)
       + '<div class="age-line"><b>' + run.age + '</b><span>岁 · ' + esc(stage.label) + '</span></div>'
-      + '<div class="game-chips"><span class="run-chip">' + esc(world.dossier[0]) + '：' + esc(educationLabel(run)) + '</span><span class="run-chip">' + esc(world.dossier[1]) + '：' + esc(jobLabel(run)) + '</span></div>'
+      + '<div class="game-chips"><span class="run-chip">性别：' + esc(run.genderLabel || '未知') + '</span><span class="run-chip">' + esc(world.dossier[0]) + '：' + esc(educationLabel(run)) + '</span><span class="run-chip">' + esc(world.dossier[1]) + '：' + esc(jobLabel(run)) + '</span></div>'
       + '</header>'
+      + avatarHtml(run)
       + '<main class="log">' + logHtml(run) + (run.ending ? endingHtml(run) : '') + '</main>'
       + (death ? '' : '<div class="game-controls" style="padding-bottom:calc(9px + var(--safe-bottom))"><button class="btn btn-ghost" data-action="toggle-auto" data-auto="' + (state.auto ? 'true' : 'false') + '"><span class="auto-dot"></span>' + (state.auto ? '暂停自动' : '自动播放') + '</button><button class="btn btn-primary" data-action="advance">' + advanceLabel + '</button></div>')
       + '</div>';
@@ -15582,7 +16159,7 @@
     if (entries.length === 0) return '';
     const index = Math.min(Math.max(0, replay.index || 0), entries.length - 1);
     const entry = entries[index];
-    const tag = entry.kind === 'chapter' ? '章节' : entry.kind === 'birth' ? '出生' : entry.kind === 'death' ? '终局' : entry.isChoice ? (entry.autoChoice ? '命运选择' : '抉择') : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '一年';
+    const tag = entry.kind === 'chapter' ? '章节' : entry.kind === 'birth' ? '出生' : entry.kind === 'death' ? '终局' : entry.isChoice ? (entry.autoChoice ? '命运选择' : '抉择') : entry.isPartner ? '相伴' : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '一年';
     return '<div class="modal"><section class="replay-modal" role="dialog" aria-modal="true" aria-label="回放这一生">'
       + '<div class="modal-head"><div><span class="modal-kicker">REPLAY SYSTEM</span><h2>' + esc(replay.title || '回放这一生') + '</h2><p>不改变结局，只是把走过的路再读一遍。</p></div><button class="close-btn" data-action="close-replay" aria-label="关闭回放">×</button></div>'
       + '<div class="progress"><i style="width:' + Math.round(((index + 1) / entries.length) * 100) + '%"></i></div>'
@@ -15614,7 +16191,7 @@
         return;
       }
       advanceLife();
-    }, 1500);
+    }, AUTO_PLAY_MS);
   }
 
   function advanceLife() {
@@ -15701,7 +16278,7 @@
   function changeAlloc(key, delta) {
     const draft = state.draft;
     if (delta > 0) {
-      if (remainingPoints() <= 0 || (draft.alloc[key] || 0) >= 10) return;
+      if (remainingPoints() <= 0 || (draft.alloc[key] || 0) >= ALLOC_MAX) return;
       draft.alloc = { ...draft.alloc, [key]: (draft.alloc[key] || 0) + 1 };
     } else {
       if ((draft.alloc[key] || 0) <= 0) return;
@@ -15715,7 +16292,7 @@
     const keys = currentWorld().attrs.map(item => item.key);
     for (let i = 0; i < TOTAL_POINTS; i += 1) {
       let key = keys[Math.floor(Math.random() * keys.length)];
-      while (values[key] >= 10) key = keys[Math.floor(Math.random() * keys.length)];
+      while (values[key] >= ALLOC_MAX) key = keys[Math.floor(Math.random() * keys.length)];
       values[key] += 1;
     }
     state.draft.alloc = values;
@@ -15740,7 +16317,7 @@
     state.record = withModeRecord(state.record, mode, { ...bucket, runs: nextNumber });
     writeRecord(state.record);
     const legacy = state.legacy;
-    state.run = createRun(state.draft.alloc, selectedTalents(), state.draft.worldId, nextNumber, legacy);
+    state.run = createRun(state.draft.alloc, selectedTalents(), state.draft.worldId, nextNumber, legacy, state.draft.gender);
     state.run.playMode = mode;
     state.legacy = null;
     state.view = 'game';
@@ -15869,6 +16446,12 @@
       case 'start-setup': startSetup(); break;
       case 'home': goHome(); break;
       case 'choose-world': chooseWorld(target.dataset.world); break;
+      case 'set-gender':
+        if (GENDER_MAP[target.dataset.gender]) {
+          state.draft.gender = target.dataset.gender;
+          render();
+        }
+        break;
       case 'alloc': changeAlloc(target.dataset.key, Number(target.dataset.dir)); break;
       case 'random-alloc': randomAlloc(); break;
       case 'clear-alloc': state.draft.alloc = emptyAlloc(); render(); break;
