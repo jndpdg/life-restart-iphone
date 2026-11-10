@@ -17526,6 +17526,78 @@
     }
   }
 
+  // Real-instrument backing tracks: rendered offline from GeneralUser.sf2 and
+  // decoded into AudioBuffers. If a file cannot be fetched the synth engine
+  // above keeps playing, so the page still has music when the network is gone.
+  const MUSIC_FILE_BASE = 'music/';
+  const MUSIC_FILES = new Map();
+  let musicFileBroken = false;
+
+  async function loadMusicBuffer(id) {
+    if (MUSIC_FILES.has(id)) return MUSIC_FILES.get(id);
+    const res = await fetch(MUSIC_FILE_BASE + id + '.mp3', { cache: 'force-cache' });
+    if (!res.ok) throw new Error('music ' + res.status);
+    const buffer = await music.ctx.decodeAudioData(await res.arrayBuffer());
+    MUSIC_FILES.set(id, buffer);
+    return buffer;
+  }
+
+  async function startFileTrack(id) {
+    if (!music || musicFileBroken) return false;
+    const token = (music.fileToken || 0) + 1;
+    music.fileToken = token;
+    try {
+      const buffer = await loadMusicBuffer(id);
+      if (!music || token !== music.fileToken || !music.playing) return false;
+      if (music.fileSource) {
+        try { music.fileSource.stop(); } catch { /* already stopped */ }
+        music.fileSource = null;
+      }
+      const source = music.ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(music.bus);
+      source.start();
+      music.fileSource = source;
+      music.fileLive = true;
+      return true;
+    } catch {
+      musicFileBroken = true;
+      return false;
+    }
+  }
+
+  function stopFileTrack(fadeMs) {
+    if (!music || !music.fileSource) return;
+    const source = music.fileSource;
+    music.fileSource = null;
+    music.fileLive = false;
+    const stop = () => {
+      try { source.stop(); } catch { /* already stopped */ }
+      try { source.disconnect(); } catch { /* already gone */ }
+    };
+    if (fadeMs > 0) setTimeout(stop, fadeMs);
+    else stop();
+  }
+
+  function pumpFileDrums() {
+    if (!music || !music.playing) return;
+    const track = currentTrack();
+    const beat = track.beat;
+    const bar = beat * 4;
+    const now = music.ctx.currentTime;
+    if (music.nextBar < now - bar) music.nextBar = now + 0.2;
+    while (music.nextBar < now + 1.2) {
+      if (music.mood !== 'life') {
+        for (let step = 0; step < 8; step += 1) {
+          drumVoice(music.nextBar + step * (beat / 2), step % 4 === 0 ? 0.07 : step % 2 === 0 ? 0.038 : 0.024);
+        }
+      }
+      music.nextBar += bar;
+      music.barIndex += 1;
+    }
+  }
+
   function padVoice(freq, when, duration, gain, pan, detune) {
     if (!music) return;
     const ctx = music.ctx;
@@ -17742,6 +17814,10 @@
 
   function pumpMusic() {
     if (!music || !music.playing) return;
+    if (music.fileLive) {
+      pumpFileDrums();
+      return;
+    }
     try {
       const now = music.ctx.currentTime;
       const bar = currentTrack().beat * 4;
@@ -17782,6 +17858,7 @@
       audio.bus.gain.exponentialRampToValueAtTime(0.82, audio.ctx.currentTime + 1.8);
       pumpMusic();
       audio.timer = setInterval(pumpMusic, 250);
+      if (!audio.fileLive) startFileTrack(state.track || currentTrack().id);
       return true;
     } catch {
       return false;
@@ -17791,6 +17868,8 @@
   function stopMusic() {
     if (!music) return;
     music.playing = false;
+    music.fileToken = (music.fileToken || 0) + 1;
+    if (music.fileSource) stopFileTrack(820);
     if (music.timer) {
       clearInterval(music.timer);
       music.timer = null;
@@ -17850,6 +17929,7 @@
       music.barIndex = 0;
       music.nextBar = music.ctx.currentTime + 0.15;
     }
+      if (music.fileLive) startFileTrack(id);
     showToast('背景曲：' + MUSIC_TRACKS[id].name);
     render();
   }
