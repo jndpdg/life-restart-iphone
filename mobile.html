@@ -13724,7 +13724,7 @@
     function maybeOfferChoice(run) {
       if (!run || !run.alive || run.pendingChoice) return null
       const lastChoiceAge = Number(run.flags.lastChoiceAge)
-      if (Number.isFinite(lastChoiceAge) && run.age - lastChoiceAge < 4) return null
+      if (Number.isFinite(lastChoiceAge) && run.age - lastChoiceAge < 2) return null
       const nodes = (CHOICE_NODES[run.worldId] || [])
         .concat(
           WORLD_CHOICE_EXTRA[run.worldId] || [],
