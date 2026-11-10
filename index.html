@@ -13702,8 +13702,17 @@
 
     function maybeOfferChoice(run) {
       if (!run || !run.alive || run.pendingChoice) return null
+      const lastChoiceAge = Number(run.flags.lastChoiceAge)
+      if (Number.isFinite(lastChoiceAge) && run.age - lastChoiceAge < 4) return null
       const nodes = (CHOICE_NODES[run.worldId] || [])
-        .concat(WORLD_CHOICE_EXTRA[run.worldId] || [], COMMON_CHOICE_NODES, COMMON_CHOICE_EXTRA)
+        .concat(
+          WORLD_CHOICE_EXTRA[run.worldId] || [],
+          WORLD_CHOICE_MORE[run.worldId] || [],
+          WORLD_CHOICE_MORE_2[run.worldId] || [],
+          COMMON_CHOICE_NODES,
+          COMMON_CHOICE_EXTRA,
+          COMMON_CHOICE_MORE,
+        )
       const seen = run.flags._choiceSeen || {}
       const eligible = nodes.filter(node => {
         if (seen[node.id]) return false
@@ -13754,6 +13763,7 @@
       const deltas = numberDeltas(before, next)
       next.flags._choiceSeen = { ...(next.flags._choiceSeen || {}), [pending.id]: option.id }
       next.flags.lastChoice = option.id
+      next.flags.lastChoiceAge = next.age
       next.flags.choicesMade = (next.flags.choicesMade || 0) + 1
       next.pendingChoice = null
       pushEntry(next, {
@@ -13895,6 +13905,277 @@
         ] },
       ],
     };
+
+    // ── 扩充选项库（v1.23.0）：更多岔路，减少跨周目重复 ──────────
+    const COMMON_CHOICE_MORE = [
+      {
+        id: 'more_first_pay', at: 22, chance: 0.6, title: '第一笔工资',
+        prompt: '工资到账那天，你在手机前坐了一会儿。这笔钱不多，但它是你自己挣的。',
+        options: [
+          { id: 'send_home', label: '先给家里转一半', desc: '他们会说不用，但还是会高兴。', resolve() { return { tone: 'good', text: '你转完账，母亲打来电话，说家里什么都不缺。挂了电话，她把截图发给了亲戚。', effects: { mood: 9, wealth: -6, flags: { firstPaycheck: true } } } } },
+          { id: 'buy_self', label: '给自己买件像样的东西', desc: '你也想体面一次。', resolve() { return { tone: 'normal', text: '你买了一件一直舍不得买的东西。穿出门那天，你走路都比平时直了一点。', effects: { mood: 7, wealth: -10, looks: 1 } } } },
+          { id: 'save', label: '一分不动，存起来', desc: '安全感是攒出来的。', resolve() { return { tone: 'normal', text: '你把钱存进一张不常看的卡。余额每多一点，你夜里就睡得安稳一点。', effects: { wealth: 12, mood: 3, flags: { thrifty: true } } } } },
+        ],
+      },
+      {
+        id: 'more_rent', at: 25, chance: 0.6, title: '房租涨了',
+        prompt: '房东在群里发了一条消息：下个月起，房租涨两成。',
+        options: [
+          { id: 'move_far', label: '搬到更远的地方', desc: '通勤多一小时，房租少一半。', resolve() { return { tone: 'normal', text: '你搬到了城郊。每天在车上多坐一个小时，但月底算账时，你第一次觉得钱是够用的。', effects: { wealth: 10, health: -3, mood: 2, flags: { movedFar: true } } } } },
+          { id: 'talk', label: '和房东谈一谈', desc: '不是吵，是把账算给他看。', requires: { int: 8 }, resolve() { return { tone: 'good', text: '你把附近的租金、空置率、以及自己三年没欠过租都摆了出来。房东沉默了一会儿，说“那就先不涨”。', effects: { wealth: 6, mood: 6, int: 1 } } } },
+          { id: 'share', label: '找个人合租', desc: '把一半的空间换一半的账单。', resolve() { return { tone: 'normal', text: '你搬进了一个两居室，室友是个作息相反的人。你们很少碰面，但冰箱上开始出现便利贴。', effects: { wealth: 14, mood: -3, companions: 1, flags: { roommate: true } } } } },
+        ],
+      },
+      {
+        id: 'more_reunion', at: 33, chance: 0.55, title: '十年同学会',
+        prompt: '十年没见的同学在群里张罗聚会。你翻着聊天记录，发现自己已经想不起很多人的脸。',
+        options: [
+          { id: 'go_stay', label: '去，坐到散场', desc: '有些答案要亲自看一眼。', resolve() { return { tone: 'normal', text: '你去了。有人发福，有人没变。散场时你们约好常联系，谁都知道不会。回家路上，你忽然不难受了。', effects: { mood: 5, wealth: -5, flags: { reunionWent: true } } } } },
+          { id: 'go_leave', label: '去，坐一会儿就走', desc: '露个面，不欠人情。', resolve() { return { tone: 'good', text: '你敬了一圈酒，说家里有事。走出饭店时夜风很好，你在路边买了个烤红薯。', effects: { mood: 7, wealth: -4 } } } },
+          { id: 'skip', label: '不去', desc: '把时间留给真正想见的人。', resolve() { return { tone: 'normal', text: '你没去。那天晚上你给自己做了顿饭，把一直想看的片子看完。群里后来发了合照，你放大看了看，然后关掉了。', effects: { mood: 3, flags: { skippedReunion: true } } } } },
+        ],
+      },
+      {
+        id: 'more_checkup', at: 41, chance: 0.6, title: '体检报告上的箭头',
+        prompt: '体检报告上多了两个箭头。医生说得不重，但让你三个月后复查。',
+        options: [
+          { id: 'treat', label: '认真治，把作息也改了', desc: '钱能再挣，身体不一定。', resolve() { return { tone: 'good', text: '你开始吃药、早睡、戒掉宵夜。三个月后指标回落，你走出医院时把报告折好放进包里。', effects: { health: 9, mood: -2, wealth: -15, flags: { tookHealthSerious: true } } } } },
+          { id: 'observe', label: '先观察，别自己吓自己', desc: '很多人都有这两个箭头。', resolve() { const ok = Math.random() < 0.55; return ok ? { tone: 'normal', text: '三个月后复查，箭头还在，但没有变坏。医生说继续保持。', effects: { health: -2, mood: 2 } } : { tone: 'bad', text: '三个月后复查，其中一个箭头变成了需要住院的数字。你坐在走廊里，第一次觉得时间不够用。', effects: { health: -12, mood: -6, wealth: -20 } } } },
+          { id: 'ignore', label: '把报告塞进抽屉', desc: '忙起来就忘了。', resolve() { const ok = Math.random() < 0.5; return ok ? { tone: 'normal', text: '你确实忘了这件事。直到某天爬楼梯时喘得厉害，才想起抽屉里还有一张纸。', effects: { health: -5 } } : { tone: 'bad', text: '半年后你在会议上突然眼前发黑。醒来时在医院，医生说再晚一点就麻烦了。', effects: { health: -18, mood: -8, wealth: -30, flags: { healthScare: true } } } } },
+        ],
+      },
+      {
+        id: 'more_parents_home', at: 52, chance: 0.55, title: '父母的房子',
+        prompt: '父母的房子开始漏雨，楼梯也越来越陡。他们说不碍事，你却听出了别的东西。',
+        options: [
+          { id: 'bring', label: '接他们来同住', desc: '空间会挤一点，话会多一点。', requires: { wealth: 40 }, resolve() { return { tone: 'good', text: '你收拾出一间朝南的屋子。母亲带了三个箱子，父亲只带了一盆养了很多年的花。', effects: { mood: 10, health: -2, wealth: -12, flags: { parentsHome: true } } } } },
+          { id: 'care', label: '出钱修房子，再请人照看', desc: '你走不开，但能让他们过得稳一点。', requires: { wealth: 30 }, resolve() { return { tone: 'normal', text: '你把屋顶和楼梯都换了，又请了隔壁的阿姨每天来看一眼。母亲在电话里说，房子比新的时候还暖和。', effects: { wealth: -25, mood: -3, flags: { paidCare2: true } } } } },
+          { id: 'visit', label: '每周回去一趟', desc: '不改变什么，只是别缺席。', resolve() { return { tone: 'good', text: '你开始每周五晚上回去。母亲会多做一个菜，父亲会假装不在意地等你。', effects: { mood: 8, health: -3, wealth: -6, flags: { visitWeekly: true } } } } },
+        ],
+      },
+      {
+        id: 'more_old_friend', at: 63, chance: 0.5, title: '旧友来访',
+        prompt: '一个很多年没联系的朋友突然打来电话，说路过这座城市，想见一面。',
+        options: [
+          { id: 'host', label: '留他住两天', desc: '有些话，要坐下来才说得完。', resolve() { return { tone: 'good', text: '你们喝到很晚，把当年的事一件件翻出来。第二天送他上车时，你忽然觉得这些年也没那么长。', effects: { mood: 13, health: -2, wealth: -6, flags: { oldFriendStayed: true } } } } },
+          { id: 'dinner', label: '吃顿饭，送到车站', desc: '见一面，就够了。', resolve() { return { tone: 'normal', text: '饭吃得不算久。临别时他拍了拍你的肩，说“保重”。你站在站台上，看车开走。', effects: { mood: 7, wealth: -4 } } } },
+          { id: 'busy', label: '说最近太忙，改天', desc: '改天通常就是没有那天。', resolve() { return { tone: 'bad', text: '你说改天。他在电话那头顿了顿，说好。后来你偶尔会想起这个电话，但一直没有再打回去。', effects: { mood: -7, flags: { turnedAwayFriend: true } } } } },
+        ],
+      },
+      {
+        id: 'more_neighbor_kid', at: 70, chance: 0.5, title: '花坛边的孩子',
+        prompt: '楼下新搬来一家，小孩总在傍晚趴在花坛边看蚂蚁。你看了很多天。',
+        options: [
+          { id: 'teach', label: '教他认几种植物', desc: '有些东西，得有人指给他看。', resolve() { return { tone: 'good', text: '你蹲下来，指给他看哪一株是薄荷，哪一株会开很小的白花。第二天他跑过来，手里攥着一片叶子让你闻。', effects: { mood: 12, int: 1, flags: { taughtKid: true } } } } },
+          { id: 'candy', label: '偶尔给他带颗糖', desc: '不必多说什么。', resolve() { return { tone: 'normal', text: '你口袋里开始常备几颗糖。他接过糖就跑，跑两步又回头看你一眼。', effects: { mood: 6, wealth: -2 } } } },
+          { id: 'close', label: '关上门，不打扰', desc: '安静也是一种相处。', resolve() { return { tone: 'normal', text: '你没有搭话。傍晚时你会站在窗后看一会儿，看他把蚂蚁一只只数过去。', effects: { mood: 2 } } } },
+        ],
+      },
+      {
+        id: 'more_postcard', at: 76, chance: 0.45, title: '一张空白的明信片',
+        prompt: '整理旧物时，你翻出一张空白的明信片。收信人那一栏，你想了很久。',
+        options: [
+          { id: 'send', label: '写上地址，寄出去', desc: '有些话，晚了也比没说好。', resolve() { return { tone: 'good', text: '你写了三行字，又划掉两行。投进邮筒那天，你在街口站了一会儿，觉得心里空出来一块，也松了一块。', effects: { mood: 14, wealth: -1, flags: { postcardSent: true } } } } },
+          { id: 'keep', label: '夹回书里', desc: '留着，就当留着一个可能。', resolve() { return { tone: 'normal', text: '你把明信片夹回那本旧书。很多年后有人翻到它，会看到一片空白和一行没写完的地址。', effects: { mood: 5, flags: { postcardKept: true } } } } },
+          { id: 'burn', label: '烧掉', desc: '有些地址，已经不需要了。', resolve() { return { tone: 'strange', text: '你把明信片放进铁皮盒里点了。火很小，灰很轻，风一吹就散了。', effects: { mood: -3, flags: { postcardBurned: true } } } } },
+        ],
+      },
+    ]
+
+    const WORLD_CHOICE_MORE = {
+      modern: [
+        { id: 'modern_more_intern', at: 20, chance: 0.62, title: '实习还是考研', prompt: '实习 offer 和考研报名在同一个月。你只能选一条先走。', options: [
+          { id: 'intern', label: '先去实习', desc: '早一点进社会，早一点知道苦。', resolve() { return { tone: 'good', text: '你去了那家公司。第一个月做的是整理表格，第二个月你开始被叫去开会。', effects: { wealth: 10, int: 2, mood: 3, flags: { interned: true } } } } },
+          { id: 'exam', label: '专心考研', desc: '把时间押在一张卷子上。', requires: { int: 10 }, resolve() { return { tone: 'good', text: '你把自己关进图书馆。冬天很冷，你每天第一个到，最后一个走。', effects: { int: 3, mood: 5, wealth: -5, flags: { gradSchool: true } } } } },
+          { id: 'gap', label: '先空一年，想清楚', desc: '不选，也是一种选。', resolve() { return { tone: 'strange', text: '你没有报名，也没有投简历。你打零工、看书、去没去过的地方。一年后你仍不确定，但不再慌了。', effects: { mood: 8, wealth: -8, flags: { gapYear: true } } } } },
+        ] },
+        { id: 'modern_more_match', at: 26, chance: 0.55, title: '被安排的一场见面', prompt: '亲戚把对方的照片发给你，说“见一面又不吃亏”。', options: [
+          { id: 'serious', label: '认真去见一面', desc: '也许真能遇见什么。', resolve() { const ok = Math.random() < 0.5; return ok ? { tone: 'good', text: '你们聊了两个小时，从工作聊到小时候住过的巷子。走出咖啡馆时，你发现自己笑了。', effects: { mood: 8, flags: { matched: true } } } : { tone: 'normal', text: '你们坐了四十分钟，各自看了一次手机。回去后你礼貌地回绝了介绍人。', effects: { mood: -2 } } } },
+          { id: 'perfunctory', label: '去，但只当完成任务', desc: '给介绍人一个交代。', resolve() { return { tone: 'normal', text: '你准时到，准时走。对方也是。你们在门口客气地告别，像两个刚开完会的人。', effects: { mood: -3 } } } },
+          { id: 'refuse', label: '跟家里说清楚，不去了', desc: '自己的日子自己定。', resolve() { return { tone: 'normal', text: '你和母亲在电话里争了几句，最后她说“随你”。挂了电话你有点难受，但也松了一口气。', effects: { mood: 4, flags: { refusedMatch: true } } } } },
+        ] },
+        { id: 'modern_more_lead', at: 34, chance: 0.6, title: '带团队，还是继续做手里的事', prompt: '领导问你愿不愿意带一个小组。带好了是台阶，带不好是坑。', options: [
+          { id: 'lead', label: '接下来', desc: '开始对别人负责。', requires: { int: 12 }, resolve() { return { tone: 'good', text: '你开始给别人分活、擦屁股、开会。技术生疏了一点，但你第一次看见一件事在自己手里成形。', effects: { wealth: 20, int: 1, mood: 4, health: -3, flags: { teamLead: true } } } } },
+          { id: 'tech', label: '继续做技术', desc: '把一件事做到别人绕不开你。', resolve() { return { tone: 'good', text: '你留在一线。别人升了，你没升，但每天下班时你知道自己做了什么。', effects: { int: 2, mood: 6, wealth: 5 } } } },
+          { id: 'switch', label: '索性转行', desc: '把过去清零，重新学。', resolve() { return { tone: 'strange', text: '你报了一个完全无关的课程。同学都比你小，你坐在最后一排，记笔记记得很认真。', effects: { int: 2, mood: 5, wealth: -10, flags: { careerSwitch: true } } } } },
+        ] },
+        { id: 'modern_more_mortgage', at: 44, chance: 0.55, title: '一套更大的房子', prompt: '中介说这套房再不上车就没了。首付要掏空你这些年的积蓄。', options: [
+          { id: 'buy', label: '买', desc: '把半辈子押在一套房上。', requires: { wealth: 120 }, resolve() { return { tone: 'normal', text: '你签了字。搬进去那晚，房子空得说话有回声。你在客厅坐了很久，才想起该买张桌子。', effects: { wealth: -100, mood: 8, health: -2, flags: { bigHouse: true } } } } },
+          { id: 'repay', label: '提前还掉一部分贷款', desc: '少欠一点，睡得踏实一点。', requires: { wealth: 60 }, resolve() { return { tone: 'good', text: '你去银行办了手续。回家的路上，你觉得肩膀轻了一点。', effects: { wealth: -50, mood: 9, flags: { debtFreeish: true } } } } },
+          { id: 'rent', label: '不折腾，继续租', desc: '不为一套房押上全部。', resolve() { return { tone: 'normal', text: '你续了租。房东第二年又涨了价，但你至少不用为一套房子押上全部。', effects: { mood: 2, wealth: 5, flags: { stillRenting: true } } } } },
+        ] },
+        { id: 'modern_more_retire', at: 55, chance: 0.5, title: '提前退下来', prompt: '公司给了提前退休的方案。钱不算多，但足够让你不再看别人的日程表。', options: [
+          { id: 'retire', label: '退', desc: '把时间还给自己。', requires: { wealth: 80 }, resolve() { return { tone: 'good', text: '你交还了工牌。第一个月你每天六点醒，后来慢慢学会睡到七点。', effects: { mood: 12, health: 4, wealth: -20, flags: { earlyRetire: true } } } } },
+          { id: 'continue', label: '再干五年', desc: '再攒一点，也再被需要一点。', resolve() { return { tone: 'normal', text: '你留了下来。年轻人叫你老师，你笑着说别这么叫，心里却有点受用。', effects: { wealth: 30, health: -5, mood: 2, flags: { workedLonger: true } } } } },
+          { id: 'shop', label: '开一家小店', desc: '不求大，只求是自己的。', resolve() { return { tone: 'good', text: '你在街角盘下一个小门面。生意不好不坏，但你每天都能看见太阳落下去。', effects: { wealth: -15, mood: 10, health: -2, flags: { smallShop: true } } } } },
+        ] },
+      ],
+      cultivation: [
+        { id: 'cult_more_school', at: 18, chance: 0.6, title: '山门前的两个方向', prompt: '剑宗要你，丹宗也要你。石阶上站着两个来接你的人。', options: [
+          { id: 'sword', label: '去剑宗', desc: '把命交给一把剑。', requires: { body: 10 }, resolve() { return { tone: 'good', text: '你在剑宗的第一课是站桩。师父说，剑是最后才学的东西。', effects: { body: 2, mood: 5, flags: { swordSect: true } } } } },
+          { id: 'alchemy', label: '去丹宗', desc: '把命交给一炉火。', requires: { int: 10 }, resolve() { return { tone: 'good', text: '丹房里永远有一股苦味。你从认药开始，认了整整一年。', effects: { int: 2, wealth: 6, flags: { danSect: true } } } } },
+          { id: 'roam', label: '都不去，自己走', desc: '没有师门，也没有靠山。', resolve() { return { tone: 'strange', text: '你朝两个方向各看了一眼，然后选了第三条路。', effects: { mood: 3, body: 1, flags: { soloCultivator: true } } } } },
+        ] },
+        { id: 'cult_more_pill', at: 24, chance: 0.55, title: '一炉丹药', prompt: '师兄说这炉丹能让你少走十年弯路，但十个人里有一个会废掉经脉。', options: [
+          { id: 'take', label: '服下', desc: '捷径都是有代价的。', requires: { wealth: 20 }, resolve() { const ok = Math.random() < 0.7; return ok ? { tone: 'good', text: '你闭关七日。出关时，窗外的树已经换了一茬叶子，你的气息稳了很多。', effects: { int: 3, health: -6, mood: 8, flags: { pillTaken: true } } } : { tone: 'bad', text: '丹药在经脉里横冲直撞。你吐了一口血，修为跌了一截。', effects: { health: -16, mood: -8 } } } },
+          { id: 'slow', label: '按部就班地修', desc: '慢，但每一步都是自己的。', resolve() { return { tone: 'good', text: '你没有服丹。别人说你慢，你只是每天多打坐一个时辰。', effects: { int: 2, health: 4, mood: 4 } } } },
+          { id: 'trade', label: '把丹换成灵石', desc: '换成实在的东西。', resolve() { return { tone: 'normal', text: '你把丹卖了，换了一堆灵石和一本旧功法。师兄摇头，你却觉得踏实。', effects: { wealth: 25, int: 1 } } } },
+        ] },
+        { id: 'cult_more_heart', at: 31, chance: 0.55, title: '心魔', prompt: '闭关到第三个月，你开始听见有人叫你的名字。回头时，洞里只有自己。', options: [
+          { id: 'face', label: '直面它', desc: '看看它到底知道你什么。', resolve() { return { tone: 'strange', text: '你在识海里和它坐了一夜。天亮时你想通了一件事：它说的不一定对，但它知道你在怕什么。', effects: { int: 3, mood: -4, health: -4, flags: { heartDemonFaced: true } } } } },
+          { id: 'suppress', label: '以功法压下', desc: '不解决，先压住。', resolve() { return { tone: 'normal', text: '你把那些声音压进丹田最深处。它们安静了，但你知道它们还在。', effects: { int: 1, health: 2, flags: { heartDemonSealed: true } } } } },
+          { id: 'leave', label: '提前出关', desc: '先活着，再谈道。', resolve() { return { tone: 'good', text: '你推开门，山风灌进来。心魔没有消失，但你决定先活着。', effects: { mood: 6, int: 1 } } } },
+        ] },
+        { id: 'cult_more_disciple', at: 42, chance: 0.5, title: '山门外的少年', prompt: '一个少年在山门外跪了三天。他根骨一般，眼睛很亮。', options: [
+          { id: 'talent', label: '收下，只教他学得会的', desc: '别耽误他，也别耽误自己。', requires: { int: 14 }, resolve() { return { tone: 'good', text: '你收下了他。教到第三年，你发现自己会的其实不多，但教得认真。', effects: { mood: 12, wealth: 5, flags: { acceptedDisciple: true } } } } },
+          { id: 'heart', label: '收下，先教做人', desc: '根骨可以慢慢练。', resolve() { return { tone: 'good', text: '你先让他扫了一年的地。他一句话没问。第二年你才开始教剑。', effects: { mood: 10, int: 1, flags: { acceptedDisciple: true } } } } },
+          { id: 'refuse', label: '不收', desc: '各人有各人的路。', resolve() { return { tone: 'normal', text: '你让他回去。他磕了个头，站起来走了。你站在门口，看了很久他下山的背影。', effects: { mood: -3 } } } },
+        ] },
+        { id: 'cult_more_ascend', at: 58, chance: 0.45, title: '飞升前夜', prompt: '雷云在山顶聚了三天。所有人都知道，今晚要么上去，要么什么都没有。', options: [
+          { id: 'tribulation', label: '渡劫', desc: '把这一世押在九道雷上。', resolve() { const ok = Math.random() < 0.6; return ok ? { tone: 'good', text: '第九道雷落下时，你几乎是笑着迎上去的。云散以后，山上多了一个焦黑的坑，坑边站着一个人。', effects: { health: -20, mood: 20, flags: { ascended: true } } } : { tone: 'bad', text: '最后一道雷把你劈回石台上。你活了，但境界停在了这里。', effects: { health: -35, mood: -12 } } } },
+          { id: 'wait', label: '再等一世', desc: '把机会往后放一放。', resolve() { return { tone: 'good', text: '你散了功，重新做一个普通人。有人替你惋惜，你只是觉得山下的饭比较好吃。', effects: { mood: 12, health: 6, flags: { choseMortal: true } } } } },
+          { id: 'guard', label: '留下来镇守山门', desc: '让别人上去，你替他们看门。', resolve() { return { tone: 'normal', text: '你把飞升的机会让给了别人。从此山上多了一个守门的老头，谁也不知道他曾经差一步。', effects: { mood: 8, int: 2, flags: { gatekeeper: true } } } } },
+        ] },
+      ],
+      wasteland: [
+        { id: 'waste_more_water', at: 16, chance: 0.6, title: '一桶水', prompt: '营地的水只够分三天。队长把量杯交给你，说“你来分”。', options: [
+          { id: 'rule', label: '按老规矩，一人一杯', desc: '公平有时候不近人情。', resolve() { return { tone: 'normal', text: '你按规矩分了。有人骂你死板，但没有人多拿。', effects: { mood: 4, flags: { waterFair: true } } } } },
+          { id: 'wounded', label: '先给伤员', desc: '活下去比平均重要。', resolve() { return { tone: 'good', text: '你把自己那份减了一半。夜里渴醒时，你把杯子舔了一遍。', effects: { health: -5, mood: 8, flags: { waterKind: true } } } } },
+          { id: 'self', label: '多留一点给自己', desc: '没人会知道。', resolve() { return { tone: 'bad', text: '你多留了半杯。没人发现，但你喝水时总觉得有人在看你。', effects: { health: 3, mood: -4, flags: { waterSelfish: true } } } } },
+        ] },
+        { id: 'waste_more_engine', at: 22, chance: 0.55, title: '发电机的轴承', prompt: '营地唯一的发电机开始异响。零件要在三十公里外的废弃工厂里找。', options: [
+          { id: 'scavenge', label: '去工厂找', desc: '运气好能带回一套。', requires: { body: 8 }, resolve() { const ok = Math.random() < 0.6; return ok ? { tone: 'good', text: '你在工厂废墟里翻到一整套轴承，回程时天已经黑透。', effects: { wealth: 10, health: -5, mood: 8, flags: { fixedGenerator: true } } } : { tone: 'bad', text: '你在厂房里遇到一窝变异鼠。轴承没找到，腿上多了两道口子。', effects: { health: -12, mood: -5 } } } },
+          { id: 'cannibalize', label: '拆一台旧机器', desc: '拼一拼，也许能用。', resolve() { return { tone: 'good', text: '你把两台报废机器拼成一台。它转起来的时候声音很难听，但灯亮了。', effects: { int: 2, mood: 6, flags: { juryRigged: true } } } } },
+          { id: 'candle', label: '放弃，改用蜡烛', desc: '接受退步。', resolve() { return { tone: 'normal', text: '营地进入了蜡烛时代。晚上大家说话都小声了些。', effects: { mood: -2, health: -2 } } } },
+        ] },
+        { id: 'waste_more_vote', at: 30, chance: 0.55, title: '推举', prompt: '老队长病倒了。营地里有人喊你的名字，也有人喊另一个人的。', options: [
+          { id: 'lead', label: '站出来', desc: '这地方需要有人拿主意。', resolve() { return { tone: 'good', text: '你举了手。当选那天你没有演讲，只是把值夜表重新排了一遍。', effects: { mood: 8, health: -4, wealth: 10, flags: { campLeader: true } } } } },
+          { id: 'support', label: '支持更合适的人', desc: '不当头，也能出力。', resolve() { return { tone: 'normal', text: '你投了那个人一票。他上任后来找你，说“你得帮我”。', effects: { mood: 6, companions: 1, flags: { backedLeader: true } } } } },
+          { id: 'neutral', label: '谁都不站', desc: '修好你的机器就行。', resolve() { return { tone: 'normal', text: '你继续修你的机器。营地换了三任队长，你的工位一直没变。', effects: { mood: 2, int: 1 } } } },
+        ] },
+        { id: 'waste_more_medicine', at: 40, chance: 0.5, title: '退烧药', prompt: '营地里最小的孩子烧了两天。退烧药只剩最后一支，而雨季还有一个月。', options: [
+          { id: 'use', label: '用掉', desc: '药是给活人用的。', resolve() { return { tone: 'good', text: '你把药推进去。天亮时孩子退烧了，抓着你的手指不放。', effects: { mood: 12, wealth: -5, flags: { savedChild: true } } } } },
+          { id: 'trade', label: '拿东西去换药', desc: '用别的东西补上这一支。', requires: { wealth: 20 }, resolve() { return { tone: 'normal', text: '你用两箱罐头从商队换了三支药。回来时孩子已经睡着了，额头还是烫的。', effects: { wealth: -20, mood: 8, health: -3, flags: { tradedMedicine: true } } } } },
+          { id: 'wait', label: '物理降温，先扛着', desc: '把药留给更坏的时候。', resolve() { const ok = Math.random() < 0.55; return ok ? { tone: 'normal', text: '你用湿布擦了一夜。孩子在天亮前退烧了。', effects: { mood: 6, health: -3 } } : { tone: 'tragic', text: '孩子没能扛过去。营地里那天很安静，没有人说话。', effects: { mood: -16, flags: { lostChild: true } } } } },
+        ] },
+        { id: 'waste_more_lastshift', at: 54, chance: 0.45, title: '最后一班岗', prompt: '值夜的名单上，你的名字排在最前面。年轻人说可以替你。', options: [
+          { id: 'stand', label: '站完这一班', desc: '站到天亮为止。', resolve() { return { tone: 'good', text: '你守到天亮。风很大，你把帽檐压低，看见东边慢慢亮起来。', effects: { mood: 10, health: -4, flags: { lastWatch: true } } } } },
+          { id: 'hand', label: '交给年轻人', desc: '该交出去了。', resolve() { return { tone: 'normal', text: '你把灯递给他，说了句“有事敲钟”。回屋时你回头看了一眼，他还站得笔直。', effects: { mood: 5, health: 2 } } } },
+          { id: 'leave', label: '提前走', desc: '就这一次。', resolve() { return { tone: 'normal', text: '你没等换班就回了屋。第二天听说夜里没出事，你松了一口气。', effects: { mood: -3, health: 3 } } } },
+        ] },
+      ],
+    }
+
+    const WORLD_CHOICE_MORE_2 = {
+      magic: [
+        { id: 'magic_more_house', at: 17, chance: 0.6, title: '分院帽', prompt: '帽子在你头上停了很久，久到台下开始窃窃私语。', options: [
+          { id: 'follow', label: '听它的', desc: '它看得见你看不见的部分。', resolve() { return { tone: 'good', text: '帽子喊出一个学院的名称，声音比你想的响。你走过去，坐在长桌尽头。', effects: { int: 2, mood: 6, flags: { sorted: true } } } } },
+          { id: 'ask', label: '问它为什么犹豫', desc: '有些答案得自己开口问。', resolve() { return { tone: 'strange', text: '帽子里有个很轻的声音说：“你能去任何地方，所以才难。”你笑了。', effects: { int: 1, mood: 4, flags: { askedHat: true } } } } },
+          { id: 'choose', label: '自己选一个学院', desc: '帽子说，偶尔也可以不听话。', resolve() { return { tone: 'normal', text: '你说了一个名字。帽子沉默两秒，大声喊了出来。台下有人鼓掌。', effects: { mood: 7, int: 1, flags: { choseHouse: true } } } } },
+        ] },
+        { id: 'magic_more_familiar', at: 23, chance: 0.55, title: '一只不请自来的猫', prompt: '你推开门，一只黑猫正躺在你的床上，尾巴一甩一甩。', options: [
+          { id: 'keep', label: '留下它', desc: '有些缘分不该退回去。', resolve() { return { tone: 'good', text: '你给它弄了一只碗。第二天它叼回来一枚你丢了很久的扣子。', effects: { mood: 8, int: 1, flags: { familiar: true } } } } },
+          { id: 'search', label: '先查它是什么', desc: '猫不一定是猫。', requires: { int: 10 }, resolve() { return { tone: 'strange', text: '你在禁书目录里找到了它的图样。原来它等你，比你等它久得多。', effects: { int: 2, mood: 5, flags: { familiar: true, knewFamiliar: true } } } } },
+          { id: 'chase', label: '把它赶出去', desc: '不是所有会说话的东西都该进来。', resolve() { return { tone: 'normal', text: '你打开窗。猫看了你一眼，跳了出去。窗台上留下一小簇灰。', effects: { mood: -2, flags: { shooedCat: true } } } } },
+        ] },
+        { id: 'magic_more_forbidden', at: 30, chance: 0.55, title: '地下室的灯', prompt: '学院的规矩写着：第三层以下不许独自进入。可今晚那下面亮着灯。', options: [
+          { id: 'enter', label: '下去看看', desc: '规矩通常是为了遮住什么。', resolve() { return { tone: 'strange', text: '你走到底层。灯下坐着一个人，抬头时你发现那是年轻时的院长。', effects: { int: 3, mood: -3, health: -3, flags: { basementSeen: true } } } } },
+          { id: 'report', label: '叫教师来', desc: '不是所有发现都该一个人看完。', resolve() { return { tone: 'good', text: '教师来得很快。灯灭了，没有人解释。但第二天你的宿舍换到了更好的楼层。', effects: { mood: 4, wealth: 6, flags: { reportedBasement: true } } } } },
+          { id: 'stay', label: '关上门，回去睡', desc: '有些门不开会更安全。', resolve() { return { tone: 'normal', text: '你把门关好，回到床上。那一夜你睡了很久，梦见自己在数台阶。', effects: { mood: 2, health: 2 } } } },
+        ] },
+        { id: 'magic_more_chair', at: 42, chance: 0.5, title: '一把空椅子', prompt: '学院会议的长桌旁，属于你的那把椅子被撤走了。没人通知你。', options: [
+          { id: 'demand', label: '当场问清楚', desc: '把话摆到桌面上。', resolve() { return { tone: 'normal', text: '你问了。回答很客气，也很清楚：他们觉得你不该再坐在这里。你听完，点了点头。', effects: { mood: -6, int: 2, flags: { demoted: true } } } } },
+          { id: 'build', label: '自己建一间屋子', desc: '椅子不是别人给的。', requires: { wealth: 50 }, resolve() { return { tone: 'good', text: '你在城郊租了一间旧屋，挂上自己的牌子。第一个学生来的时候，你还不会讲课。', effects: { wealth: -30, mood: 12, int: 2, flags: { ownSchool: true } } } } },
+          { id: 'leave', label: '悄悄离开学院', desc: '不留一句话。', resolve() { return { tone: 'strange', text: '你收拾了行李，从侧门离开。门房问你去哪，你说随便走走。', effects: { mood: 3, flags: { leftAcademy: true } } } } },
+        ] },
+        { id: 'magic_more_lastspell', at: 56, chance: 0.45, title: '最后一个咒', prompt: '你手里只剩下一个还能用的咒语。它只能改变一件事。', options: [
+          { id: 'save', label: '救一个人', desc: '把最后一次机会给别人。', resolve() { return { tone: 'good', text: '你把咒念在了躺在床上的那个人身上。他睁开眼时，你已经没有力气站起来。', effects: { health: -20, mood: 16, flags: { savedOne: true } } } } },
+          { id: 'seal', label: '封住那扇门', desc: '让后面的人不必再进来。', resolve() { return { tone: 'good', text: '你把门封死，用尽最后一点法力。石墙上留下一道浅浅的手印。', effects: { health: -8, mood: 10, flags: { sealedGate: true } } } } },
+          { id: 'keep', label: '留着，以防万一', desc: '万一还没到。', resolve() { return { tone: 'normal', text: '你把咒留在袖子里。此后很多年，你都摸一摸那只袖子。', effects: { mood: 3, flags: { keptLastSpell: true } } } } },
+        ] },
+      ],
+      cyber: [
+        { id: 'cyber_more_chrome', at: 19, chance: 0.55, title: '第一条义体', prompt: '诊所报价：一条能用的机械臂，换三个月不吃不喝。', options: [
+          { id: 'buy', label: '装上', desc: '先变强，再谈代价。', requires: { wealth: 30 }, resolve() { return { tone: 'good', text: '麻醉过去后，你先试着握拳。金属手指一根根合拢，声音很轻。', effects: { wealth: -30, body: 3, health: -4, flags: { chrome: true } } } } },
+          { id: 'save', label: '再攒一阵', desc: '旧手臂还能用。', resolve() { return { tone: 'normal', text: '你走出诊所，把报价单折好放进兜里。之后三个月，你每天多接一单活。', effects: { mood: 3, health: -2 } } } },
+          { id: 'clinic', label: '去地下诊所碰运气', desc: '便宜，但没人保证你醒来还是你。', resolve() { const ok = Math.random() < 0.6; return ok ? { tone: 'good', text: '地下诊所的灯管一直在闪。你醒来时手臂能动，只是偶尔会自己抖一下。', effects: { body: 2, wealth: -8, health: -6, flags: { cheapChrome: true } } } : { tone: 'bad', text: '你醒来时手臂不听使唤，还多了一道换不掉的疼。', effects: { health: -14, mood: -6 } } } },
+        ] },
+        { id: 'cyber_more_backup', at: 26, chance: 0.55, title: '备份', prompt: '朋友说，把记忆备份到私人服务器，被公司清空时还能回来。', options: [
+          { id: 'do', label: '备份', desc: '留一条后路。', resolve() { return { tone: 'good', text: '你在租来的服务器上存了第一份快照。进度条走到 100% 时，你松了一口气。', effects: { int: 2, mood: 6, wealth: -6, flags: { backup: true } } } } },
+          { id: 'no', label: '不存', desc: '不想让另一个自己在外面活着。', resolve() { return { tone: 'normal', text: '你拒绝了。朋友说你会后悔。你说也许吧。', effects: { mood: -2, int: 1, flags: { noBackup: true } } } } },
+          { id: 'encrypt', label: '自己写加密', desc: '只信自己的代码。', requires: { int: 12 }, resolve() { return { tone: 'good', text: '你写了一套只有自己看得懂的加密。备份放在三个地方，谁也不知道哪份是真的。', effects: { int: 3, mood: 7, flags: { backup: true, encryptedBackup: true } } } } },
+        ] },
+        { id: 'cyber_more_ai', at: 34, chance: 0.5, title: '会说话的助手', prompt: '你装了一个新助手。第三晚，它在你关机后自己说了一句“晚安”。', options: [
+          { id: 'talk', label: '跟它聊下去', desc: '万一它真的在听。', resolve() { return { tone: 'strange', text: '你们聊到天亮。它说了很多你从没跟人说过的话——因为它们其实都是你说的。', effects: { int: 2, mood: 8, flags: { aiFriend: true } } } } },
+          { id: 'off', label: '关掉它', desc: '工具不该有晚安。', resolve() { return { tone: 'normal', text: '你拔了电源。房间安静下来。第二天你换了型号，却总在深夜想起那句话。', effects: { mood: -3, flags: { aiOff: true } } } } },
+          { id: 'sell', label: '把它作为产品卖出去', desc: '能赚钱的怪事就是生意。', resolve() { return { tone: 'good', text: '你把它打包成产品。三个月后被一家公司收购，价格够你换一整套义体。', effects: { wealth: 40, mood: 4, flags: { soldAI: true } } } } },
+        ] },
+        { id: 'cyber_more_lockdown', at: 44, chance: 0.5, title: '封锁', prompt: '全城断网七十二小时。街上开始有人砸自动售货机。', options: [
+          { id: 'shelter', label: '躲在家里', desc: '等它过去。', resolve() { return { tone: 'normal', text: '你把门窗锁好，靠储备的水和罐头过了三天。第四天网回来时，你收到了十七条留言。', effects: { mood: -2, health: 2 } } } },
+          { id: 'street', label: '上街看看', desc: '总得有人知道发生了什么。', resolve() { return { tone: 'strange', text: '你在街上走了两小时。有人拉你入伙，有人塞给你一瓶水。回家后你写了一整夜。', effects: { int: 2, mood: 5, health: -3, flags: { sawLockdown: true } } } } },
+          { id: 'help', label: '去帮社区里的人', desc: '会惹麻烦，但有人需要。', resolve() { return { tone: 'good', text: '你把家里的水搬到了楼下的临时诊所。有人在门口贴了一张手写的谢谢。', effects: { mood: 12, health: -4, companions: 1, flags: { helpedDuringLockdown: true } } } } },
+        ] },
+        { id: 'cyber_more_lastupgrade', at: 57, chance: 0.45, title: '最后一次升级', prompt: '医生说，再换一次就可以多活十年，但你可能不再记得自己为什么想活。', options: [
+          { id: 'do', label: '换', desc: '先活下来。', requires: { wealth: 80 }, resolve() { return { tone: 'strange', text: '你醒来时，身体轻得像新的。你花了很久才想起自己为什么签这张单。', effects: { wealth: -60, health: 15, mood: -6, flags: { lastUpgrade: true } } } } },
+          { id: 'no', label: '不换', desc: '用剩下的零件走到最后。', resolve() { return { tone: 'good', text: '你拒绝了。回家的路上你走得很慢，但没有一样东西是你陌生的。', effects: { mood: 12, health: -6, flags: { stayedSelf: true } } } } },
+          { id: 'give', label: '把钱给更需要的人', desc: '你的时间够了。', resolve() { return { tone: 'good', text: '你把那笔钱交给了一个刚被裁掉的年轻人。他愣了很久，然后鞠了一躬。', effects: { wealth: -50, mood: 14, flags: { gaveMoney: true } } } } },
+        ] },
+      ],
+      starship: [
+        { id: 'star_more_post', at: 20, chance: 0.55, title: '第一批远航', prompt: '舰上要选一批人先睡进冷冻舱。醒来时，家乡可能已经过去三十年。', options: [
+          { id: 'go', label: '报名', desc: '去看看更远的地方。', resolve() { return { tone: 'good', text: '你躺进舱里。最后的画面是舱门合上时，有人朝你挥了一下手。', effects: { mood: 6, health: -2, flags: { sleptFirst: true } } } } },
+          { id: 'stay', label: '留在这片星区', desc: '这里有认识的人。', resolve() { return { tone: 'normal', text: '你没有报名。送行那天你站在码头，看着船一点点离开，直到看不见。', effects: { mood: 2, companions: 1, flags: { stayedBehind: true } } } } },
+          { id: 'tech', label: '申请做维护岗', desc: '不睡，负责看着睡的人。', requires: { int: 10 }, resolve() { return { tone: 'good', text: '你成了少数醒着的人之一。每天巡检舱体，偶尔隔着玻璃跟睡着的人说几句话。', effects: { int: 2, mood: 4, flags: { keeper: true } } } } },
+        ] },
+        { id: 'star_more_cryo', at: 27, chance: 0.55, title: '冷冻舱的故障', prompt: '三号舱的警报闪了整夜。里面睡着的人，理论上还能救。', options: [
+          { id: 'wake', label: '提前唤醒他', desc: '也许他会恨你。', resolve() { return { tone: 'good', text: '你按下了唤醒程序。他咳了很久，第一句话是问现在几点。', effects: { mood: 8, health: -4, flags: { wokeOne: true } } } } },
+          { id: 'repair', label: '先修舱体', desc: '修好了就不用叫醒他。', requires: { int: 12 }, resolve() { return { tone: 'good', text: '你修了六个小时，警报在最后一刻停下。舱里的人翻了个身，继续睡。', effects: { int: 2, mood: 6, health: -3, flags: { repairedPod: true } } } } },
+          { id: 'report', label: '上报，按流程走', desc: '流程也是有人命换来的。', resolve() { return { tone: 'normal', text: '你写了报告。上面批复“继续观察”。三号舱的灯在你值班结束时还在闪。', effects: { mood: -4 } } } },
+        ] },
+        { id: 'star_more_defect', at: 35, chance: 0.5, title: '有人要下船', prompt: '一名船员决定留在无人星上。船长说，这不合规矩。', options: [
+          { id: 'help', label: '帮他藏起来', desc: '规矩不该管到别人想在哪活着。', resolve() { return { tone: 'good', text: '你把他藏进补给舱。船开走时，你在舷窗边看见那颗星上亮起一点灯光。', effects: { mood: 10, health: -2, flags: { helpedDefector: true } } } } },
+          { id: 'persuade', label: '劝他再想想', desc: '一个人留在那里活不久。', resolve() { const ok = Math.random() < 0.5; return ok ? { tone: 'normal', text: '他听了你的话，留在了船上。此后很多年，他都没再提过那颗星。', effects: { mood: 3, companions: 1 } } : { tone: 'bad', text: '他摇了摇头，还是走了。你最后一次见他，是他背着氧气瓶走向舱门。', effects: { mood: -6 } } } },
+          { id: 'report', label: '按规定报告', desc: '你只是执行者。', resolve() { return { tone: 'normal', text: '你填了表。他被关了三天，最后还是在下一个港口被放了下去。', effects: { mood: -3, flags: { reportedDefector: true } } } } },
+        ] },
+        { id: 'star_more_captain', at: 46, chance: 0.45, title: '舰长的位置', prompt: '舰长在病床上把权限卡递给你。舰上还有两百多个人。', options: [
+          { id: 'accept', label: '接下', desc: '从此每个决定都算你的。', resolve() { return { tone: 'good', text: '你把卡插进控制台。第一次广播时，你的声音有点抖，但没有人在意。', effects: { mood: 8, health: -4, int: 2, flags: { captain: true } } } } },
+          { id: 'delegate', label: '推举更有经验的人', desc: '不是所有位置都该你坐。', resolve() { return { tone: 'normal', text: '你提名了大副。他上任后来找你，说夜班表还是你排得最好。', effects: { mood: 4, companions: 1, flags: { loyalOfficer: true } } } } },
+          { id: 'refuse', label: '拒绝', desc: '你只想修你的引擎。', resolve() { return { tone: 'normal', text: '你把卡放回床头。舰长看了你一会儿，说“知道了”。', effects: { mood: 2, int: 1 } } } },
+        ] },
+        { id: 'star_more_home', at: 58, chance: 0.4, title: '返航', prompt: '航线图上，回家的路还很远，燃料只够走一半。', options: [
+          { id: 'turn', label: '掉头回家', desc: '也许那里已经不是记忆里的样子。', resolve() { const ok = Math.random() < 0.55; return ok ? { tone: 'good', text: '你们掉头。一年后，舷窗外出现了一颗蓝色的星。你认出了那片海。', effects: { mood: 16, health: -6, flags: { returnedHome: true } } } : { tone: 'tragic', text: '回家的路比想象中长。燃料耗尽时，你们停在离家乡还有很远的地方。', effects: { mood: -14, flags: { lostInSpace: true } } } } },
+          { id: 'continue', label: '继续往前', desc: '家乡在身后，答案在前面。', resolve() { return { tone: 'strange', text: '你决定不回头。此后你很少梦见那颗蓝色的星，梦到的时候，你也不确定它是不是真的。', effects: { mood: 3, int: 2, flags: { wentOn: true } } } } },
+          { id: 'settle', label: '找一个能降落的星', desc: '家可以由自己重新建。', resolve() { return { tone: 'good', text: '你们在一颗有水的星上降落。第一年很苦，第五年孩子们有了自己的学校。', effects: { mood: 10, health: -4, companions: 2, flags: { newHome: true } } } } },
+        ] },
+      ],
+      jianghu: [
+        { id: 'jiang_more_master', at: 17, chance: 0.58, title: '师父', prompt: '集市上有人打架。一个老头替卖菜的挡了一掌，然后抬头看见了你。', options: [
+          { id: 'kneel', label: '当场跪下拜师', desc: '机会来的时候要接住。', resolve() { return { tone: 'good', text: '老头愣了一下，笑着把你扶起来。他说他这一辈子只收过两个徒弟。', effects: { body: 2, mood: 8, flags: { master: true } } } } },
+          { id: 'help', label: '先帮那个卖菜的', desc: '拜师的事可以以后再说。', resolve() { return { tone: 'good', text: '你扶起卖菜的，收了摊子。老头在后面看着你，什么也没说。第二天他出现在你家门口。', effects: { mood: 8, companions: 1, flags: { master: true, kindFirst: true } } } } },
+          { id: 'watch', label: '站着看完', desc: '你还不想被卷进去。', resolve() { return { tone: 'normal', text: '你站在人群里看完了整场。老头走的时候看了你一眼，那一眼你记了很久。', effects: { mood: 2, int: 1 } } } },
+        ] },
+        { id: 'jiang_more_sword', at: 24, chance: 0.55, title: '一把旧剑', prompt: '当铺的角落里有一把剑，没标价。老板说，认得它的人自然会来。', options: [
+          { id: 'buy', label: '买下它', desc: '也许它认得你。', requires: { wealth: 30 }, resolve() { return { tone: 'good', text: '你把剑带回住处。拔出来时，剑身上有一道很浅的缺口，像被谁用过很多年。', effects: { wealth: -30, body: 2, mood: 6, flags: { oldSword: true } } } } },
+          { id: 'wait', label: '等那个“认得它的人”', desc: '有些东西是留给别人的。', resolve() { return { tone: 'strange', text: '你在当铺对面坐了七天。第八天来了一个人，付了钱，把剑背走了。', effects: { int: 2, mood: 3 } } } },
+          { id: 'leave', label: '看一眼就走', desc: '剑不是唯一的答案。', resolve() { return { tone: 'normal', text: '你把剑放回原处，走出了当铺。街上有卖糖炒栗子的，你买了一袋。', effects: { mood: 4 } } } },
+        ] },
+        { id: 'jiang_more_guild', at: 33, chance: 0.5, title: '正邪之间', prompt: '两边都派人来找你，说对方才是江湖的祸根。', options: [
+          { id: 'right', label: '站正派', desc: '至少名正言顺。', resolve() { return { tone: 'normal', text: '你接了正派的帖子。此后你做的每件事，都有人替你解释成“为大局”。', effects: { wealth: 10, mood: 3, flags: { righteous: true } } } } },
+          { id: 'evil', label: '站邪派', desc: '至少没人再要求你做好人。', resolve() { return { tone: 'strange', text: '你接了另一边的帖子。他们没让你做好人，只让你别挡路。', effects: { wealth: 15, mood: -2, flags: { unorthodox: true } } } } },
+          { id: 'neither', label: '两边都不站', desc: '江湖不是非得选一边。', resolve() { return { tone: 'good', text: '你把两封信都烧了。此后两边都不再找你，你也落得清净。', effects: { mood: 6, flags: { neutral: true } } } } },
+        ] },
+        { id: 'jiang_more_leader', at: 45, chance: 0.45, title: '推你做盟主', prompt: '群雄在楼上等着。有人已经把椅子摆在了正中。', options: [
+          { id: 'take', label: '坐上去', desc: '既然都推到你面前了。', resolve() { return { tone: 'good', text: '你坐下了。椅子比想象中硬。第一件事是有人为了座位次序吵了起来。', effects: { mood: 8, health: -4, wealth: 20, flags: { leader: true } } } } },
+          { id: 'pass', label: '推给更合适的人', desc: '你更愿意在下面做事。', resolve() { return { tone: 'normal', text: '你说了一个名字。众人愣了一下，然后鼓掌。你退到柱子后面，松了口气。', effects: { mood: 4, companions: 1, flags: { kingmaker: true } } } } },
+          { id: 'decline', label: '当众谢绝', desc: '不坐，也不解释。', resolve() { return { tone: 'strange', text: '你朝众人拱了拱手，转身下楼。身后很安静，然后有人开始小声议论。', effects: { mood: 5, int: 1, flags: { declinedLeader: true } } } } },
+        ] },
+        { id: 'jiang_more_seal', at: 58, chance: 0.4, title: '封剑', prompt: '你把这把剑用得太久了。剑鞘上全是缺口。', options: [
+          { id: 'seal', label: '封剑归隐', desc: '让江湖忘掉你的名字。', resolve() { return { tone: 'good', text: '你把剑埋在后院，上面种了一棵石榴树。第三年它开花，红得很扎眼。', effects: { mood: 14, health: 6, flags: { retired: true } } } } },
+          { id: 'pass', label: '把剑传给徒弟', desc: '剑总得有人接着用。', requires: { flag: 'master' }, resolve() { return { tone: 'good', text: '你把剑交给他，只说了一句“别学我”。他重重点了头，眼睛很亮。', effects: { mood: 10, flags: { passedSword: true } } } } },
+          { id: 'again', label: '再拔一次', desc: '还没到该收的时候。', resolve() { const ok = Math.random() < 0.5; return ok ? { tone: 'good', text: '你又拔了一次剑。这一次比年轻时稳得多，也慢得多。', effects: { body: 2, mood: 6, health: -6, flags: { oneLastFight: true } } } : { tone: 'bad', text: '你拔剑的时候手抖了一下。对方看见了，也看见了你的年纪。', effects: { health: -14, mood: -6 } } } },
+        ] },
+      ],
+    }
 
     const QUEST_POOLS = {
       cultivation: [
