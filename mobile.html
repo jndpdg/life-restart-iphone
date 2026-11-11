@@ -17890,10 +17890,12 @@ function attrCapFor(run) {
   let music = null;
 
   function storedMusicOn() {
+    // Default OFF: music only starts after the player taps the note button or
+    // picks a track. A stored '1' means the player opted in on an earlier visit.
     try {
-      return window.localStorage.getItem(MUSIC_KEY) !== '0';
+      return window.localStorage.getItem(MUSIC_KEY) === '1';
     } catch {
-      return true;
+      return false;
     }
   }
 
@@ -18562,6 +18564,7 @@ function attrCapFor(run) {
     music.playing = false;
     music.fileToken = (music.fileToken || 0) + 1;
     if (music.fileSource) stopFileTrack(820);
+    music.fileLive = false;
     if (music.timer) {
       clearInterval(music.timer);
       music.timer = null;
@@ -18614,16 +18617,26 @@ function attrCapFor(run) {
 
   function setMusicTrack(id) {
     if (!MUSIC_TRACKS[id]) return;
+    const changed = state.track !== id;
     state.track = id;
     state.showTracks = false;
     try { window.localStorage.setItem(TRACK_KEY, id); } catch { /* Private mode can refuse persistence. */ }
+    // Picking a track is an explicit request to hear it, so enable music and
+    // remember the choice even when the player had it muted.
+    if (!state.musicOn) {
+      state.musicOn = true;
+      try { window.localStorage.setItem(MUSIC_KEY, '1'); } catch { /* Private mode can refuse persistence. */ }
+    }
+    musicFileBroken = false;
+    musicFileTries = 0;
     if (music && music.playing) {
       music.barIndex = 0;
       music.nextBar = music.ctx.currentTime + 0.15;
+      if (music.fileSource) stopFileTrack(0);
+      if (changed || !music.fileLive) startFileTrack(id);
+    } else {
+      startMusic();
     }
-      musicFileBroken = false;
-      musicFileTries = 0;
-      if (music.fileLive) startFileTrack(id);
     showToast('背景曲：' + MUSIC_TRACKS[id].name);
     render();
   }
@@ -18642,7 +18655,7 @@ function attrCapFor(run) {
       + '<section class="track-sheet">'
       + '<div class="track-head"><div><span class="modal-kicker">SOUNDTRACK</span><h2>选择这一世的背景曲</h2><p>' + MUSIC_TRACK_ORDER.length + ' 种风格，切换后从下一小节开始播放。</p></div><button class="close-btn" data-action="close-tracks" aria-label="关闭">×</button></div>'
       + '<div class="track-list">' + cards + '</div>'
-      + '<div class="track-note">音乐开关仍由音符按钮控制；选择会保存在本机浏览器。</div>'
+      + '<div class="track-note">七首都是真乐器音轨（GeneralUser 音源离线渲染）；点选即开始播放，若某首加载失败会自动回退成合成音色并给出提示。选择会保存在本机浏览器。</div>'
       + '</section></div>';
   }
 
@@ -18734,7 +18747,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.28.1 · 2026-11-11</p>'
+      + '<p class="ver-line">v1.28.2 · 2026-11-11</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
