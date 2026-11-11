@@ -18037,7 +18037,19 @@ function attrCapFor(run) {
       scale: [369.99, 415.30, 440.00, 554.37, 587.33, 739.99, 830.61, 880.00],
       melody: [[2, -1, -1, -1], [-1, 4, -1, -1], [1, -1, -1, -1], [-1, 3, -1, 5], [2, -1, 4, -1], [-1, 0, -1, -1], [3, -1, -1, -1], [-1, -1, 5, -1]],
     },
-    festival: {
+    heaven: {
+      id: 'heaven', name: '天地缓缓', glyph: '天', sub: 'D minor · 56 BPM',
+      desc: '天地辽阔，云海缓缓推移，适合长夜、终局与远行。', style: 'sparse', beat: 60 / 56,
+      progression: [
+        { bass: 73.42, root: 146.83, fifth: 220.00 },
+        { bass: 58.27, root: 116.54, fifth: 174.61 },
+        { bass: 65.41, root: 130.81, fifth: 196.00 },
+        { bass: 55.00, root: 110.00, fifth: 164.81 },
+      ],
+      scale: [293.66, 349.23, 392.00, 440.00, 523.25, 587.33, 698.46, 783.99],
+      melody: [[0, -1, 2, -1], [4, -1, 3, -1], [2, -1, 1, -1], [0, -1, -1, -1], [5, -1, 4, -1], [3, -1, 2, -1], [1, -1, 0, -1], [-1, -1, 0, -1]],
+    },
+        festival: {
       id: 'festival', name: '灯会', glyph: '灯', sub: 'D major · 96 BPM',
       desc: '灯火、人声和甜味，适合热闹的一生。', style: 'bright', beat: 60 / 96,
       progression: [
@@ -18050,7 +18062,7 @@ function attrCapFor(run) {
       melody: [[0, 2, -1, 3], [-1, 4, -1, 5], [2, -1, 4, -1], [-1, 3, -1, 2], [5, -1, 4, -1], [-1, 6, -1, -1], [0, 2, -1, 4], [-1, 3, -1, 5]],
     },
   };
-  const MUSIC_TRACK_ORDER = ['rain', 'clouds', 'sun', 'stars', 'wind', 'abyss', 'festival'];
+  const MUSIC_TRACK_ORDER = ['rain', 'clouds', 'sun', 'stars', 'wind', 'abyss', 'festival', 'heaven'];
 
   function storedTrack() {
     try {
@@ -18728,7 +18740,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.28.4 · 2026-11-11</p>'
+      + '<p class="ver-line">v1.28.5 · 2026-11-11</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
