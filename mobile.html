@@ -6362,7 +6362,7 @@ function attrCapFor(run) {
         },
       },
       {
-        id: 'c_old_friend',
+        id: 'c_old_friend_gone',
         stage: 'elder',
         repeatable: true,
         weight: 0.75,
@@ -18252,7 +18252,9 @@ function attrCapFor(run) {
       if (music.playing && !musicFileBroken) {
         const wait = 2200 * musicFileTries;
         setTimeout(() => {
-          if (music && music.playing && !music.fileLive && !musicFileBroken) startFileTrack(id, true);
+          if (!music || !music.playing || musicFileBroken) return;
+          if (token !== music.fileToken) return; // 切歌后不把旧曲目拉回来
+          if (!music.fileLive) startFileTrack(id, true);
         }, wait);
       }
       return false;
@@ -18747,7 +18749,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.28.2 · 2026-11-11</p>'
+      + '<p class="ver-line">v1.28.3 · 2026-11-11</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -19126,9 +19128,11 @@ function portraitStageFor(run) {
   return 'adult'
 }
 function looksTierFor(run) {
+  // 用固定基准（ATTR_MAX 40）而不是当前阶段上限：阶段上限会随年龄抬高，
+  // 若按 looks/cap 计算，同一个人会在变老时反而“变丑”，不符合直觉。
   const looks = (run && run.attrs && run.attrs.looks) || 0
-  const cap = typeof attrCapFor === 'function' ? attrCapFor(run) : 40
-  const ratio = cap > 0 ? looks / cap : 0
+  const base = typeof ATTR_MAX === 'number' && ATTR_MAX > 0 ? ATTR_MAX : 40
+  const ratio = looks / base
   if (ratio >= 0.5) return 2
   if (ratio >= 0.25) return 1
   return 0
