@@ -138,6 +138,13 @@
     }
     button:disabled { cursor: default; }
     h1, h2, h3, p { margin: 0; }
+    .ver-line {
+      margin: 4px 0 0;
+      font-size: 11px;
+      letter-spacing: .06em;
+      opacity: .5;
+      font-variant-numeric: tabular-nums;
+    }
     .app {
       width: 100%;
       max-width: 620px;
@@ -18727,6 +18734,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
+      + '<p class="ver-line">v1.28.1 · 2026-11-11</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
