@@ -3708,10 +3708,10 @@
     const CULTIVATION_STAGES = {
       child: { label: '凡尘', chapter: '凡尘 · 灵根初醒', from: 0, to: 11 },
       teen: { label: '入道', chapter: '入道 · 山门钟声', from: 12, to: 17 },
-      youth: { label: '问道', chapter: '问道 · 下山的路', from: 18, to: 29 },
-      adult: { label: '历练', chapter: '历练 · 剑与因果', from: 30, to: 49 },
-      middle: { label: '观心', chapter: '观心 · 云海无声', from: 50, to: 64 },
-      elder: { label: '残阳', chapter: '残阳 · 天道在上', from: 65, to: 12000 },
+      youth: { label: '问道', chapter: '问道 · 结庐人境', from: 18, to: 49 },
+      adult: { label: '筑基', chapter: '筑基 · 剑与因果', from: 50, to: 199 },
+      middle: { label: '丹成', chapter: '丹成 · 云海无声', from: 200, to: 999 },
+      elder: { label: '道远', chapter: '道远 · 天道在上', from: 1000, to: 12000 },
     }
 
     const WASTELAND_STAGES = {
@@ -4228,8 +4228,8 @@
       },
       {
         id: 'cult_concert',
-        title: '雷劫演唱会',
-        description: '天雷落下时，你正好在高音上。整个山头都听见了，连天道都沉默了三秒。',
+        title: '雷劫法会',
+        description: '你在雷劫下开坛讲道，说自己要以身试雷。雷来得比话快，山门前的幡旗烧了三天才熄。',
         tone: 'tragic',
         when: run => run.cause === '天劫',
       },
@@ -4461,19 +4461,19 @@
         when: run => run.attrs.int <= 8 && run.age >= 40,
       },
       {
-        id: "cult_fun_live",
-        title: "雷劫直播带货",
-        description: "你在雷劫下开直播，卖避雷针和护心镜。雷没劈死你，倒是把服务器劈了。",
-        tone: "strange",
+        id: 'cult_fun_live',
         comedy: true,
+        title: '渡劫带货',
+        description: '你在雷劫下摆摊，卖避雷符和护心镜。符卖光了，雷没劈死你，倒是把护山大阵劈塌了。',
+        tone: "strange",
         when: run => run.peakWealth >= 100 && run.age >= 50,
       },
       {
-        id: "cult_fun_resume",
-        title: "灵兽简历造假",
-        description: "你的灵兽在简历上写“曾单挑元婴”。面试时它被一只鸡追着跑。你只好说那是它前世的战绩。",
-        tone: "good",
+        id: 'cult_fun_resume',
         comedy: true,
+        title: '灵兽战帖造假',
+        description: '你的灵兽在战帖上写“曾单挑元婴”。擂台开场，它被一只灵鸡追着跑。你只好说那是它前世的战绩。',
+        tone: "good",
         when: run => run.mood >= 60 && run.age >= 40,
       },
       {
@@ -4501,11 +4501,11 @@
         when: run => run.flags.swordHeart && run.age >= 40,
       },
       {
-        id: "cult_fun_lawyer",
-        title: "心魔考了律师证",
-        description: "你的心魔考了律师证，现在天天给你发律师函。你不敢渡劫，怕它告你违约。",
-        tone: "strange",
+        id: 'cult_fun_lawyer',
         comedy: true,
+        title: '心魔入了仙盟',
+        description: '你的心魔混进仙盟当了执事，如今天天给你发规条。你不敢渡劫，怕它判你违约。',
+        tone: "strange",
         when: run => run.flags.demon && run.age >= 40,
       },
       {
@@ -4581,11 +4581,11 @@
         when: run => run.attrs.int >= 18 && run.age >= 100,
       },
       {
-        id: "cult_fun_wifi",
-        title: "凡人村通了Wi-Fi",
-        description: "你把Wi-Fi引进了凡人村。村民们不再求雨，开始刷短视频。土地公也开了账号。",
-        tone: "good",
+        id: 'cult_fun_wifi',
         comedy: true,
+        title: '引雷术进了凡人村',
+        description: '你把引雷术教给了凡人村。村民不再求雨，改求雷劈谷仓；土地公也立了块新碑。',
+        tone: "good",
         when: run => run.age >= 70 && run.attrs.family >= 12,
       },
       {
@@ -5669,7 +5669,7 @@
         id: 'c_master',
         stage: 'teen',
         minAge: 16,
-        maxAge: 17,
+        maxAge: 12000,
         weight: 2.6,
         when: s => s.flags.sect,
         good: true,
@@ -5687,7 +5687,7 @@
         id: 'c_spar',
         stage: 'teen',
         minAge: 13,
-        maxAge: 17,
+        maxAge: 12000,
         weight: 2.2,
         resolve(s) {
           const win = s.attrs.body + s.attrs.int >= 10
@@ -5704,7 +5704,7 @@
         id: 'c_library',
         stage: 'teen',
         minAge: 13,
-        maxAge: 17,
+        maxAge: 12000,
         weight: 1.8,
         when: s => s.flags.sect,
         good: true,
@@ -5720,7 +5720,7 @@
         id: 'c_chores',
         stage: 'teen',
         minAge: 12,
-        maxAge: 17,
+        maxAge: 12000,
         weight: 1.6,
         when: s => !s.flags.sect || s.attrs.looks <= 3,
         resolve() {
@@ -5735,7 +5735,7 @@
         id: 'c_beast',
         stage: 'teen',
         minAge: 14,
-        maxAge: 17,
+        maxAge: 12000,
         weight: 1.7,
         resolve(s) {
           const survive = s.attrs.body >= 7 || s.flags.swordHeart
@@ -5752,7 +5752,7 @@
         id: 'c_pill',
         stage: 'teen',
         minAge: 14,
-        maxAge: 17,
+        maxAge: 12000,
         weight: 1.5,
         when: s => s.flags.sect,
         good: true,
@@ -5768,7 +5768,7 @@
         id: 'c_friend',
         stage: 'teen',
         minAge: 12,
-        maxAge: 17,
+        maxAge: 12000,
         weight: 1.6,
         good: true,
         resolve() {
@@ -5783,7 +5783,7 @@
         id: 'c_forbidden',
         stage: 'teen',
         minAge: 15,
-        maxAge: 17,
+        maxAge: 12000,
         weight: 1.2,
         resolve() {
           return {
@@ -5818,7 +5818,7 @@
         id: 'c_mission',
         stage: 'youth',
         minAge: 18,
-        maxAge: 29,
+        maxAge: 12000,
         weight: 2.2,
         when: s => s.flags.sect,
         resolve() {
@@ -5833,7 +5833,7 @@
         id: 'c_secret',
         stage: 'youth',
         minAge: 20,
-        maxAge: 29,
+        maxAge: 12000,
         weight: 1.8,
         resolve(s) {
           const lucky = s.attrs.family >= 7 || s.luck >= 2
@@ -5850,7 +5850,7 @@
         id: 'c_alchemy',
         stage: 'youth',
         minAge: 18,
-        maxAge: 29,
+        maxAge: 12000,
         weight: 1.7,
         resolve() {
           return {
@@ -5864,7 +5864,7 @@
         id: 'c_duel',
         stage: 'youth',
         minAge: 18,
-        maxAge: 29,
+        maxAge: 12000,
         weight: 1.8,
         resolve(s) {
           const win = s.attrs.int + s.attrs.body + (s.flags.swordHeart ? 4 : 0) >= 16
@@ -5881,7 +5881,7 @@
         id: 'c_dao_partner',
         stage: 'youth',
         minAge: 20,
-        maxAge: 29,
+        maxAge: 12000,
         weight: 1.6,
         when: s => !s.flags.daoPartner,
         resolve(s) {
@@ -5899,7 +5899,7 @@
         id: 'c_demon_tempt',
         stage: 'youth',
         minAge: 20,
-        maxAge: 29,
+        maxAge: 12000,
         weight: 1.3,
         when: s => s.flags.demonBone || s.flags.forbidden,
         resolve() {
@@ -5914,7 +5914,7 @@
         id: 'c_heart_demon',
         stage: 'youth',
         minAge: 22,
-        maxAge: 29,
+        maxAge: 12000,
         weight: 1.4,
         resolve() {
           return {
@@ -5928,7 +5928,7 @@
         id: 'c_master_death',
         stage: 'youth',
         minAge: 22,
-        maxAge: 29,
+        maxAge: 12000,
         weight: 1.3,
         when: s => s.flags.master,
         resolve() {
@@ -5943,7 +5943,7 @@
         id: 'c_spirit_beast',
         stage: 'youth',
         minAge: 18,
-        maxAge: 29,
+        maxAge: 12000,
         weight: 1.4,
         good: true,
         resolve() {
@@ -5958,7 +5958,7 @@
         id: 'c_retreat',
         stage: 'youth',
         minAge: 18,
-        maxAge: 29,
+        maxAge: 12000,
         weight: 1.5,
         good: true,
         resolve() {
@@ -5994,7 +5994,7 @@
         id: 'c_sect_master',
         stage: 'adult',
         minAge: 30,
-        maxAge: 49,
+        maxAge: 12000,
         weight: 1.7,
         when: s => (s.flags.realmIndex || 0) >= 2 && s.flags.sect,
         good: true,
@@ -6010,7 +6010,7 @@
         id: 'c_auction',
         stage: 'adult',
         minAge: 30,
-        maxAge: 49,
+        maxAge: 12000,
         weight: 1.5,
         resolve(s) {
           const gain = s.attrs.int >= 9 || s.flags.merchant
@@ -6027,7 +6027,7 @@
         id: 'c_war',
         stage: 'adult',
         minAge: 30,
-        maxAge: 49,
+        maxAge: 12000,
         weight: 1.6,
         resolve(s) {
           const survive = s.attrs.body >= 8 || (s.flags.realmIndex || 0) >= 3
@@ -6044,7 +6044,7 @@
         id: 'c_child',
         stage: 'adult',
         minAge: 35,
-        maxAge: 49,
+        maxAge: 12000,
         weight: 1.2,
         when: s => s.flags.daoPartner && (s.flags.children || 0) === 0,
         good: true,
@@ -6060,7 +6060,7 @@
         id: 'c_relic',
         stage: 'adult',
         minAge: 30,
-        maxAge: 49,
+        maxAge: 12000,
         weight: 1.5,
         resolve(s) {
           const good = s.attrs.family >= 6 || s.attrs.int >= 9
@@ -6077,7 +6077,7 @@
         id: 'c_old_friend',
         stage: 'adult',
         minAge: 30,
-        maxAge: 49,
+        maxAge: 12000,
         weight: 1.3,
         when: s => s.flags.allies,
         resolve() {
@@ -6092,7 +6092,7 @@
         id: 'c_demon_rise',
         stage: 'adult',
         minAge: 30,
-        maxAge: 49,
+        maxAge: 12000,
         weight: 1.2,
         when: s => s.flags.demonTouched || s.flags.demonBone,
         resolve(s) {
@@ -6131,7 +6131,7 @@
         id: 'c_tribulation',
         stage: 'middle',
         minAge: 50,
-        maxAge: 64,
+        maxAge: 12000,
         weight: 1.7,
         resolve(s) {
           const tough = s.attrs.body >= 9 || (s.flags.realmIndex || 0) >= 4
@@ -6148,7 +6148,7 @@
         id: 'c_cave_heaven',
         stage: 'middle',
         minAge: 50,
-        maxAge: 64,
+        maxAge: 12000,
         weight: 1.5,
         good: true,
         resolve() {
@@ -6163,7 +6163,7 @@
         id: 'c_old_enemy',
         stage: 'middle',
         minAge: 50,
-        maxAge: 64,
+        maxAge: 12000,
         weight: 1.4,
         resolve(s) {
           const win = (s.flags.realmIndex || 0) >= 3 || s.attrs.body >= 9
@@ -6180,7 +6180,7 @@
         id: 'c_disciple',
         stage: 'middle',
         minAge: 50,
-        maxAge: 64,
+        maxAge: 12000,
         weight: 1.4,
         good: true,
         resolve() {
@@ -6195,7 +6195,7 @@
         id: 'c_wander',
         stage: 'middle',
         minAge: 50,
-        maxAge: 64,
+        maxAge: 12000,
         weight: 1.3,
         good: true,
         resolve() {
@@ -6231,7 +6231,7 @@
         id: 'c_teach',
         stage: 'elder',
         minAge: 65,
-        maxAge: 110,
+        maxAge: 12000,
         weight: 1.8,
         good: true,
         resolve() {
@@ -6246,7 +6246,7 @@
         id: 'c_friend_death',
         stage: 'elder',
         minAge: 70,
-        maxAge: 110,
+        maxAge: 12000,
         weight: 1.6,
         when: s => s.flags.allies,
         resolve() {
@@ -6261,7 +6261,7 @@
         id: 'c_comprehend',
         stage: 'elder',
         minAge: 75,
-        maxAge: 115,
+        maxAge: 12000,
         weight: 1.5,
         good: true,
         resolve() {
@@ -6276,7 +6276,7 @@
         id: 'c_final_tribulation',
         stage: 'elder',
         minAge: 88,
-        maxAge: 130,
+        maxAge: 12000,
         weight: 1.2,
         when: s => (s.flags.realmIndex || 0) >= 4,
         resolve(s) {
@@ -6413,7 +6413,376 @@
           }
         },
       },
-    ]
+    
+      {
+        id: 'c2_cycle',
+        stage: 'youth',
+        minAge: 18,
+        minRealm: 1,
+        weight: 2.4,
+        good: true,
+        resolve() {
+          return {
+            tone: 'good',
+            text: '灵气第一次自己走完一个周天。你睁开眼时，指尖还留着一层薄薄的凉意，像刚从井里提上来的水。',
+            effects: { health: 4, mood: 6, flags: { firstCycle: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_talisman',
+        stage: 'youth',
+        minAge: 18,
+        minRealm: 1,
+        weight: 2,
+        resolve() {
+          return {
+            tone: 'normal',
+            text: '坊市里有人卖火球符，三张一叠，摊主说保真。你捏着一张看了半天，最后买了两张，留下一张的钱买米。',
+            effects: { wealth: -4, int: 1, flags: { talisman: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_debt',
+        stage: 'youth',
+        minAge: 18,
+        minRealm: 1,
+        weight: 1.8,
+        resolve() {
+          return {
+            tone: 'normal',
+            text: '同门向你借二十块下品灵石，说三个月就还。你借了。三个月后他闭了关，洞府门口的禁制比你的心还硬。',
+            effects: { wealth: -10, mood: -3, flags: { lentStones: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_field',
+        stage: 'youth',
+        minAge: 18,
+        minRealm: 1,
+        weight: 1.6,
+        resolve() {
+          return {
+            tone: 'normal',
+            text: '你在灵田值夜。露水从叶尖滴下来，落进土里的声音很轻，像有人在数着你还剩多少年。',
+            effects: { mood: 2, wealth: 3 },
+          }
+        },
+      },
+      {
+        id: 'c2_foundation',
+        stage: 'adult',
+        minAge: 40,
+        minRealm: 2,
+        weight: 2.3,
+        good: true,
+        resolve() {
+          return {
+            tone: 'good',
+            text: '筑基丹在炉里滚了七天七夜。开炉那一刻，丹香冲出石室，把檐下的麻雀惊得满天都是。你只取了一颗，剩下的收进玉瓶。',
+            effects: { health: 8, mood: 10, wealth: -20, flags: { foundationPill: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_arena',
+        stage: 'adult',
+        minAge: 40,
+        minRealm: 2,
+        weight: 2,
+        resolve(run) {
+          const win = (run.attrs.body || 0) + (run.attrs.int || 0) >= 22
+          return win
+            ? { tone: 'good', text: '山门比试，你在第七场遇上一位使鞭的师兄。你赢得很险，收剑时手在抖，台下却有人开始记你的名字。', effects: { mood: 8, wealth: 6, flags: { arenaWin: true } } }
+            : { tone: 'bad', text: '山门比试，你在第三场就被人一剑挑落了发冠。你捡起冠，向对手行了一礼，回去把那一剑拆了三个月。', effects: { health: -6, mood: -4, int: 2 } }
+        },
+      },
+      {
+        id: 'c2_seclusion',
+        stage: 'adult',
+        minAge: 60,
+        minRealm: 2,
+        weight: 1.7,
+        resolve() {
+          return {
+            tone: 'strange',
+            text: '你闭了一次死关。洞口的封石落下时，你听见自己的心跳在石室里回响。再睁眼，山下已经换了两代人。',
+            effects: { int: 2, health: -4, mood: 4, flags: { longSeclusion: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_ambush',
+        stage: 'adult',
+        minAge: 50,
+        minRealm: 2,
+        weight: 1.9,
+        resolve(run) {
+          const escape = (run.attrs.body || 0) >= 12
+          return escape
+            ? { tone: 'normal', text: '三个散修在谷口等你，话没说完就动了手。你弃了半袋灵石，从侧崖跳下去，落地时崴了一只脚，命还在。', effects: { health: -8, wealth: -14, mood: -2 } }
+            : { tone: 'bad', text: '三个散修在谷口等你。你护住了储物袋，没护住左肩。那道伤后来每逢阴天就疼，像有人提醒你别忘了这一天。', effects: { health: -16, wealth: -6, mood: -5, flags: { oldWound: true } } }
+        },
+      },
+      {
+        id: 'c2_crack',
+        stage: 'adult',
+        minAge: 120,
+        minRealm: 3,
+        weight: 2,
+        resolve() {
+          return {
+            tone: 'strange',
+            text: '金丹上出现了一道极细的裂纹。你内视了很久，忽然明白那不是伤，是你这些年咽下去的东西，终于找到了一条缝。',
+            effects: { health: -6, mood: -6, int: 3, flags: { pillCrack: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_pact',
+        stage: 'adult',
+        minAge: 100,
+        minRealm: 3,
+        weight: 1.8,
+        good: true,
+        resolve() {
+          return {
+            tone: 'good',
+            text: '有人与你结了一段道侣之契。没有宾客，没有喜宴，只是两枚玉牌各刻了半个字，合起来才是一句完整的话。',
+            effects: { mood: 14, health: 4, flags: { daoPartner: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_sectwar',
+        stage: 'adult',
+        minAge: 150,
+        minRealm: 3,
+        weight: 1.7,
+        resolve(run) {
+          const hold = (run.attrs.body || 0) + (run.attrs.int || 0) >= 28
+          return hold
+            ? { tone: 'good', text: '魔道叩山，你守的是西侧第三道阵眼。阵旗断了三面，你用手撑着，直到天亮援军上来。战后没人记得这一段，你自己记得。', effects: { health: -12, mood: 8, flags: { sectWar: true } } }
+            : { tone: 'bad', text: '魔道叩山，第三道阵眼破了。你拖着两个人退到后山，回头看见自己住了几十年的洞府塌成一片白烟。', effects: { health: -18, mood: -12, wealth: -30, flags: { sectFallen: true } } }
+        },
+      },
+      {
+        id: 'c2_nascent',
+        stage: 'middle',
+        minAge: 300,
+        minRealm: 4,
+        weight: 2.2,
+        good: true,
+        resolve() {
+          return {
+            tone: 'legend',
+            text: '元婴出窍的那一刻，你看见自己的肉身坐在蒲团上，像一个终于可以放下的旧包袱。风从很远的地方吹来，你第一次觉得天地并不大。',
+            effects: { health: 12, mood: 16, int: 3, flags: { nascentSoul: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_disciple',
+        stage: 'middle',
+        minAge: 300,
+        minRealm: 4,
+        weight: 2,
+        good: true,
+        resolve() {
+          return {
+            tone: 'good',
+            text: '你收了一个徒弟。他第一次叫你师父时，声音发抖，你想起很多年前自己也是这样站在别人面前。你只说了一句：先把剑拿稳。',
+            effects: { mood: 12, family: 3, flags: { hasDisciple: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_farewell',
+        stage: 'middle',
+        minAge: 400,
+        minRealm: 4,
+        weight: 1.9,
+        resolve() {
+          return {
+            tone: 'sad',
+            text: '当年一起外门扫地的师兄坐化了。他的洞府很干净，桌上留着一壶没喝完的酒，和一张写着“不必等”的字条。',
+            effects: { mood: -12, int: 2, flags: { oldFriendGone: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_cave',
+        stage: 'middle',
+        minAge: 250,
+        minRealm: 4,
+        weight: 1.6,
+        resolve() {
+          return {
+            tone: 'normal',
+            text: '你把洞府迁到了更深的峡谷。旧洞府的东西收拾出来只有三箱：几卷功法、一炉丹灰、和一把早就不能用的剑。',
+            effects: { mood: 4, wealth: -10, flags: { deepCave: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_spirit',
+        stage: 'middle',
+        minAge: 800,
+        minRealm: 5,
+        weight: 1.9,
+        resolve() {
+          return {
+            tone: 'strange',
+            text: '化神之劫来得没有声音。你在识海里走了很久，走到一处没有路的地方，看见年轻时的自己坐在那里，问你：还要往上走吗。',
+            effects: { health: -14, mood: 8, int: 4, flags: { spiritTrial: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_forget',
+        stage: 'middle',
+        minAge: 900,
+        minRealm: 5,
+        weight: 1.6,
+        resolve() {
+          return {
+            tone: 'strange',
+            text: '你坐忘了百年。醒来时忘了自己为何开始修行，只记得某个春天，有人在门口叫过你的名字。你想了很久，没想起来那是谁。',
+            effects: { int: 3, mood: -8, flags: { longForget: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_void',
+        stage: 'elder',
+        minAge: 1200,
+        minRealm: 6,
+        weight: 2,
+        resolve() {
+          return {
+            tone: 'good',
+            text: '炼虚之后，你开始听见天地之间的空隙。那种声音像风穿过很远的山口，听久了会忘记自己站在哪里。',
+            effects: { int: 4, mood: 8, health: 6, flags: { voidSense: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_herb',
+        stage: 'elder',
+        minAge: 1500,
+        minRealm: 6,
+        weight: 1.7,
+        good: true,
+        resolve() {
+          return {
+            tone: 'good',
+            text: '你在绝壁的裂缝里找到一株万载灵药，叶片只有三枚，边缘泛着极淡的金。你守了它七天，等它自己把种子落下来，才取了其中一枚。',
+            effects: { health: 14, wealth: 40, flags: { tenThousandHerb: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_karma',
+        stage: 'elder',
+        minAge: 1800,
+        minRealm: 6,
+        weight: 1.8,
+        resolve() {
+          return {
+            tone: 'strange',
+            text: '因果找上门来。那是你几百年前救过的一个凡人，如今他的孙子跪在山门外，求你救一场旱。你去了，用了三天，误了一次闭关。',
+            effects: { mood: 8, int: 1, wealth: -20, flags: { karmaPaid: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_merge',
+        stage: 'elder',
+        minAge: 2500,
+        minRealm: 7,
+        weight: 1.9,
+        resolve() {
+          return {
+            tone: 'legend',
+            text: '合体那一夜，你与自己的元神对坐了一整晚。你们谁也没有先开口，最后同时笑了一下，像两个终于讲和的人。',
+            effects: { health: 18, mood: 14, int: 4, flags: { merged: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_meteor',
+        stage: 'elder',
+        minAge: 3000,
+        minRealm: 7,
+        weight: 1.6,
+        good: true,
+        resolve() {
+          return {
+            tone: 'good',
+            text: '一块天外陨铁落在你的山头，砸出一个冒着青烟的坑。你把它炼成一把剑，剑成之日，方圆百里的鸟都往南飞了。',
+            effects: { wealth: 60, mood: 10, flags: { meteorSword: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_inherit',
+        stage: 'elder',
+        minAge: 4000,
+        minRealm: 8,
+        weight: 1.8,
+        resolve() {
+          return {
+            tone: 'good',
+            text: '你把宗门交到了徒弟手里。他跪下来接掌印，你退到后山，忽然发现自己终于有时间看一次完整的日落。',
+            effects: { mood: 16, family: 4, flags: { sectPassed: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_mortal',
+        stage: 'elder',
+        minAge: 5000,
+        minRealm: 8,
+        weight: 1.5,
+        resolve() {
+          return {
+            tone: 'normal',
+            text: '一个凡俗王朝在山下立了你的生祠，每逢旱年就抬着供品上山。你听着他们念你的名字，觉得那个名字已经不太像自己。',
+            effects: { wealth: 30, mood: 6, flags: { mortalShrine: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_tribulation',
+        stage: 'elder',
+        minAge: 6000,
+        minRealm: 9,
+        weight: 2,
+        resolve() {
+          return {
+            tone: 'strange',
+            text: '雷劫来前一夜，你把该还的东西都还了：借的灵石、欠的人情、答应过别人的一句话。天亮时，天上开始聚云。',
+            effects: { mood: 10, health: -10, flags: { tribulationReady: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_ascend',
+        stage: 'elder',
+        minAge: 8000,
+        minRealm: 9,
+        weight: 1.4,
+        resolve() {
+          return {
+            tone: 'legend',
+            text: '你站在飞升台上，回头看了一次。云海下面有山门、有市集、有一个人曾经等过你的路口。你没有再回头第二次。',
+            effects: { mood: 20, int: 3, flags: { ascendSeen: true } },
+          }
+        },
+      },
+]
 
     const CULTIVATION_MILESTONES = [
       {
@@ -13402,12 +13771,29 @@
       '你把房间的灯关了又开，最后决定就这样坐着。',
     ]
 
+    const CULTIVATION_FILLER = [
+      '你在洞府里坐了一夜，灵气绕着经脉转了三圈，又归于平静。',
+      '山下的枫叶红了又落，你出关时才发现自己记错了季节。',
+      '你把剑横在膝上擦了很久，剑身上那道旧痕还是没淡。',
+      '你在坊市听见有人叫卖筑基丹，价钱高得像是开玩笑。',
+      '你在崖边看云，云从脚下过去，像一群不说话的白鹤。',
+      '你抄了半卷功法，写到一半忽然明白前一句真正的意思。',
+      '夜里有人敲山门，你开门时只看见雪地上的一行脚印。',
+      '你把丹炉的火压小，药香在石室里浮了一整天。',
+      '你去后山看那株灵草，它比上个月又高了一寸。',
+      '你在藏经阁坐到闭阁，守阁的老者没有赶你。',
+      '你听见远处有雷声，抬头却是一片晴空。',
+      '你把这一年的收支记在玉简上，末尾写了一句“尚可”。',
+      '你在溪边洗剑，水里的鱼四散，过一会儿又聚回来。',
+      '你梦见自己还在凡尘，醒来时帐外下着很大的雨。',
+    ]
+
     const COMMON_CHOICE_NODES = [
       {
         id: 'common_direction',
         at: 27,
         chance: 0.8,
-        title: '二十七岁的岔路',
+        title: '人生的一次岔路',
         prompt: '你已经不是刚出发的那个人了。接下来这一段，你想怎么走？',
         options: [
           {
@@ -13454,7 +13840,7 @@
         id: 'common_crossroads',
         at: 47,
         chance: 0.8,
-        title: '四十七岁的一次选择',
+        title: '中年的一次选择',
         prompt: '你开始听见身体和时间的声音。剩下的路，要拿什么去换？',
         options: [
           {
@@ -13500,7 +13886,7 @@
         id: 'common_late',
         at: 68,
         chance: 0.8,
-        title: '六十八岁，还想做什么',
+        title: '暮年，还想做什么',
         prompt: '你已经过了需要向谁证明什么的年纪。剩下的日子，想怎么用？',
         options: [
           {
@@ -13621,7 +14007,9 @@
           const name = ensurePartnerName(run)
           return {
             tone: 'good',
-            text: '你和' + name + '都老了。你们走路慢了下来，开始为一些很小的事高兴：今天的菜很新鲜，楼下的树又发了芽。你们还是会为电视遥控器争两句，然后一起笑。',
+            text: run.worldId === 'cultivation'
+              ? '你和' + name + '都老了——按修士的说法，是境界稳了。你们不再争谁的剑快，只争今日谁先沏茶。山门的钟响过很多遍，你们一次也没听腻。'
+              : '你和' + name + '都老了。你们走路慢了下来，开始为一些很小的事高兴：今天的菜很新鲜，楼下的树又发了芽。你们还是会为电视遥控器争两句，然后一起笑。',
             effects: { mood: 8 },
           }
         },
@@ -13635,7 +14023,9 @@
           run.flags.partner = false
           return {
             tone: 'tragic',
-            text: name + '走在了你前面。屋子里忽然多出很多声音：钟表、冰箱、窗外的风。你花了很久才习惯，饭只煮一个人的份。',
+            text: run.worldId === 'cultivation'
+              ? name + '走在了你前面。不是兵解，是坐化。洞府里忽然空出很大一块，你把他的剑挂在墙上，每日仍拂一次灰。'
+              : name + '走在了你前面。屋子里忽然多出很多声音：钟表、冰箱、窗外的风。你花了很久才习惯，饭只煮一个人的份。',
             effects: { mood: -14, health: -2 },
           }
         },
@@ -13677,8 +14067,14 @@
       return pick(fresh.length ? fresh : pool)
     }
 
+    function fillerExtras(worldId) {
+      return worldId === 'cultivation'
+        ? (FILLER_LINES.cultivation || []).concat(CULTIVATION_FILLER)
+        : (FILLER_LINES[worldId] || FILLER_LINES.modern).concat(GENERIC_FILLER)
+    }
+
     function fillerText(run) {
-      const pool = (FILLER_LINES[run.worldId] || FILLER_LINES.modern).concat(GENERIC_FILLER)
+      const pool = fillerExtras(run.worldId)
       const recent = run.recentTexts || []
       const fresh = pool.filter(text => !recent.includes(text))
       return pick(fresh.length ? fresh : pool)
@@ -13733,11 +14129,16 @@
           COMMON_CHOICE_NODES,
           COMMON_CHOICE_EXTRA,
           COMMON_CHOICE_MORE,
+          CULTIVATION_COMMON,
         )
       const seen = run.flags._choiceSeen || {}
+      const cultivation = run.worldId === 'cultivation'
       const eligible = nodes.filter(node => {
         if (seen[node.id]) return false
         if (run.age < node.at) return false
+        if (cultivation && /^(common|more)_/.test(node.id)) return false
+        if (!cultivation && node.until == null && run.age > node.at + 10) return false
+        if (node.until != null && run.age > node.until) return false
         if (node.when && !node.when(run)) return false
         return true
       })
@@ -14002,6 +14403,216 @@
         ],
       },
     ]
+
+
+    const CULTIVATION_COMMON = [
+      {
+        id: 'cc_way',
+        at: 18,
+        chance: 0.82,
+        when: run => (run.flags.realmIndex || 0) >= 1,
+        title: '凝气之后的岔路',
+        prompt: '灵气入了经脉，路却刚刚分岔。你把接下来的几十年押在哪一边？',
+        options: [
+          {
+            id: 'bitter',
+            label: '闭门苦修',
+            desc: '不进则退，先把根基打厚。',
+            resolve() {
+              return { tone: 'good', text: '你把洞府的门封了，只留一道透气的缝。日子被拉成一条很细的线，线上只有吐纳、抄经、再吐纳。出关时你不确定自己强了多少，但确定自己没有白过。', effects: { int: 2, health: 4, mood: 2, flags: { bitterCultivation: true } } }
+            },
+          },
+          {
+            id: 'roam',
+            label: '下山游历',
+            desc: '山门里的道理，未必都在山门里。',
+            resolve() {
+              return { tone: 'normal', text: '你背着一把剑下了山。走过三个州，见过妖、见过骗子、也见过真正的善人。回来时你的剑没快多少，眼神变了。', effects: { body: 2, mood: 6, wealth: -6, flags: { roamed: true } } }
+            },
+          },
+          {
+            id: 'market',
+            label: '在坊市结缘',
+            desc: '财侣法地，人情也是资源。',
+            resolve() {
+              return { tone: 'normal', text: '你在坊市摆了个小摊，替人看符、辨药、修阵旗。赚得不多，认识的人却不少。后来你遇险时，是一个只见过两面的摊主递了信。', effects: { wealth: 10, mood: 4, flags: { marketTies: true } } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'cc_stone',
+        at: 18,
+        chance: 0.78,
+        when: run => (run.flags.realmIndex || 0) >= 2,
+        title: '这一袋灵石怎么花',
+        prompt: '积蓄够了，选择却更难：换成境界、换成器物，还是留着等一个说不清的以后？',
+        options: [
+          {
+            id: 'pill',
+            label: '换成丹药',
+            desc: '修为是自己的，器物会旧。',
+            resolve() {
+              return { tone: 'good', text: '你买了一炉筑基期的丹药，价钱让人心疼。服下第一颗时，你听见经脉里有细微的响声，像冻住的河开始化。', effects: { health: 8, int: 2, wealth: -30, flags: { pillInvest: true } } }
+            },
+          },
+          {
+            id: 'artifact',
+            label: '换一件法器',
+            desc: '命只有一条，剑可以有很多把。',
+            resolve() {
+              return { tone: 'normal', text: '你换了一面护身小盾，铜钱大小，贴在胸口。此后几次险境，都是它先替你挨了一下。', effects: { health: 5, body: 1, wealth: -25, flags: { shieldArtifact: true } } }
+            },
+          },
+          {
+            id: 'save',
+            label: '留着不动',
+            desc: '机缘来的时候，得有东西接得住。',
+            resolve() {
+              return { tone: 'normal', text: '你把灵石分了三处藏好。有人笑你守财，你不辩解。很多年后，正是这笔没花出去的钱，让你在秘境里买下了半株还魂草。', effects: { wealth: 6, int: 1, flags: { stoneHoard: true } } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'cc_heart',
+        at: 18,
+        chance: 0.74,
+        when: run => (run.flags.realmIndex || 0) >= 3,
+        title: '心魔夜',
+        prompt: '夜里你听见有人在识海里说话，声音和你一模一样。它说的每一句，都是你不肯承认的实话。',
+        options: [
+          {
+            id: 'face',
+            label: '与它对面坐下',
+            desc: '怕的东西，看清楚就不那么怕了。',
+            resolve() {
+              return { tone: 'strange', text: '你在识海里坐下，听它把这些年的怨、贪、悔一件件说完。天快亮时它累了，你也累了。你们谁也没赢，但它不再说话了。', effects: { mood: 10, health: -6, int: 2, flags: { heartFaced: true } } }
+            },
+          },
+          {
+            id: 'suppress',
+            label: '以修为压下去',
+            desc: '快，但总要还。',
+            resolve() {
+              return { tone: 'bad', text: '你以神识强压，识海安静了。可你知道它只是退到更深的地方，像水退下去，礁石还在。', effects: { mood: -4, health: -3, flags: { heartSuppressed: true } } }
+            },
+          },
+          {
+            id: 'borrow',
+            label: '借它的力气修行',
+            desc: '魔也是力，就看谁握刀柄。',
+            requires: { int: 18 },
+            resolve() {
+              return { tone: 'strange', text: '你把心魔的话当成口诀来参，参到第三夜，竟真参出一线清明。这条路很险，你走了一步就退回来，但你已经知道它通到哪里。', effects: { int: 4, mood: -6, health: -4, flags: { heartBorrowed: true } } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'cc_disciple',
+        at: 18,
+        chance: 0.76,
+        when: run => (run.flags.realmIndex || 0) >= 4,
+        title: '有人在山门外跪了三天',
+        prompt: '一个凡人少年跪在雪里，说要拜你为师。他的灵根很差，差到连外门都不会收。',
+        options: [
+          {
+            id: 'take',
+            label: '收下他',
+            desc: '灵根差，不等于走不远。',
+            resolve() {
+              return { tone: 'good', text: '你把他扶起来，先让他喝了一碗热汤。教他的第一件事不是吐纳，是每天把院子扫干净。他扫了三年，没有问为什么。', effects: { mood: 12, family: 3, flags: { tookDisciple: true } } }
+            },
+          },
+          {
+            id: 'refuse',
+            label: '让他回去',
+            desc: '有些路，不走才是慈悲。',
+            resolve() {
+              return { tone: 'normal', text: '你告诉他，修仙不是逃命的路。他磕了三个头走了。很多年后你听说他在山下开了间药铺，活得比很多修士都久。', effects: { mood: 2, int: 1, flags: { refusedDisciple: true } } }
+            },
+          },
+          {
+            id: 'test',
+            label: '先试他三年',
+            desc: '心性比灵根难测。',
+            resolve() {
+              return { tone: 'normal', text: '你给了他一把钝刀，让他去后山砍三年的柴。他砍到第二年冬天，手上有了一层很厚的茧，眼神却比来时亮。你这才开始教他第一句口诀。', effects: { mood: 8, family: 2, int: 1, flags: { testedDisciple: true } } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'cc_bond',
+        at: 18,
+        chance: 0.7,
+        when: run => (run.flags.realmIndex || 0) >= 2 && !run.flags.daoPartner,
+        title: '道侣之约',
+        prompt: '有个人与你同行了很久。今日他（她）把一枚玉牌放在你面前，说：合则同行，不合则各走。',
+        options: [
+          {
+            id: 'bond',
+            label: '结下此契',
+            desc: '修行太长，一个人太静。',
+            resolve() {
+              return { tone: 'good', text: '你们各刻了半个字，合成一句很短的话。此后闭关有人护法，受伤有人上药，吵架也有人在。修行还是苦，但不再是一个人苦。', effects: { mood: 16, health: 6, flags: { daoPartner: true } } }
+            },
+          },
+          {
+            id: 'alone',
+            label: '独自上路',
+            desc: '道不同，强留是两个人的劫。',
+            resolve() {
+              return { tone: 'normal', text: '你把玉牌推回去，说了声抱歉。对方收起来，笑了一下，转身走了。你站在原地很久，直到雪落满肩。', effects: { mood: -6, int: 2, flags: { soloPath: true } } }
+            },
+          },
+          {
+            id: 'wait',
+            label: '再等一等',
+            desc: '有些话，等一个更好的时候。',
+            resolve() {
+              return { tone: 'normal', text: '你说再等等。对方点头，说好。你们又同行了很多年，那枚玉牌一直放在储物袋最里面，谁也没有再提。', effects: { mood: 4, flags: { bondPending: true } } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'cc_ascend',
+        at: 18,
+        chance: 0.8,
+        when: run => (run.flags.realmIndex || 0) >= 8,
+        title: '飞升之问',
+        prompt: '天门已在云上显形。你可以现在就走，也可以再留一会儿。',
+        options: [
+          {
+            id: 'go',
+            label: '踏上去',
+            desc: '修了这么久，为的就是这一步。',
+            resolve() {
+              return { tone: 'legend', text: '你一步踏上云阶。脚下的山川越缩越小，最后成了一张旧地图。你没有回头看，但你知道身后有很多人在看。', effects: { mood: 20, flags: { ascendReady: true } } }
+            },
+          },
+          {
+            id: 'stay',
+            label: '再压一境',
+            desc: '上面是什么，谁也说不清。',
+            resolve() {
+              return { tone: 'strange', text: '你转身回了洞府，把天门关在身后。有人说你怕了，你不解释。你只是想把这一世的因果，再还干净一点。', effects: { int: 3, mood: 6, flags: { delayedAscend: true } } }
+            },
+          },
+          {
+            id: 'teach',
+            label: '先把道传下去',
+            desc: '一个人上去，不如留一条路。',
+            resolve() {
+              return { tone: 'good', text: '你在山门开坛讲道，讲了七天。来听的人从山门排到山脚，有修士，也有挑着担子的凡人。讲完那天，你觉得自己轻了很多。', effects: { mood: 14, family: 4, flags: { taughtDao: true } } }
+            },
+          },
+        ],
+      },
+    ]
+
 
     const WORLD_CHOICE_MORE = {
       modern: [
@@ -15211,6 +15822,7 @@
     function maybeOfferQuest(run) {
       if (!run || !run.alive || run.pendingChoice || run.pendingScene) return null
       if (run.age < 12) return null
+      if (run.worldId === 'cultivation' && (run.flags.realmIndex || 0) >= 2) return null
       const last = run.flags.lastQuestAge || 0
       if (last && run.age - last < 6) return null
       if ((run.flags.questsDone || 0) >= 14) return null
@@ -15364,6 +15976,16 @@
       if (age < 30) return 'youth'
       if (age < 50) return 'adult'
       if (age < 65) return 'middle'
+      return 'elder'
+    }
+
+    function stageForRun(run) {
+      if (!run || run.worldId !== 'cultivation') return stageFor(run ? run.age : 0)
+      const realm = run.flags ? (run.flags.realmIndex || 0) : 0
+      if (realm <= 0) return stageFor(run.age)
+      if (realm === 1) return 'youth'
+      if (realm <= 3) return 'adult'
+      if (realm <= 5) return 'middle'
       return 'elder'
     }
 
@@ -16176,6 +16798,11 @@
       if (event.stage !== run.stage) return false
       if (event.minAge != null && run.age < event.minAge) return false
       if (event.maxAge != null && run.age > event.maxAge) return false
+      if (event.minRealm != null || event.maxRealm != null) {
+        const realm = (run.flags && run.flags.realmIndex) || 0
+        if (event.minRealm != null && realm < event.minRealm) return false
+        if (event.maxRealm != null && realm > event.maxRealm) return false
+      }
       if (event.when && !event.when(run)) return false
       if (!event.repeatable && run.seen.includes(event.id)) return false
       return true
@@ -16464,7 +17091,7 @@
       run.age += years
       run.lastYears = years
       run.causeThisYear = null
-      const stage = stageFor(run.age)
+      const stage = stageForRun(run)
       if (stage !== previousStage) {
         run.stage = stage
         pushEntry(run, { kind: 'chapter', age: run.age, text: world.stages[stage].chapter })
@@ -16502,7 +17129,7 @@
 
       if (source === 'quiet') {
         const baseQuiet = world.quiet[run.stage] || world.quiet.child || []
-        const extras = (FILLER_LINES[world.id] || FILLER_LINES.modern).concat(GENERIC_FILLER)
+        const extras = fillerExtras(world.id)
           .map(text => ({ text, effects: { mood: 1 } }))
         const pool = baseQuiet.concat(extras)
         const quiet = pickFresh(run, pool) || { text: fillerText(run), effects: { mood: 1 } }
