@@ -783,6 +783,53 @@
       -webkit-backdrop-filter: blur(14px) saturate(112%);
       box-shadow: 0 10px 24px rgba(0, 0, 0, .28);
     }
+    .career-card {
+      margin: 6px 16px 0;
+      padding: 9px 11px;
+      border: 1px solid color-mix(in srgb, var(--brand) 34%, var(--line));
+      border-radius: 13px;
+      background: linear-gradient(150deg, color-mix(in srgb, var(--brand) 12%, var(--panel)), color-mix(in srgb, var(--panel-2) 92%, transparent));
+    }
+    .career-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .career-title { font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--brand); }
+    .career-tag {
+      flex: none;
+      padding: 1px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--line-strong);
+      font-size: 9px;
+      color: var(--muted);
+    }
+    .career-grid { margin-top: 6px; display: grid; grid-template-columns: 1fr; gap: 3px; }
+    .career-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 11px; }
+    .career-row span { flex: none; color: var(--muted); font-size: 10px; }
+    .career-row b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+    .log-tabs {
+      position: sticky;
+      top: calc(6px + env(safe-area-inset-top));
+      z-index: 8;
+      display: flex;
+      gap: 4px;
+      margin: 0 0 8px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+      backdrop-filter: blur(10px) saturate(110%);
+      -webkit-backdrop-filter: blur(10px) saturate(110%);
+    }
+    .log-tab {
+      flex: 1;
+      min-height: 28px;
+      border-radius: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .log-tab[data-active="true"] {
+      background: var(--brand-soft);
+      color: var(--brand);
+      font-weight: 650;
+    }
     .avatar-art { flex: none; width: 108px; height: 162px; overflow: hidden; border-radius: 12px; }
     .avatar-art svg { display: block; width: 100%; height: 100%; }
     .avatar-art { position: relative; background: #141414; }
@@ -2563,6 +2610,111 @@ function attrCapFor(run) {
       if (run.flags.bb) return bbCareerSummary(run);
       if (run.flags.es) return esCareerSummary(run);
       return '';
+    }
+
+    const FB_CUPS = {
+      英格兰: '足总杯', 西班牙: '国王杯', 意大利: '意大利杯', 德国: '德国杯', 法国: '法国杯',
+      荷兰: '荷兰杯', 葡萄牙: '葡萄牙杯', 苏格兰: '苏格兰杯', 土耳其: '土耳其杯', 俄罗斯: '俄罗斯杯',
+      比利时: '比利时杯', 巴西: '巴西杯', 阿根廷: '阿根廷杯', 墨西哥: '墨西哥杯', 美国: '美国公开杯',
+      中国: '足协杯', 日本: '天皇杯', 韩国: '足总杯', 沙特: '沙特国王杯', 澳大利亚: '澳洲杯',
+    }
+
+    function careerFlavor(run) {
+      const sport = run.flags.careerSport;
+      const lines = [];
+      if (sport === 'football' && run.flags.fb) {
+        const fb = run.flags.fb;
+        const league = fbLeague(fb.leagueId);
+        const s = fb.lastSeason || { goals: 0, apps: 0, rating: 6.5 };
+        // 国内杯赛
+        const cupName = FB_CUPS[league.country];
+        if (!fb.retired && cupName && Math.random() < fbClamp((fb.ability - league.power) / 90 + 0.12, 0.06, 0.42)) {
+          fb.honours.push(cupName + '冠军');
+          lines.push('【' + cupName + '】捧起' + cupName + '。');
+        }
+        // 联赛金靴
+        if (!fb.retired && s.goals >= 20 && Math.random() < 0.45) {
+          fb.awards.push(league.name + '金靴');
+          lines.push('【金靴】' + s.goals + ' 球拿下' + league.name + '金靴。');
+        }
+        // 百球里程碑
+        const before = fb.goals - s.goals;
+        [100, 200, 300, 400].forEach(function (ms) {
+          if (before < ms && fb.goals >= ms) {
+            fb.awards.push(ms + '球里程碑');
+            lines.push('【里程碑】职业生涯第 ' + ms + ' 球落袋。');
+          }
+        });
+        // 队长袖标 / 身价
+        if (!fb.captain && fb.caps >= 18 && run.age >= 26) {
+          fb.captain = true;
+          lines.push('【队长】戴上' + league.name + '队长袖标。');
+        }
+        fb.value = Math.round(60 + fb.ability * fb.ability * 0.16);
+        if (!fb.retired && run.age <= 27 && Math.random() < 0.22) {
+          lines.push('【身价】德转更新为 ' + fb.value + ' 万欧。');
+        }
+        // 退役之后
+        if (fb.retired && !fb.coachOffer && Math.random() < 0.4) {
+          fb.coachOffer = true;
+          lines.push('【退役之后】老东家递来一份青年队教练合同。');
+        }
+      } else if (sport === 'basketball' && run.flags.bb) {
+        const bb = run.flags.bb;
+        const league = bbLeague(bb.leagueId);
+        const s = bb.lastSeason || { ppg: 0, rpg: 0, apg: 0 };
+        if (!bb.retired && s.ppg >= 18 && Math.random() < 0.55) {
+          bb.allStars += 1;
+          bb.honours.push(league.name + '全明星');
+          lines.push('【全明星】以场均 ' + s.ppg.toFixed(1) + ' 分入选' + league.name + '全明星。');
+        }
+        if (bb.seasons === 1 && s.ppg >= 11 && Math.random() < 0.5) {
+          bb.honours.push('最佳新秀');
+          lines.push('【最佳新秀】新秀赛季就进了最佳新秀阵容。');
+        }
+        if (!bb.retired && s.ppg >= 26 && Math.random() < 0.3) {
+          bb.honours.push(league.name + '得分王');
+          lines.push('【得分王】以场均 ' + s.ppg.toFixed(1) + ' 分登顶' + league.name + '得分榜。');
+        }
+        if (bb.titles > (bb.seenTitles || 0)) {
+          bb.seenTitles = bb.titles;
+          if (Math.random() < 0.35) {
+            bb.mvps += 1;
+            lines.push('【总决赛 MVP】夺冠之夜捧起 FMVP 奖杯。');
+          }
+        }
+        if (bb.retired && !bb.coachOffer && Math.random() < 0.4) {
+          bb.coachOffer = true;
+          lines.push('【退役之后】转做球队助教，开始带年轻人。');
+        }
+      } else if (sport === 'esports' && run.flags.es) {
+        const es = run.flags.es;
+        const league = esLeague(es.game, es.league);
+        const s = es.lastSeason || { wins: 0, matches: 0, kda: 0 };
+        if (!es.retired && es.game === 'LOL' && league.tier === 1 && Math.random() < 0.4) {
+          es.honours.push('MSI 参赛');
+          lines.push('【MSI】季中冠军赛登场，解说念出了你的 ID。');
+        }
+        if (!es.retired && run.age >= 19 && run.age <= 24 && Math.random() < 0.22) {
+          es.honours.push('亚运会集训');
+          lines.push('【亚运】入选亚运会电竞项目集训名单。');
+        }
+        if (es.titles > (es.seenTitles || 0)) {
+          es.seenTitles = es.titles;
+          if (Math.random() < 0.4) {
+            es.mvps += 1;
+            lines.push('【FMVP】决赛系列赛拿下 MVP。');
+          }
+        }
+        if (!es.retired && Math.random() < 0.18) {
+          lines.push('【版本】新版本改动让你的英雄池被削了一刀，只能重新练。');
+        }
+        if (es.retired && !es.streamDeal && Math.random() < 0.45) {
+          es.streamDeal = true;
+          lines.push('【退役之后】签了直播约，弹幕还在刷当年的名场面。');
+        }
+      }
+      return lines.join('');
     }
 
     function maybeCareerYear(run) {
@@ -18083,6 +18235,10 @@ function attrCapFor(run) {
             effects: { mood: 1 },
           }
         }
+        if (source === 'football' && result && typeof result.text === 'string') {
+          const flavour = careerFlavor(run)
+          if (flavour) result.text = result.text + ' ' + flavour
+        }
         const before = snapshotNumbers(run)
         applyEffects(run, result.effects)
         const deltas = numberDeltas(before, run)
@@ -18097,6 +18253,8 @@ function attrCapFor(run) {
           isPartner: source === 'partner',
           isCrisis: source === 'crisis',
           isPower: source === 'power',
+          isCareer: source === 'football',
+          careerSport: source === 'football' ? run.flags.careerSport : undefined,
           title: source === 'twist' || source === 'crisis' || source === 'power' ? current.title : undefined,
         })
         if (source !== 'milestone' && source !== 'partner' && source !== 'crisis' && source !== 'power' && !current.repeatable) run.seen.push(current.id)
@@ -18836,6 +18994,7 @@ function attrCapFor(run) {
     showAllAchievements: false,
     achPage: 0,
     pendingScroll: 'top',
+    logFilter: 'all',
   };
 
   const WORLD_GLYPHS = {
@@ -19702,7 +19861,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.32.0 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.33.0 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -20288,14 +20447,81 @@ function aiPortraitFor(run) {
         + '</section>';
     }
 
+  function careerCardHtml(run) {
+    const sport = run.flags.careerSport;
+    if (!sport) return '';
+    let title = '';
+    let rows = [];
+    let retired = false;
+    if (sport === 'football' && run.flags.fb) {
+      const fb = run.flags.fb;
+      const league = FB_BY_ID.get(fb.leagueId) || FB_LEAGUES[0];
+      title = FB_POSITIONS[fb.pos] + ' · ' + league.name;
+      rows = [
+        ['俱乐部', fb.club],
+        ['联赛归属', league.name + ' · ' + league.country + ' · 第' + league.tier + '级'],
+        ['赛季', fb.seasons + ' 季 · ' + fb.apps + ' 场 ' + fb.goals + ' 球 ' + fb.assists + ' 助'],
+        ['国家队', fb.nation + ' · ' + fb.caps + ' 场 ' + fb.nationalGoals + ' 球'],
+        ['荣誉', (fb.honours || []).slice(-3).join(' / ') || '暂无'],
+        ['奖项', (fb.awards || []).slice(-2).join(' / ') || '暂无'],
+      ];
+      if (fb.ballonDors) rows.push(['金球奖', fb.ballonDors + ' 座']);
+      retired = Boolean(fb.retired);
+    } else if (sport === 'basketball' && run.flags.bb) {
+      const bb = run.flags.bb;
+      const league = bbLeague(bb.leagueId);
+      title = BB_POSITIONS[bb.pos] + ' · ' + league.name;
+      rows = [
+        ['球队', bb.club],
+        ['联赛归属', league.name + ' · ' + league.country + ' · 第' + league.tier + '级'],
+        ['赛季', bb.seasons + ' 季 · ' + bb.games + ' 场'],
+        ['场均', bb.ppg.toFixed(1) + ' 分 ' + bb.rpg.toFixed(1) + ' 板 ' + bb.apg.toFixed(1) + ' 助'],
+        ['荣誉', ((bb.titles ? bb.titles + ' 冠 ' : '') + (bb.mvps ? bb.mvps + ' MVP ' : '') + (bb.allStars ? bb.allStars + ' 全明星' : '')) || '暂无'],
+      ];
+      retired = Boolean(bb.retired);
+    } else if (sport === 'esports' && run.flags.es) {
+      const es = run.flags.es;
+      const league = esLeague(es.game, es.league);
+      title = ES_ROLES[es.role] + ' · ' + es.game;
+      rows = [
+        ['战队', es.team],
+        ['赛区归属', league.league + ' · ' + league.country + ' · 第' + league.tier + '级'],
+        ['赛季', es.seasons + ' 季 · ' + es.matches + ' 场'],
+        ['胜率 / KDA', (es.matches ? Math.round((es.wins / es.matches) * 100) : 0) + '% · ' + (es.kda || 0).toFixed(2)],
+        ['荣誉', ((es.titles ? es.titles + ' 联赛冠军 ' : '') + (es.worldTitles ? es.worldTitles + ' 世界赛 ' : '') + (es.mvps ? es.mvps + ' FMVP' : '')) || '暂无'],
+      ];
+      retired = Boolean(es.retired);
+    }
+    if (!rows.length) return '';
+    return '<section class="career-card" data-sport="' + esc(sport) + '">'
+      + '<div class="career-head"><span class="career-title">职业生涯 · ' + esc(title) + '</span>'
+      + '<span class="career-tag">' + (retired ? '已退役' : '进行中') + '</span></div>'
+      + '<div class="career-grid">' + rows.map(function (row) {
+          return '<div class="career-row"><span>' + esc(row[0]) + '</span><b>' + esc(String(row[1])) + '</b></div>';
+        }).join('') + '</div>'
+      + '</section>';
+  }
+
+  function logTabsHtml(run) {
+    if (!run || !run.flags.careerSport) return '';
+    const items = [['all', '全部'], ['life', '普通生活'], ['career', '职业生涯']];
+    return '<div class="log-tabs">' + items.map(function (item) {
+      return '<button class="log-tab" data-action="log-filter" data-value="' + item[0] + '" data-active="' + (state.logFilter === item[0] ? 'true' : 'false') + '">' + item[1] + '</button>';
+    }).join('') + '</div>';
+  }
+
   function deltaHtml(entry) {
     if (!Array.isArray(entry.deltas) || entry.deltas.length === 0) return '';
     return '<div class="deltas">' + entry.deltas.map(delta => '<span class="delta" data-kind="' + esc(delta.kind || '') + '">' + esc(delta.label) + ' ' + (delta.value > 0 ? '+' : '') + delta.value + (delta.money ? (delta.unit || '') : '') + '</span>').join('') + '</div>';
   }
 
-  function logHtml(run) {
+  function logHtml(run, filter) {
+    const wantCareer = filter === 'career';
+    const wantLife = filter === 'life';
     let html = '';
     for (const entry of run.log) {
+      if (wantCareer && !entry.isCareer) continue;
+      if (wantLife && entry.isCareer) continue;
       if (entry.kind === 'chapter') {
         html += '<div class="chapter-entry">' + esc(entry.text) + '<small>' + entry.age + ' 岁</small></div>';
         continue;
@@ -20308,7 +20534,7 @@ function aiPortraitFor(run) {
         html += '<div class="death-entry"><small>终局 · ' + esc(entry.cause || '') + '</small>' + esc(entry.text) + '</div>';
         continue;
       }
-      const tag = entry.isChoice ? (entry.autoChoice ? '命运选择 · ' : '抉择 · ') + (entry.choiceLabel || '命运岔路') : entry.isPartner ? '相伴' : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '';
+      const tag = entry.isCareer ? '职业' : entry.isChoice ? (entry.autoChoice ? '命运选择 · ' : '抉择 · ') + (entry.choiceLabel || '命运岔路') : entry.isPartner ? '相伴' : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '';
       html += '<div class="entry" data-tone="' + esc(entry.tone || 'normal') + '">'
         + '<div class="entry-age">' + entry.age + ' 岁' + (entry.span ? '<small>+' + entry.span + '年</small>' : '') + '</div>'
         + '<div class="entry-body">' + (tag ? '<span class="entry-tag ' + (entry.isTwist ? 'twist' : entry.isChoice ? 'choice' : entry.isPartner ? 'partner' : '') + '">' + tag + '</span>' : '')
@@ -20379,7 +20605,8 @@ function aiPortraitFor(run) {
       + '</div>'
       + '</header>'
       + avatarHtml(run)
-      + '<main class="log">' + logHtml(run) + (run.ending ? endingHtml(run) : '') + '</main>'
+      + careerCardHtml(run)
+      + '<main class="log">' + logTabsHtml(run) + logHtml(run, state.logFilter) + (run.ending ? endingHtml(run) : '') + '</main>'
       + (death ? '' : '<div class="game-controls" style="padding-bottom:calc(9px + var(--safe-bottom))"><button class="btn btn-ghost" data-action="toggle-auto" data-auto="' + (state.auto ? 'true' : 'false') + '"><span class="auto-dot"></span>' + (state.auto ? '暂停自动' : '自动播放') + '</button><button class="btn btn-primary" data-action="advance">' + advanceLabel + '</button></div>')
       + '</div>';
   }
@@ -20807,6 +21034,7 @@ function aiPortraitFor(run) {
           render();
         }
         break;
+      case 'log-filter': state.logFilter = target.dataset.value || 'all'; render(); break;
       case 'inherit': inheritLife(); break;
       case 'restart': restartLife(); break;
       case 'clear-legacy': state.legacy = null; render(); break;
