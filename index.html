@@ -3887,6 +3887,48 @@ function attrCapFor(run) {
           }
         },
       },
+      {
+        id: 'm_bathroom',
+        stage: 'child',
+        minAge: 4,
+        maxAge: 12,
+        weight: 0.5,
+        resolve() {
+          if (Math.random() < 0.06) {
+            return {
+              tone: 'tragic',
+              text: '浴室的地砖上有一层水。你脚下一滑，后脑磕在浴缸边沿——家里人说，那天下午的阳光很好，水还在慢慢流。',
+              effects: { fatal: true, cause: '离谱意外' },
+            }
+          }
+          return {
+            tone: 'bad',
+            text: '你在浴室门口滑了一跤，磕掉半颗门牙，哭得整栋楼都听见了。母亲抱着你冲去急诊，回来的路上给你买了一支冰棍。',
+            effects: { health: -3, mood: -3 },
+          }
+        },
+      },
+      {
+        id: 'm_young_road',
+        stage: 'youth',
+        minAge: 15,
+        maxAge: 34,
+        weight: 0.45,
+        resolve() {
+          if (Math.random() < 0.05) {
+            return {
+              tone: 'tragic',
+              text: '雨夜的路口，绿灯只剩两秒。你想着赶在灯变之前过去——后来交警说，那辆车的刹车灯早就坏了。',
+              effects: { fatal: true, cause: '离谱意外' },
+            }
+          }
+          return {
+            tone: 'strange',
+            text: '你在路口险些被一辆电动车带倒，对方骂了一句就走了。你站在原地，摸了摸口袋，发现手机屏幕裂了一道。',
+            effects: { health: -2, mood: -4, wealth: -1 },
+          }
+        },
+      },
     ]
 
     const MILESTONES = [
@@ -8336,6 +8378,23 @@ function attrCapFor(run) {
             tone: 'strange',
             text: '雷劫来前一夜，你把该还的东西都还了：借的灵石、欠的人情、答应过别人的一句话。天亮时，天上开始聚云。',
             effects: { mood: 10, health: -10, flags: { tribulationReady: true } },
+          }
+        },
+      },
+      {
+        id: 'c2_sword_saint',
+        stage: 'adult',
+        minAge: 40,
+        maxAge: 12000,
+        minRealm: 3,
+        weight: 1.6,
+        when: run => run.flags.swordHeart && run.attrs.int >= 18,
+        good: true,
+        resolve() {
+          return {
+            tone: 'legend',
+            text: '你在瀑布下练了三年同一式。第四年春天，水流到你面前自己分开了。山里的老剑修说，这不是剑法，是剑认了你。',
+            effects: { int: 3, mood: 8, flags: { swordSaint: true } },
           }
         },
       },
@@ -18610,7 +18669,7 @@ function attrCapFor(run) {
         const lifespan = REALM_LIFESPAN[target]
         run.deathAge = target === 10
           ? Math.max(run.deathAge, 999999)
-          : Math.max(run.deathAge, lifespan, run.age + 20) + (run.flags.lifespanBonus || 0)
+          : Math.max(run.deathAge, lifespan, run.age + 20)
         const flags = {
           realmIndex: target,
           realmName: expected,
@@ -20364,7 +20423,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.35.0 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.35.1 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
