@@ -2898,8 +2898,9 @@ function attrCapFor(run) {
             resolve(run) {
               run.flags.contractDone = true;
               const moved = careerMoveUp(run);
-              const where = moved ? ('【转会】' + moved.team + '（' + moved.league + ' · ' + moved.country + ' · 第' + moved.tier + '级）') : '俱乐部';
-              return { tone: 'good', text: where + ' 你在合同里加了一条：进不了季后赛，你可以免费走人。', effects: { wealth: 60, mood: 6 } };
+              const where = moved ? ('【转会】' + moved.team + '（' + moved.league + ' · ' + moved.country + ' · 第' + moved.tier + '级）') : '你留在了原来的球队';
+              const tail = moved ? ' 你在合同里加了一条：进不了季后赛，你可以免费走人。' : '，把夺冠条款写进了合同：拿不到冠军，你可以免费走人。';
+              return { tone: 'good', text: where + tail, effects: { wealth: 60, mood: 6 } };
             },
           },
         ],
