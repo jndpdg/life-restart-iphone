@@ -2714,6 +2714,9 @@ function attrCapFor(run) {
           lines.push('【退役之后】签了直播约，弹幕还在刷当年的名场面。');
         }
       }
+      // 日常层的细碎内容：让每个职业年都不太一样
+      const extra = careerDayFlavor(run);
+      if (extra) lines.push(extra);
       return lines.join('');
     }
 
@@ -2799,6 +2802,332 @@ function attrCapFor(run) {
         { id: 'es_any', label: '听教练安排', desc: '先跟着青训营练，项目以后再定。', resolve(run) { esInit(run, '英雄联盟', 'mid'); run.flags.careerAsked = true; return { tone: 'normal', text: '你被分进青训营的混合组。教练说：「版本会变，手不会。」', effects: { mood: 5 } } } },
       ],
     };
+
+    const FB_CAREER_SMALLTALK = {
+      football: [
+        '【德比】同城德比踢满 90 分钟，看台上骂声和掌声各占一半。',
+        '【帽子戏法】你在一场比赛里进了三个球，第二个是倒地铲射。',
+        '【板凳】连续三场坐在替补席，你把热身做得比谁都标准。',
+        '【传闻】转会窗口最后一天，手机响了七次，经纪人说「再等等」。',
+        '【球迷】一个小孩举着写你名字的纸板，你把自己的护腿板送给了他。',
+        '【采访】赛后采访你说「团队功劳」，第二天的标题是「他拒绝居功」。',
+        '【雨战】雨里踢了整场，球衣重了两斤，比分 1:0。',
+        '【更衣室】两个队友为一次传球吵起来，你把人拉开，谁也没帮。',
+      ],
+      basketball: [
+        '【三双】你拿了一次三双，最后一个篮板是全队帮你卡出来的。',
+        '【绝杀】最后 1.2 秒的中投进了，回防时你听见自己心跳。',
+        '【客场】客场球迷整场嘘你，赛后你在球员通道给小球迷签名。',
+        '【伤病名单】队里两个主力进了伤病名单，你打了 42 分钟。',
+        '【训练馆】凌晨的训练馆只有你和球声，保洁阿姨给你留了灯。',
+        '【垃圾话】对手在你耳边说了一整场的垃圾话，你只回了一句「比分说话」。',
+      ],
+      esports: [
+        '【rank】韩服打到凌晨四点，排名爬了 20 名，早上照样开会。',
+        '【基地】基地的猫踩坏了你的键盘，你换了新键盘，手感反而更顺。',
+        '【粉丝】粉丝见面会排队到楼梯口，你签完最后一本已经手酸。',
+        '【复盘】复盘会上教练把你的一波操作放慢了八倍，全队沉默。',
+        '【外设】新赞助的鼠标到了，你花了三天才适应它的重量。',
+        '【直播】开直播只打了一把就被叫去训练，弹幕刷了满屏的「跑路」。',
+      ],
+    };
+
+    function careerDayFlavor(run) {
+      const sport = run.flags.careerSport;
+      const pool = FB_CAREER_SMALLTALK[sport];
+      const st = sport === 'football' ? run.flags.fb : sport === 'basketball' ? run.flags.bb : run.flags.es;
+      if (!pool || !st || st.retired) return '';
+      if (Math.random() > 0.45) return '';
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    const CAREER_LIFE_NODES = [
+      {
+        id: 'career_agent', at: 21, chance: 0.85,
+        when: run => Boolean(run.flags.careerSport) && !run.flags.careerAgentDone,
+        title: '经纪人来敲门',
+        prompt: '一家经纪公司想签你，抽成不低，但能替你谈合同、找代言。',
+        options: [
+          {
+            id: 'ca_agent_big', label: '签大公司', desc: '抽成 12%，但资源立刻不一样',
+            resolve(run) {
+              run.flags.careerAgentDone = true
+              run.flags.careerAgent = 'big'
+              return { tone: 'good', text: '合同签下去，第二天就多出三个电话：代言、采访、公益活动。抽成心疼，但账面确实好看了。', effects: { wealth: 30, mood: 2, looks: 1 } }
+            },
+          },
+          {
+            id: 'ca_agent_self', label: '自己谈', desc: '省下抽成，但要多花时间',
+            resolve(run) {
+              run.flags.careerAgentDone = true
+              run.flags.careerAgent = 'self'
+              return { tone: 'normal', text: '你把合同条款一条条读完，深夜里给律师发消息。钱省了下来，睡眠少了两个小时。', effects: { wealth: 12, health: -2, int: 1 } }
+            },
+          },
+          {
+            id: 'ca_agent_family', label: '让家里人管', desc: '可靠，但难免扯上人情',
+            resolve(run) {
+              run.flags.careerAgentDone = true
+              run.flags.careerAgent = 'family'
+              return { tone: 'normal', text: '家里人接手了账本和电话，饭桌上从此多了一个议题。', effects: { wealth: 8, mood: 3, family: 1 } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_injury', at: 25, until: 28, chance: 0.8,
+        when: run => Boolean(run.flags.careerSport) && !run.flags.careerInjuryDone,
+        title: '膝盖响了一声',
+        prompt: '一次落地，膝盖里像被人拧了一下。队医说，可以手术，也可以先保守治疗。',
+        options: [
+          {
+            id: 'ci_surgery', label: '立刻手术', desc: '报销大半个赛季，但根治',
+            resolve(run) {
+              run.flags.careerInjuryDone = true
+              const st = run.flags.careerSport === 'football' ? run.flags.fb : run.flags.careerSport === 'basketball' ? run.flags.bb : run.flags.es
+              if (st) { st.ability = Math.max(30, st.ability - 1); st.injured = 1 }
+              return { tone: 'normal', text: '手术很顺利。康复室里，你看着队友的比赛直播，把战术板默画了一遍又一遍。', effects: { health: 6, mood: -4 } }
+            },
+          },
+          {
+            id: 'ci_conservative', label: '保守治疗', desc: '带伤打，风险自己担',
+            resolve(run) {
+              run.flags.careerInjuryDone = true
+              return { tone: 'bad', text: '你打着封闭上场。数据还在，但每次起跳前都要先想一下膝盖。', effects: { health: -6, mood: 1 } }
+            },
+          },
+          {
+            id: 'ci_retire_hint', label: '开始想退役的事', desc: '第一次认真考虑离开',
+            resolve(run) {
+              run.flags.careerInjuryDone = true
+              run.flags.retireHint = true
+              return { tone: 'bad', text: '夜里你翻着合同和保单，第一次认真算：如果不打了，还能做什么。', effects: { mood: -5, int: 1 } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_nation', at: 22, until: 27, chance: 0.8,
+        when: run => Boolean(run.flags.careerSport) && !run.flags.careerNationDone,
+        title: '国家队与俱乐部',
+        prompt: '国家队征召和俱乐部的关键战撞在同一周，两边都等着你回话。',
+        options: [
+          {
+            id: 'cn_nation', label: '为国家队出战', desc: '荣誉感拉满，身体吃亏',
+            resolve(run) {
+              run.flags.careerNationDone = true
+              const st = run.flags.careerSport === 'football' ? run.flags.fb : run.flags.careerSport === 'basketball' ? run.flags.bb : run.flags.es
+              if (st) { st.caps = (st.caps || 0) + 2; if (st.ability) st.ability += 1 }
+              return { tone: 'good', text: '国歌响起来的时候，你把俱乐部的电话按掉了。回来时，腿上多了两块淤青和一枚队徽。', effects: { mood: 7, health: -3, wealth: 10 } }
+            },
+          },
+          {
+            id: 'cn_club', label: '留在俱乐部', desc: '俱乐部会记住这份人情',
+            resolve(run) {
+              run.flags.careerNationDone = true
+              return { tone: 'normal', text: '你留了下来，踢满关键战。俱乐部在续约谈判里主动加了数字。', effects: { wealth: 26, mood: -2 } }
+            },
+          },
+          {
+            id: 'cn_doctor', label: '让队医出报告', desc: '两头都不得罪，两头都不痛快',
+            resolve(run) {
+              run.flags.careerNationDone = true
+              return { tone: 'normal', text: '一份含糊的医疗报告替你挡了枪。教练没说什么，但看你的眼神变了。', effects: { health: 3, mood: -1 } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_captain', at: 26, until: 31, chance: 0.75,
+        when: run => Boolean(run.flags.careerSport) && !run.flags.careerCaptainNode,
+        title: '袖标给谁',
+        prompt: '老队长退役，教练把两个人叫进办公室——你是其中之一。',
+        options: [
+          {
+            id: 'cc_captain_fight', label: '主动争取', desc: '更衣室会记住你的态度',
+            resolve(run) {
+              run.flags.careerCaptainNode = true
+              return { tone: 'good', text: '你在全队面前说了三分钟，没有一句漂亮话。袖标最终戴在了你手臂上。', effects: { mood: 5, companions: 2, body: 1 } }
+            },
+          },
+          {
+            id: 'cc_captain_yield', label: '让给老队员', desc: '退一步，关系更顺',
+            resolve(run) {
+              run.flags.careerCaptainNode = true
+              return { tone: 'normal', text: '你把袖标让了出去，换来的是训练场上更多的传球和饭桌上更少的客套。', effects: { companions: 3, mood: 1 } }
+            },
+          },
+          {
+            id: 'cc_captain_talk', label: '私下找教练谈', desc: '不表态，也不出局',
+            resolve(run) {
+              run.flags.careerCaptainNode = true
+              return { tone: 'normal', text: '你和教练聊到很晚。袖标没给你，但战术板上多了一个以你为轴的选择。', effects: { int: 2, mood: 2 } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_business', at: 24, until: 30, chance: 0.8,
+        when: run => Boolean(run.flags.careerSport) && !run.flags.careerBizDone,
+        title: '代言找上门',
+        prompt: '一家饮料品牌想让你出镜，报价比你一年工资还高。产品你自己从来不喝。',
+        options: [
+          {
+            id: 'cb_take', label: '接下来', desc: '钱是真的，良心有点痒',
+            resolve(run) {
+              run.flags.careerBizDone = true
+              return { tone: 'good', text: '广告拍了两天。你在镜头前举起那瓶饮料，回家把它放进柜子最里面。', effects: { wealth: 55, mood: -2, looks: 1 } }
+            },
+          },
+          {
+            id: 'cb_selective', label: '只接运动品牌', desc: '少赚，但睡得着',
+            resolve(run) {
+              run.flags.careerBizDone = true
+              return { tone: 'good', text: '你推掉了饮料，接下一双跑鞋。合约小得多，但拍摄那天你确实穿了它去训练。', effects: { wealth: 22, mood: 3 } }
+            },
+          },
+          {
+            id: 'cb_charity', label: '把钱捐出去', desc: '名声和口碑一起涨',
+            resolve(run) {
+              run.flags.careerBizDone = true
+              return { tone: 'good', text: '代言费进了青训基金。新闻稿只有两行，但你老家的球场真的修好了。', effects: { wealth: -6, mood: 6, companions: 2, family: 1 } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_decline', at: 29, until: 33, chance: 0.8,
+        when: run => Boolean(run.flags.careerSport) && !run.flags.careerDeclineDone,
+        title: '身体开始不听话',
+        prompt: '同一个动作，二十岁时做十次，现在做完要缓两天。教练的话也变少了。',
+        options: [
+          {
+            id: 'cd_train', label: '加练', desc: '把状态硬拽回来',
+            resolve(run) {
+              run.flags.careerDeclineDone = true
+              const st = run.flags.careerSport === 'football' ? run.flags.fb : run.flags.careerSport === 'basketball' ? run.flags.bb : run.flags.es
+              if (st) st.ability = Math.min(96, st.ability + 2)
+              return { tone: 'good', text: '你把训练量加了一半，理疗师的脸一天比一天黑。数据回来了，身体在记账。', effects: { body: -2, health: -2, mood: 3 } }
+            },
+          },
+          {
+            id: 'cd_style', label: '改踢法', desc: '用脑子代替腿',
+            resolve(run) {
+              run.flags.careerDeclineDone = true
+              return { tone: 'good', text: '你开始提前半秒出球，少跑三千米，多出三次关键传球。解说员说：他变聪明了。', effects: { int: 3, mood: 2 } }
+            },
+          },
+          {
+            id: 'cd_bench', label: '接受替补', desc: '少踢一点，多活几年',
+            resolve(run) {
+              run.flags.careerDeclineDone = true
+              const st = run.flags.careerSport === 'football' ? run.flags.fb : run.flags.careerSport === 'basketball' ? run.flags.bb : run.flags.es
+              if (st) st.ability = Math.max(30, st.ability - 1)
+              return { tone: 'normal', text: '你从首发名单里退出来，替补席上的视角让你第一次看清整场比赛。', effects: { health: 3, mood: -2, companions: 2 } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_retire_call', at: 33, until: 37, chance: 0.9,
+        when: run => Boolean(run.flags.careerSport) && !run.flags.careerRetireAsked,
+        title: '退役这件事',
+        prompt: '合同还剩一年。身体、家庭、教练组，三份意见摆在你面前。',
+        options: [
+          {
+            id: 'cr_one_more', label: '再打一年', desc: '把最后一点余热烧完',
+            resolve(run) {
+              run.flags.careerRetireAsked = true
+              return { tone: 'good', text: '你在合同上签了字。这一年你打得很慢，但每一次触球都很认真。', effects: { mood: 4, wealth: 12, health: -2 } }
+            },
+          },
+          {
+            id: 'cr_stop', label: '急流勇退', desc: '在自己还体面的时候离开',
+            resolve(run) {
+              run.flags.careerRetireAsked = true
+              run.flags.retireHint = true
+              return { tone: 'good', text: '你开了发布会，说了不到三分钟。第二天训练场照常响着球声，只是没有你。', effects: { mood: 6, health: 4 } }
+            },
+          },
+          {
+            id: 'cr_coach', label: '直接转教练', desc: '换个身份留在场上',
+            resolve(run) {
+              run.flags.careerRetireAsked = true
+              run.flags.coachPath = true
+              return { tone: 'good', text: '退役仪式和教练聘书在同一周。你把球鞋收进柜子，把战术板挂上了墙。', effects: { mood: 5, int: 2, wealth: 8 } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_esports_patch', at: 21, until: 26, chance: 0.8,
+        when: run => run.flags.careerSport === 'esports' && !run.flags.careerPatchDone,
+        title: '版本更新',
+        prompt: '新版本把你的招牌英雄削了 8%，赛训组连夜开会。',
+        options: [
+          {
+            id: 'ep_switch', label: '换英雄池', desc: '从零开始练三个新角色',
+            resolve(run) {
+              run.flags.careerPatchDone = true
+              const es = run.flags.es
+              if (es) es.ability = Math.min(96, es.ability + 2)
+              return { tone: 'good', text: '你把训练室当成自习室，一个月后新英雄的胜率爬回了五成。', effects: { int: 2, health: -2, mood: 2 } }
+            },
+          },
+          {
+            id: 'ep_stubborn', label: '死磕老本行', desc: '用理解弥补数值',
+            resolve(run) {
+              run.flags.careerPatchDone = true
+              return { tone: 'normal', text: '你坚持用被削的英雄，靠细节把对线打平。教练组一半人摇头，一半人记笔记。', effects: { int: 3, mood: 1 } }
+            },
+          },
+          {
+            id: 'ep_coach', label: '转教练席', desc: '手上不行了，脑子还行',
+            resolve(run) {
+              run.flags.careerPatchDone = true
+              run.flags.coachPath = true
+              return { tone: 'good', text: '你把自己的理解写成三页纸，第二天坐到了教练席。选手们开始叫你「老师」。', effects: { int: 2, mood: 4, wealth: 6 } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_draft', at: 19, until: 21, chance: 0.85,
+        when: run => run.flags.careerSport === 'basketball' && !run.flags.careerDraftDone,
+        title: '选秀夜',
+        prompt: '名单上有你的名字。是要今年参选，还是再等一年？',
+        options: [
+          {
+            id: 'cd_enter', label: '今年参选', desc: '顺位未知，机会只有一次',
+            resolve(run) {
+              run.flags.careerDraftDone = true
+              const bb = run.flags.bb
+              if (bb && bb.ability >= 62) {
+                bb.ability = Math.min(96, bb.ability + 3)
+                return { tone: 'good', text: '名字在第二轮被念到。你戴上帽子，手一直在抖，镜头给了你三秒。', effects: { mood: 9, wealth: 20 } }
+              }
+              return { tone: 'bad', text: '你落选了。第二天一早，你在训练馆里一个人投了两个小时。', effects: { mood: -6, body: 1 } }
+            },
+          },
+          {
+            id: 'cd_wait', label: '再打一年', desc: '把数据再刷高一点',
+            resolve(run) {
+              run.flags.careerDraftDone = true
+              const bb = run.flags.bb
+              if (bb) bb.ability = Math.min(96, bb.ability + 2)
+              return { tone: 'normal', text: '你留在原来的联赛又打了一年，数据好看了，膝盖也老了一岁。', effects: { mood: 1, health: -1 } }
+            },
+          },
+          {
+            id: 'cd_stay', label: '不参选了', desc: '这条路就先走到这里',
+            resolve(run) {
+              run.flags.careerDraftDone = true
+              return { tone: 'normal', text: '你把参选表收进抽屉，继续在熟悉的球馆里打球。', effects: { mood: 2, companions: 1 } }
+            },
+          },
+        ],
+      },
+    ]
 
     const CAREER_NODES = [CAREER_NODE, FB_ROLE_NODE, BB_ROLE_NODE, ES_ROLE_NODE];
 
@@ -15205,6 +15534,7 @@ function attrCapFor(run) {
           COMMON_CHOICE_MORE,
           CULTIVATION_COMMON,
           ...CAREER_NODES,
+          ...CAREER_LIFE_NODES,
         )
       const seen = run.flags._choiceSeen || {}
       const cultivation = run.worldId === 'cultivation'
@@ -19861,7 +20191,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.33.0 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.34.0 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
