@@ -2057,6 +2057,7 @@ function attrCapFor(run) {
     function fbShouldRetire(run) {
       const fb = run.flags.fb;
       if (!fb || fb.retired) return false;
+      if (run.flags.retireHint && fb.debuted) return true;
       if (run.age >= 37) return true;
       if (run.age >= 33 && fb.ability < 52) return true;
       if (run.age >= 34 && Math.random() < 0.35) return true;
@@ -2350,6 +2351,7 @@ function attrCapFor(run) {
     function bbShouldRetire(run) {
       const bb = run.flags.bb;
       if (!bb || bb.retired) return false;
+      if (run.flags.retireHint && bb.debuted) return true;
       if (run.age >= 38) return true;
       if (run.age >= 36 && bb.ability < 60) return true;
       if (run.age >= 34 && bb.ability < 55) return true;
@@ -2548,6 +2550,7 @@ function attrCapFor(run) {
     function esShouldRetire(run) {
       const es = run.flags.es;
       if (!es || es.retired) return false;
+      if (run.flags.retireHint && es.debuted) return true;
       if (run.age >= 29) return true;
       if (run.age >= 26 && es.ability < 58) return true;
       if (run.age >= 27 && Math.random() < 0.35) return true;
@@ -2606,10 +2609,16 @@ function attrCapFor(run) {
 
     function careerSummaryLine(run) {
       const sport = run.flags.careerSport;
-      if (run.flags.fb) return fbCareerSummary(run);
-      if (run.flags.bb) return bbCareerSummary(run);
-      if (run.flags.es) return esCareerSummary(run);
-      return '';
+      let line = '';
+      if (run.flags.fb) line = fbCareerSummary(run);
+      else if (run.flags.bb) line = bbCareerSummary(run);
+      else if (run.flags.es) line = esCareerSummary(run);
+      const coach = run.flags.coach;
+      if (coach && coach.seasons) {
+        line += ' 退役后执教 ' + coach.seasons + ' 个赛季：' + coach.wins + ' 胜 ' + coach.draws + ' 平 ' + coach.losses + ' 负'
+          + (coach.titles ? '，' + coach.titles + ' 座冠军' : '') + '。';
+      }
+      return line;
     }
 
     const FB_CUPS = {
@@ -2720,7 +2729,186 @@ function attrCapFor(run) {
       return lines.join('');
     }
 
+
+    function careerStateOf(run) {
+      return run.flags.fb || run.flags.bb || run.flags.es || null;
+    }
+
+    function careerRetired(run) {
+      const st = careerStateOf(run);
+      return Boolean(st && st.retired);
+    }
+
+    function careerMoveUp(run) {
+      const sport = run.flags.careerSport;
+      if (sport === 'football' && run.flags.fb) {
+        const fb = run.flags.fb;
+        const league = fbLeague(fb.leagueId);
+        const cur = fbClub(league, fb.club);
+        const better = league.clubs.filter(c => c.strength > cur.strength + 2).sort((a, b) => b.strength - a.strength);
+        let team = better.length ? better[0] : null;
+        let target = league;
+        if (!team) {
+          const up = FB_LEAGUES.filter(l => l.power > league.power + 2).sort((a, b) => a.power - b.power)[0];
+          if (!up) return null;
+          target = up;
+          team = up.clubs[0];
+        }
+        fb.leagueId = target.id;
+        fb.club = team.name;
+        if (!fb.clubsPlayed.includes(team.name)) fb.clubsPlayed.push(team.name);
+        if (!fb.leaguesPlayed.includes(target.id)) fb.leaguesPlayed.push(target.id);
+        return { team: team.name, league: target.name, country: target.country, tier: target.tier };
+      }
+      if (sport === 'basketball' && run.flags.bb) {
+        const bb = run.flags.bb;
+        const league = bbLeague(bb.leagueId);
+        const cur = league.clubs.find(c => c.name === bb.club) || league.clubs[0];
+        const better = league.clubs.filter(c => c.strength > cur.strength + 2).sort((a, b) => b.strength - a.strength);
+        let team = better.length ? better[0] : null;
+        let target = league;
+        if (!team) {
+          const up = BB_LEAGUES.filter(l => l.power > league.power + 2).sort((a, b) => a.power - b.power)[0];
+          if (!up) return null;
+          target = up;
+          team = up.clubs[0];
+        }
+        bb.leagueId = target.id;
+        bb.club = team.name;
+        if (!bb.clubsPlayed.includes(team.name)) bb.clubsPlayed.push(team.name);
+        if (!bb.leaguesPlayed.includes(target.id)) bb.leaguesPlayed.push(target.id);
+        return { team: team.name, league: target.name, country: target.country, tier: target.tier };
+      }
+      if (sport === 'esports' && run.flags.es) {
+        const es = run.flags.es;
+        const league = esLeague(es.game, es.league);
+        const cur = league.teams.find(x => x.name === es.team) || league.teams[0];
+        const better = league.teams.filter(x => x.strength > cur.strength + 2).sort((a, b) => b.strength - a.strength);
+        let team = better.length ? better[0] : null;
+        let target = league;
+        if (!team) {
+          const up = ES_GAMES.filter(g => g.game === es.game && g.power > league.power + 2).sort((a, b) => a.power - b.power)[0];
+          if (!up) return null;
+          target = up;
+          team = up.teams[0];
+        }
+        es.league = target.league;
+        es.country = target.country;
+        es.team = team.name;
+        if (!es.teamsPlayed.includes(team.name)) es.teamsPlayed.push(team.name);
+        if (!es.leaguesPlayed.includes(target.league)) es.leaguesPlayed.push(target.league);
+        return { team: team.name, league: target.league, country: target.country, tier: target.tier };
+      }
+      return null;
+    }
+
+    function coachState(run) {
+      if (!run.flags.coach) {
+        run.flags.coach = { level: 0, seasons: 0, wins: 0, draws: 0, losses: 0, titles: 0, clubs: [], done: false };
+      }
+      return run.flags.coach;
+    }
+
+    function maybeCoachYear(run) {
+      if (run.worldId !== 'modern') return null;
+      if (!careerRetired(run)) return null;
+      if (!run.flags.coachPath) {
+        const st = careerStateOf(run) || {};
+        const offer = Boolean(st.coachOffer || st.streamDeal);
+        const qualified = ((run.attrs && run.attrs.int) || 10) >= 11;
+        if (!offer || !qualified) return null;
+        if (Math.random() > 0.6) return null;
+        run.flags.coachPath = true;
+      }
+      const co = coachState(run);
+      if (co.done) return null;
+      if (run.age > 68) return null;
+      return {
+        id: 'coach_year',
+        resolve(inner) {
+          const c = coachState(inner);
+          const st = careerStateOf(inner) || {};
+          const rep = (st.ballonDors || 0) * 3 + (st.titles || 0) + (st.worldTitles || 0) * 2 + ((st.honours || []).length) * 0.4;
+          c.seasons += 1;
+          const parts = [];
+          if (c.level === 0 && c.seasons >= 2) {
+            c.level = 1;
+            const club = fbPick(['本地球会', '中甲球队', '大学队', '乙级队']);
+            c.clubs.push(club);
+            parts.push('【上任】' + club + '把一线队交给你，合同两年。');
+          }
+          const level = c.level;
+          const matches = 30 + level * 8;
+          const winRate = fbClamp(0.32 + level * 0.06 + rep * 0.008 + ((inner.attrs && inner.attrs.int) || 10) * 0.004, 0.2, 0.68);
+          const wins = Math.round(matches * winRate);
+          const draws = Math.round((matches - wins) * fbRnd(0.2, 0.45));
+          const losses = matches - wins - draws;
+          c.wins += wins; c.draws += draws; c.losses += losses;
+          parts.push('【执教】' + (c.clubs[c.clubs.length - 1] || '球队') + ' 本赛季 ' + matches + ' 场 ' + wins + ' 胜 ' + draws + ' 平 ' + losses + ' 负。');
+          let title = null;
+          if (Math.random() < fbClamp(0.02 + level * 0.03 + rep * 0.006 + winRate * 0.06, 0.01, 0.22)) {
+            title = level >= 2 ? '顶级联赛冠军' : '次级联赛冠军';
+            c.titles += 1;
+            parts.push('【夺冠】' + title + '。终场哨响时你站在场边，没有庆祝，只是把手插在口袋里。');
+          }
+          if (level === 1 && (c.titles >= 1 || c.seasons >= 5) && Math.random() < 0.5) {
+            c.level = 2;
+            parts.push('【升级】顶级联赛的球队来挖你，你成了别人口中的「名帅」。');
+          }
+          if (level >= 1 && losses >= wins && Math.random() < 0.25) {
+            parts.push('【下课】董事会解雇了你。你在停车场坐了半小时，然后回了家。');
+            c.level = Math.max(0, c.level - 1);
+          }
+          const done = inner.age >= 66 || (c.level >= 2 && c.seasons >= 14 && Math.random() < 0.3);
+          if (done) {
+            c.done = true;
+            parts.push('【退休】你从教练席上退下来。执教 ' + c.seasons + ' 个赛季，' + c.wins + ' 胜 ' + c.draws + ' 平 ' + c.losses + ' 负' + (c.titles ? '，' + c.titles + ' 座冠军' : '') + '。');
+          }
+          const tone = title ? 'good' : losses > wins ? 'tragic' : 'normal';
+          return { tone, text: parts.join(' '), effects: { mood: title ? 8 : losses > wins ? -5 : 2, wealth: Math.round(60 + level * 90 + (title ? 40 : 0)), int: 1 } };
+        },
+      };
+    }
+
+    const CAREER_CONTRACT_NODES = [
+      {
+        id: 'career_contract', at: 25, until: 34, chance: 0.88,
+        when: run => run.worldId === 'modern' && Boolean(run.flags.careerSport) && !run.flags.contractDone && !careerRetired(run),
+        title: '合同年',
+        prompt: '经纪人在桌上摊开三份合同，笔在你手里：「钱、稳、冠军，你先挑一个。」',
+        options: [
+          {
+            id: 'cc_money', label: '要高薪', desc: '把身价兑现成账户里的数字。',
+            resolve(run) {
+              run.flags.contractDone = true;
+              run.flags.wageBoost = 3;
+              return { tone: 'normal', text: '你在最贵的那份上签了字。俱乐部不太高兴，但更衣室里从此没人比你挣得多。', effects: { wealth: 220, mood: 3 } };
+            },
+          },
+          {
+            id: 'cc_long', label: '签长约', desc: '稳一点，把未来五年交出去。',
+            resolve(run) {
+              run.flags.contractDone = true;
+              run.flags.wageStable = 5;
+              return { tone: 'good', text: '五年长约。你给家里打了个电话，说以后不用再算着花了。', effects: { wealth: 120, mood: 5, health: 1 } };
+            },
+          },
+          {
+            id: 'cc_title', label: '要冠军条款', desc: '少拿钱，换一支能赢球的队。',
+            resolve(run) {
+              run.flags.contractDone = true;
+              const moved = careerMoveUp(run);
+              const where = moved ? ('【转会】' + moved.team + '（' + moved.league + ' · ' + moved.country + ' · 第' + moved.tier + '级）') : '俱乐部';
+              return { tone: 'good', text: where + ' 你在合同里加了一条：进不了季后赛，你可以免费走人。', effects: { wealth: 60, mood: 6 } };
+            },
+          },
+        ],
+      },
+    ];
+
     function maybeCareerYear(run) {
+      const coach = maybeCoachYear(run);
+      if (coach) return coach;
       if (run.flags.fb) return maybeFootballYear(run);
       if (run.flags.bb) return maybeBasketballYear(run);
       if (run.flags.es) return maybeEsportsYear(run);
@@ -15535,6 +15723,7 @@ function attrCapFor(run) {
           CULTIVATION_COMMON,
           ...CAREER_NODES,
           ...CAREER_LIFE_NODES,
+          ...CAREER_CONTRACT_NODES,
         )
       const seen = run.flags._choiceSeen || {}
       const cultivation = run.worldId === 'cultivation'
@@ -15548,7 +15737,9 @@ function attrCapFor(run) {
         return true
       })
       if (eligible.length === 0) return null
-      const node = pick(eligible)
+      // 走职业路线时，优先让职业相关的抉择冒出来，否则一年只有一个节点会被选中，职业线几乎轮不到
+      const careerPool = run.flags.careerSport ? eligible.filter(item => /^(career_|cc_)/.test(item.id)) : []
+      const node = pick(careerPool.length && Math.random() < 0.62 ? careerPool : eligible)
       const giftChoice = run.powerGift && run.powerGift.choice ? run.powerGift.choice : 0
       const choiceChance = clamp((node.chance == null ? 0.85 : node.chance) + giftChoice + (run.power ? 0.03 : 0), 0.1, 0.97)
       if (Math.random() > choiceChance) return null
@@ -18508,7 +18699,9 @@ function attrCapFor(run) {
       if (milestone) {
         source = 'milestone'
       } else {
-        const careerPrime = Boolean(run.flags.careerSport) && run.age >= 33
+        // 只有「还在踢/还在打」的运动员才需要让位给职业生涯；退役之后要把普通人的人生事件还给他
+        const careerState = careerStateOf(run)
+        const careerPrime = Boolean(careerState && !careerState.retired) && run.age >= 33
         const partnerStory = careerPrime ? null : choosePartnerStory(run)
         const crisis = !partnerStory && !careerPrime ? maybeCrisis(run) : null
         const powerMoment = !partnerStory && !crisis && !careerPrime ? maybePowerMoment(run) : null
@@ -20191,7 +20384,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.34.0 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.35.0 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
