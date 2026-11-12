@@ -1172,6 +1172,7 @@
     .score-ring b { color: var(--ink); font-size: 20px; font-weight: 650; line-height: 1; font-variant-numeric: tabular-nums; }
     .score-ring span { color: var(--muted); font-size: 7px; }
     .ending-desc { margin-top: 9px; color: var(--muted); font-size: 11px; line-height: 1.8; }
+    .career-line { color: var(--ink); opacity: .82; border-left: 2px solid var(--line); padding-left: 9px; }
     .grade-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
     .grade-badge { display: inline-flex; align-items: center; min-height: 28px; padding: 0 9px; border-radius: 6px; background: var(--brand); color: var(--bg); font-size: 12px; font-weight: 700; letter-spacing: 0.03em; }
     .grade-badge[data-grade='SSS'] { background: linear-gradient(135deg, var(--rarity-legend), var(--ach-comedy)); color: #1f1710; }
@@ -1750,6 +1751,384 @@ function attrCapFor(run) {
         { id: 'shop', label: '小店店员', wealth: 6, mood: 4, body: 0, text: '你在街角的小店上班。老板娘记得你爱吃什么，常把卖不完的面包塞给你。' },
       ],
     }
+
+    // ===== 职业生涯：足球 =====
+    // 数据行格式：联赛名|国家|大洲|级别|联赛水平|俱乐部1,俱乐部2,...
+    const FB_LEAGUE_ROWS = [
+      '英超|英格兰|UEFA|1|86|曼城,阿森纳,利物浦,曼联,切尔西,热刺,纽卡斯尔,阿斯顿维拉,布莱顿,西汉姆,水晶宫,埃弗顿,富勒姆,布伦特福德,诺丁汉森林,狼队',
+      '英冠|英格兰|UEFA|2|72|利兹联,伯恩利,谢菲尔德联,桑德兰,米德尔斯堡,西布朗,考文垂,诺维奇,沃特福德,赫尔城,布里斯托城,斯旺西,卡迪夫城,普雷斯顿,斯托克城,谢周三',
+      '西甲|西班牙|UEFA|1|85|皇家马德里,巴塞罗那,马德里竞技,塞维利亚,比利亚雷亚尔,皇家社会,毕尔巴鄂竞技,皇家贝蒂斯,瓦伦西亚,赫罗纳,奥萨苏纳,塞尔塔,马略卡,拉斯帕尔马斯,阿拉维斯,赫塔菲,巴列卡诺,西班牙人',
+      '西乙|西班牙|UEFA|2|68|拉科鲁尼亚,希洪竞技,萨拉戈萨,阿尔梅里亚,埃瓦尔,莱万特,格拉纳达,韦斯卡,特内里费,皇家奥维耶多,桑坦德竞技,米兰德斯,卡塔赫纳,埃尔切,阿尔瓦塞特,布尔戈斯',
+      '意甲|意大利|UEFA|1|82|国际米兰,AC米兰,尤文图斯,那不勒斯,罗马,拉齐奥,亚特兰大,佛罗伦萨,博洛尼亚,都灵,乌迪内斯,热那亚,蒙扎,莱切,维罗纳,卡利亚里,恩波利,帕尔马',
+      '意乙|意大利|UEFA|2|66|萨索洛,桑普多利亚,巴勒莫,比萨,克雷莫纳,斯佩齐亚,巴里,布雷西亚,卡坦扎罗,切塞纳,弗罗西诺内,摩德纳,雷吉亚纳,奇塔代拉,曼托瓦,萨勒尼塔纳',
+      '德甲|德国|UEFA|1|82|拜仁慕尼黑,勒沃库森,多特蒙德,莱比锡红牛,斯图加特,法兰克福,霍芬海姆,弗赖堡,云达不莱梅,沃尔夫斯堡,美因茨,门兴格拉德巴赫,奥格斯堡,柏林联合,波鸿,圣保利',
+      '德乙|德国|UEFA|2|67|汉堡,沙尔克04,科隆,杜塞尔多夫,帕德博恩,卡尔斯鲁厄,汉诺威96,纽伦堡,菲尔特,凯泽斯劳滕,马格德堡,不伦瑞克,柏林赫塔,达姆施塔特,雷根斯堡,乌尔姆',
+      '法甲|法国|UEFA|1|80|巴黎圣日耳曼,摩纳哥,马赛,里尔,里昂,尼斯,朗斯,雷恩,斯特拉斯堡,图卢兹,南特,布雷斯特,蒙彼利埃,兰斯,欧塞尔,昂热',
+      '法乙|法国|UEFA|2|63|波尔多,卡昂,甘冈,阿雅克肖,亚眠,巴斯蒂亚,克莱蒙,敦刻尔克,格勒诺布尔,拉瓦勒,梅斯,巴黎FC,波城,罗德兹,特鲁瓦,瓦朗谢讷',
+      '荷甲|荷兰|UEFA|1|74|阿贾克斯,埃因霍温,费耶诺德,阿尔克马尔,特温特,乌得勒支,海伦芬,鹿特丹斯巴达,奈梅亨,前进之鹰,兹沃勒,福图纳锡塔德,格罗宁根,布雷达,瓦尔韦克,赫拉克勒斯',
+      '葡超|葡萄牙|UEFA|1|76|本菲卡,波尔图,葡萄牙体育,布拉加,吉马良斯,法马利康,莫雷伦斯,阿罗卡,吉维森特,博阿维斯塔,埃斯托里尔,里奥阿维,卡萨皮亚,圣克拉拉,法鲁人,阿维斯',
+      '苏超|苏格兰|UEFA|1|66|凯尔特人,格拉斯哥流浪者,哈茨,希伯尼安,阿伯丁,邓迪联,马瑟韦尔,基尔马诺克,圣米伦,邓迪,罗斯郡,圣约翰斯通',
+      '土超|土耳其|UEFA|1|74|加拉塔萨雷,费内巴切,贝西克塔斯,特拉布宗,伊斯坦布尔巴萨克赛尔,阿达纳德米尔,科尼亚,安塔利亚,卡斯帕萨,里泽,锡瓦斯,开塞利,加济安泰普,萨姆松,哈塔伊,博德鲁姆',
+      '俄超|俄罗斯|UEFA|1|70|泽尼特,克拉斯诺达尔,莫斯科斯巴达,莫斯科中央陆军,莫斯科迪纳摩,莫斯科火车头,罗斯托夫,喀山红宝石,索契,格罗兹尼,下诺夫哥罗德,萨马拉,乌拉尔,奥伦堡,沃罗涅日,马哈奇卡拉',
+      '比甲|比利时|UEFA|1|72|布鲁日,安德莱赫特,亨克,圣吉尔联,安特卫普,根特,标准列日,色格拉布鲁日,梅赫伦,沙勒罗瓦,韦斯特洛,科特赖克,贝弗伦,登德,奥哈瓦里,圣特雷登',
+      '巴甲|巴西|CONMEBOL|1|78|帕尔梅拉斯,弗拉门戈,科林蒂安,圣保罗,格雷米奥,巴西国际,米内罗竞技,克鲁塞罗,博塔弗戈,弗鲁米嫩塞,巴伊亚,福塔莱萨,累西腓体育,瓦斯科达伽马,桑托斯,布拉甘蒂诺',
+      '阿甲|阿根廷|CONMEBOL|1|74|河床,博卡青年,竞技,独立,圣洛伦索,萨斯菲尔德,大学生,拉普拉塔体操,纽维尔老男孩,罗萨里奥中央,飓风,阿根廷青年人,塔列雷斯,班菲尔德,防御与正义,拉努斯',
+      '墨超|墨西哥|CONCACAF|1|70|墨西哥美洲,瓜达拉哈拉,蒙特雷,老虎大学,蓝十字,帕丘卡,莱昂,托卢卡,桑托斯拉古纳,内卡萨,普埃布拉,阿特拉斯,蒂华纳,华雷斯,圣路易斯,普马斯',
+      '美职联|美国|CONCACAF|1|66|洛杉矶FC,洛杉矶银河,西雅图海湾人,波特兰伐木者,亚特兰大联,迈阿密国际,纽约城,纽约红牛,费城联合,哥伦布机员,辛辛那提,奥兰多城,纳什维尔,奥斯汀,达拉斯,堪萨斯城',
+      'J1联赛|日本|AFC|1|70|川崎前锋,横滨水手,神户胜利船,浦和红钻,鹿岛鹿角,广岛三箭,名古屋鲸八,大阪钢巴,大阪樱花,FC东京,柏太阳神,东京绿茵,福冈黄蜂,湘南比马,京都不死鸟,札幌冈萨多',
+      'K1联赛|韩国|AFC|1|68|蔚山HD,全北现代,浦项制铁,首尔FC,仁川联,大邱FC,江原FC,水原FC,济州联,光州FC,大田市民,金泉尚武',
+      '中超|中国|AFC|1|64|上海海港,上海申花,山东泰山,成都蓉城,北京国安,天津津门虎,浙江队,武汉三镇,河南队,长春亚泰,青岛海牛,深圳新鹏城,梅州客家,沧州雄狮,南通支云,青岛西海岸',
+      '沙超|沙特阿拉伯|AFC|1|70|利雅得新月,利雅得胜利,吉达联合,吉达国民,利雅得青年,达曼协作,费哈,塔亚文,哈萨征服,布赖代合作,达马克,阿科多,卡迪西亚,奥赫杜德',
+      '澳超|澳大利亚|AFC|1|62|墨尔本城,墨尔本胜利,悉尼FC,西悉尼流浪者,布里斯班狮吼,阿德莱德联,中央海岸水手,惠灵顿凤凰,珀斯光荣,麦克阿瑟,西部联,纽卡斯尔喷气机',
+    ];
+    const FB_NATION_ROWS = [
+      '阿根廷|CONMEBOL|94', '巴西|CONMEBOL|93', '法国|UEFA|94', '西班牙|UEFA|93', '英格兰|UEFA|92',
+      '德国|UEFA|89', '意大利|UEFA|88', '葡萄牙|UEFA|88', '荷兰|UEFA|87', '比利时|UEFA|86',
+      '克罗地亚|UEFA|85', '乌拉圭|CONMEBOL|86', '哥伦比亚|CONMEBOL|84', '丹麦|UEFA|83', '瑞士|UEFA|82',
+      '奥地利|UEFA|82', '厄瓜多尔|CONMEBOL|82', '摩洛哥|CAF|88', '塞内加尔|CAF|85', '埃及|CAF|82',
+      '尼日利亚|CAF|82', '日本|AFC|85', '韩国|AFC|82', '伊朗|AFC|82', '墨西哥|CONCACAF|81',
+      '美国|CONCACAF|80', '阿尔及利亚|CAF|81', '科特迪瓦|CAF|80', '乌克兰|UEFA|80', '波兰|UEFA|80',
+      '塞尔维亚|UEFA|80', '土耳其|UEFA|79', '突尼斯|CAF|79', '喀麦隆|CAF|79', '澳大利亚|AFC|79',
+      '沙特阿拉伯|AFC|78', '加纳|CAF|77', '瑞典|UEFA|78', '挪威|UEFA|78', '捷克|UEFA|78',
+      '匈牙利|UEFA|78', '智利|CONMEBOL|78', '苏格兰|UEFA|77', '威尔士|UEFA|76', '爱尔兰|UEFA|75',
+      '希腊|UEFA|76', '俄罗斯|UEFA|76', '加拿大|CONCACAF|76', '卡塔尔|AFC|75', '罗马尼亚|UEFA|75',
+      '马里|CAF|75', '布基纳法索|CAF|74', '秘鲁|CONMEBOL|74', '巴拉圭|CONMEBOL|74', '伊拉克|AFC|74',
+      '斯洛文尼亚|UEFA|74', '南非|CAF|73', '刚果民主共和国|CAF|73', '阿联酋|AFC|73', '乌兹别克斯坦|AFC|73',
+      '斯洛伐克|UEFA|73', '委内瑞拉|CONMEBOL|72', '哥斯达黎加|CONCACAF|72', '巴拿马|CONCACAF|72', '几内亚|CAF|72',
+      '波黑|UEFA|72', '芬兰|UEFA|71', '阿尔巴尼亚|UEFA|71', '冰岛|UEFA|70', '牙买加|CONCACAF|70',
+      '以色列|UEFA|70', '约旦|AFC|70', '加蓬|CAF|68', '安哥拉|CAF|67', '赞比亚|CAF|68',
+      '佛得角|CAF|68', '阿曼|AFC|68', '黑山|UEFA|68', '格鲁吉亚|UEFA|68', '中国|AFC|68',
+      '保加利亚|UEFA|67', '巴林|AFC|66', '叙利亚|AFC|66', '科索沃|UEFA|66', '贝宁|CAF|66',
+      '洪都拉斯|CONCACAF|66', '越南|AFC|65', '乌干达|CAF|64', '亚美尼亚|UEFA|64', '泰国|AFC|63',
+      '海地|CONCACAF|63', '玻利维亚|CONMEBOL|62', '肯尼亚|CAF|62', '特立尼达和多巴哥|CONCACAF|62', '萨尔瓦多|CONCACAF|62',
+      '危地马拉|CONCACAF|62', '朝鲜|AFC|62', '新西兰|OFC|62', '阿塞拜疆|UEFA|62', '白俄罗斯|UEFA|62',
+      '坦桑尼亚|CAF|60', '津巴布韦|CAF|60', '黎巴嫩|AFC|60', '巴勒斯坦|AFC|60', '塞浦路斯|UEFA|60',
+      '印度尼西亚|AFC|60', '哈萨克斯坦|UEFA|60', '刚果|CAF|60', '苏丹|CAF|58', '库拉索|CONCACAF|58',
+      '科威特|AFC|58', '吉尔吉斯斯坦|AFC|58', '印度|AFC|58', '莫桑比克|CAF|56', '马来西亚|AFC|56',
+      '塔吉克斯坦|AFC|56', '摩尔多瓦|UEFA|55', '埃塞俄比亚|CAF|55', '马达加斯加|CAF|54', '拉脱维亚|UEFA|53',
+      '立陶宛|UEFA|52', '几内亚比绍|CAF|52', '尼加拉瓜|CONCACAF|52', '布隆迪|CAF|52', '土库曼斯坦|AFC|52',
+      '爱沙尼亚|UEFA|52', '古巴|CONCACAF|52', '卢旺达|CAF|50', '多米尼加|CONCACAF|50', '马耳他|UEFA|50',
+      '新喀里多尼亚|OFC|50', '卢森堡|UEFA|58', '斐济|OFC|45', '法罗群岛|OFC|45', '巴布亚新几内亚|OFC|42',
+      '所罗门群岛|OFC|42', '瓦努阿图|OFC|40', '塔希提|OFC|40', '安道尔|UEFA|40', '圣马力诺|UEFA|25',
+    ];
+    const FB_LEAGUES = FB_LEAGUE_ROWS.map(row => {
+      const parts = row.split('|');
+      const clubs = parts[5].split(',').map((name, index) => ({
+        name,
+        strength: Math.round((92 - index * 2.2) * 10) / 10,
+      }));
+      return { id: parts[0], name: parts[0], country: parts[1], confed: parts[2], tier: Number(parts[3]), power: Number(parts[4]), clubs };
+    });
+    const FB_NATIONS = FB_NATION_ROWS.map(row => {
+      const parts = row.split('|');
+      return { name: parts[0], confed: parts[1], strength: Number(parts[2]) };
+    });
+    const FB_BY_ID = new Map(FB_LEAGUES.map(league => [league.id, league]));
+    const FB_POSITIONS = { ST: '前锋', CM: '中场', CB: '后卫', GK: '门将' };
+
+    function fbClamp(value, low, high) {
+      return Math.max(low, Math.min(high, value));
+    }
+    function fbRnd(low, high) {
+      return low + Math.random() * (high - low);
+    }
+    function fbPick(list) {
+      return list[Math.floor(Math.random() * list.length)];
+    }
+    function fbLeague(id) {
+      return FB_BY_ID.get(id) || FB_LEAGUES[FB_LEAGUES.length - 1];
+    }
+    function fbNation(name) {
+      return FB_NATIONS.find(item => item.name === name) || FB_NATIONS[0];
+    }
+    function fbClub(league, clubName) {
+      return league.clubs.find(club => club.name === clubName) || league.clubs[league.clubs.length - 1];
+    }
+    function fbTag(league, clubName) {
+      const label = clubName && clubName.name ? clubName.name : clubName;
+      return '【' + league.name + ' · ' + league.country + ' · 第' + league.tier + '级】' + label;
+    }
+    function fbNationTag(name) {
+      const nation = fbNation(name);
+      return '【国家队 · ' + nation.name + ' · ' + nation.confed + '】';
+    }
+    function fbAbility(run) {
+      const fb = run.flags.fb;
+      return fb ? fb.ability : 40;
+    }
+
+    function fbInit(run, position) {
+      const attrs = run.attrs || { body: 10, int: 10, looks: 10 };
+      const base = 30 + attrs.body * 0.85 + attrs.int * 0.55 + attrs.looks * 0.25 + fbRnd(-3, 3);
+      const league = fbLeague('中超');
+      const club = fbPick(league.clubs.slice(0, 8));
+      run.flags.fb = {
+        nation: '中国',
+        pos: position,
+        leagueId: league.id,
+        club: club.name,
+        ability: Math.round(fbClamp(base, 38, 58)),
+        potential: Math.round(fbClamp(57 + attrs.body * 1.25 + attrs.int * 1.05 + attrs.looks * 0.35 + fbRnd(0, 9), 60, 96)),
+        apps: 0,
+        goals: 0,
+        assists: 0,
+        seasons: 0,
+        caps: 0,
+        nationalGoals: 0,
+        honours: [],
+        awards: [],
+        clubsPlayed: [club.name],
+        leaguesPlayed: [league.id],
+        transferFee: 0,
+        injured: 0,
+        retired: false,
+        debuted: false,
+      };
+      return run.flags.fb;
+    }
+
+    function fbSeason(run) {
+      const fb = run.flags.fb;
+      const age = run.age;
+      const league = fbLeague(fb.leagueId);
+      const club = fbClub(league, fb.club);
+      const clubLevel = league.power + (club.strength - 80) * 0.12;
+      const ceiling = fb.potential || 72;
+      const gap = Math.max(0, ceiling - fb.ability);
+      const growth = age <= 20 ? gap * fbRnd(0.2, 0.3) + fbRnd(1.0, 2.0)
+        : age <= 25 ? gap * fbRnd(0.14, 0.22) + fbRnd(0.6, 1.4)
+          : age <= 28 ? gap * fbRnd(0.03, 0.08) + fbRnd(-0.6, 1.0)
+            : age <= 31 ? fbRnd(-2.4, -0.4) + gap * 0.02
+              : fbRnd(-5.4, -2.2);
+      fb.ability = Math.round(fbClamp(fb.ability + growth, 24, 99));
+
+      if (fb.injured > 0) fb.injured -= 1;
+      const expected = league.power - 6;
+      let apps = Math.round(30 + (fb.ability - expected) * 0.6 + fbRnd(-5, 5));
+      if (fb.injured > 0) apps = Math.round(apps * 0.35);
+      apps = Math.round(fbClamp(apps, 3, 38));
+
+      const diff = fb.ability - expected;
+      const goalRate = fb.pos === 'ST' ? 0.42 + diff * 0.010
+        : fb.pos === 'CM' ? 0.19 + diff * 0.006
+          : fb.pos === 'CB' ? 0.05 + diff * 0.002
+            : 0.002;
+      const goals = Math.max(0, Math.round(apps * fbClamp(goalRate, 0.01, 1.15) * fbRnd(0.75, 1.25)));
+      const assistRate = fb.pos === 'CM' ? 0.26 + diff * 0.008 : fb.pos === 'ST' ? 0.15 : 0.09;
+      const assists = Math.max(0, Math.round(apps * fbClamp(assistRate, 0.01, 0.6) * fbRnd(0.7, 1.3)));
+      const rating = fbClamp(6.5 + diff * 0.055 + fbRnd(-0.32, 0.38) - (fb.injured > 0 ? 0.3 : 0), 5.0, 9.6);
+
+      fb.apps += apps;
+      fb.goals += goals;
+      fb.assists += assists;
+      fb.seasons += 1;
+      fb.lastSeason = { apps, goals, assists, rating, leagueId: league.id, club: club.name, age };
+      fb.rating = rating;
+
+      // 荣誉：球队成绩与俱乐部实力挂钩
+      const titleChance = fbClamp((club.strength - league.power + 8) / 34, 0.02, 0.52);
+      let honour = null;
+      if (Math.random() < titleChance) {
+        honour = league.name + '冠军';
+        fb.honours.push(honour);
+      } else if (Math.random() < titleChance * 0.4) {
+        honour = league.name + '亚军';
+      }
+      if (rating >= 7.7 && Math.random() < 0.35) {
+        fb.awards.push(league.name + '赛季最佳阵容');
+      }
+      if (goals >= 20 && Math.random() < 0.3) {
+        fb.awards.push(league.name + '金靴');
+      }
+
+      // 国家队
+      const nation = fbNation(fb.nation);
+      const ntLine = (() => {
+        const line = fb.ability - (nation.strength - 14);
+        const capChance = fbClamp(line / 26, 0, 0.85);
+        if (age >= 17 && Math.random() < capChance) {
+          const caps = age <= 20 ? Math.round(fbRnd(2, 5)) : Math.round(fbRnd(3, 9));
+          const ntGoals = fb.pos === 'ST' ? Math.round(caps * fbRnd(0.1, 0.45)) : Math.round(caps * fbRnd(0, 0.12));
+          fb.caps += caps;
+          fb.nationalGoals += ntGoals;
+          const tier = age <= 19 ? 'U19' : age <= 22 ? 'U23' : '成年队';
+          return { caps, ntGoals, tier };
+        }
+        return null;
+      })();
+
+      return { league, club, apps, goals, assists, rating, honour, ntLine, diff };
+    }
+
+    function fbTransfer(run, season) {
+      const fb = run.flags.fb;
+      const league = season.league;
+      const wantUp = fb.ability > league.power + 4 && run.age <= 32;
+      const wantDown = fb.ability < league.power - 8;
+      if (!wantUp && !wantDown) return null;
+      if (Math.random() > (wantUp ? 0.58 : 0.3)) return null;
+      let target;
+      if (wantUp) {
+        const ceiling = league.power + Math.max(6, Math.round((fb.ability - league.power) * 1.25));
+        const candidates = FB_LEAGUES.filter(item => item.power >= league.power + 4 && item.power <= ceiling && item.id !== league.id);
+        if (candidates.length === 0) {
+          // 同联赛跳到更强的俱乐部
+          const better = league.clubs.filter(item => item.name !== fb.club && item.strength > fbClub(league, fb.club).strength + 3);
+          if (better.length === 0) return null;
+          const club = fbPick(better.slice(0, 4));
+          const fee = Math.round((60 + fb.ability * fb.ability * 0.18) * fbRnd(0.6, 1.1));
+          const from = { league: league.name, country: league.country, tier: league.tier, club: fb.club };
+          fb.club = club.name;
+          fb.clubsPlayed.push(club.name);
+          fb.transferFee = fee;
+          return { from, to: { league: league.name, country: league.country, tier: league.tier, club: club.name }, fee };
+        }
+        target = fbPick(candidates);
+      } else {
+        const candidates = FB_LEAGUES.filter(item => item.power <= league.power - 3 && item.id !== league.id);
+        if (candidates.length === 0) return null;
+        target = fbPick(candidates);
+      }
+      const club = fbPick(target.clubs.slice(0, 10));
+      const fee = Math.round((60 + fb.ability * fb.ability * 0.18) * fbRnd(0.7, 1.4));
+      const from = { league: league.name, country: league.country, tier: league.tier, club: fb.club };
+      fb.leagueId = target.id;
+      fb.club = club.name;
+      fb.clubsPlayed.push(club.name);
+      fb.leaguesPlayed.push(target.id);
+      fb.transferFee = fee;
+      return { from, to: { league: target.name, country: target.country, tier: target.tier, club: club.name }, fee };
+    }
+
+    function fbShouldRetire(run) {
+      const fb = run.flags.fb;
+      if (!fb || fb.retired) return false;
+      if (run.age >= 37) return true;
+      if (run.age >= 33 && fb.ability < 52) return true;
+      if (run.age >= 34 && Math.random() < 0.35) return true;
+      return false;
+    }
+
+    function fbCareerSummary(run) {
+      const fb = run.flags.fb;
+      if (!fb) return '';
+      const pos = FB_POSITIONS[fb.pos] || '球员';
+      const honourNames = Array.from(new Set(fb.honours));
+      const awardNames = Array.from(new Set(fb.awards));
+      const honours = fb.honours.length ? '，拿过 ' + fb.honours.length + ' 座奖杯（' + honourNames.slice(-4).join('、') + '）' : '';
+      const awards = awardNames.length ? '，个人荣誉：' + awardNames.slice(-4).join('、') : '';
+      const clubs = fb.clubsPlayed.length > 1 ? '效力过 ' + fb.clubsPlayed.length + ' 家俱乐部（' + fb.clubsPlayed.slice(0, 4).join('、') + (fb.clubsPlayed.length > 4 ? ' 等' : '') + '）' : '一直留在' + fb.clubsPlayed[0];
+      return pos + '生涯 ' + fb.seasons + ' 个赛季：' + fb.apps + ' 场 ' + fb.goals + ' 球 ' + fb.assists + ' 助攻，'
+        + '国家队 ' + fb.caps + ' 场 ' + fb.nationalGoals + ' 球' + honours + awards + '。' + clubs + '。';
+    }
+
+    function maybeFootballYear(run) {
+      const fb = run.flags.fb;
+      if (!fb || fb.retired) return null;
+      if (run.worldId !== 'modern') return null;
+      return {
+        id: 'fb_year',
+        resolve(inner) {
+          const state = inner.flags.fb;
+          const age = inner.age;
+          const league = fbLeague(state.leagueId);
+          // 青训阶段
+          if (age <= 15) {
+            return {
+              tone: 'good',
+              text: fbTag(league, state.club) + ' 你在青训梯队里长个子，教练把你从边路挪到了' + (FB_POSITIONS[state.pos] || '中路')
+                + '。每天两练，晚上还要补文化课。',
+              effects: { mood: 4, health: -2, body: 1 },
+            };
+          }
+          if (!state.debuted) {
+            state.debuted = true;
+            const season = fbSeason(inner);
+            return {
+              tone: 'good',
+              text: fbTag(season.league, state.club) + ' 你在一场无关紧要的联赛里替补登场，23 分钟，一次成功的抢断，一次传丢的直塞。'
+                + '终场哨响时，看台上有人喊了你的名字。',
+              effects: { mood: 12, wealth: 10 },
+            };
+          }
+          if (fbShouldRetire(inner)) {
+            state.retired = true;
+            const summary = fbCareerSummary(inner);
+            return {
+              tone: 'good',
+              text: fbTag(league, state.club) + ' 赛季结束后，你在更衣室宣布退役。' + summary,
+              effects: { mood: 6, health: 4 },
+            };
+          }
+          const season = fbSeason(inner);
+          const transfer = fbTransfer(inner, season);
+          const parts = [];
+          if (transfer) {
+            parts.push('【转会】' + transfer.from.club + '（' + transfer.from.league + ' · ' + transfer.from.country + ' · 第' + transfer.from.tier + '级）'
+              + '以 ' + transfer.fee + ' 万欧把你卖给了 ' + transfer.to.club + '（' + transfer.to.league + ' · ' + transfer.to.country + ' · 第' + transfer.to.tier + '级）。');
+          }
+          parts.push(fbTag(season.league, season.club) + ' 本赛季 ' + season.apps + ' 场 ' + season.goals + ' 球 ' + season.assists + ' 助，'
+            + '场均评分 ' + season.rating.toFixed(2) + (season.honour ? '，' + season.honour : '') + '。');
+          if (season.ntLine) {
+            const nt = season.ntLine;
+            parts.push(fbNationTag(state.nation) + ' 你入选' + nt.tier + '，' + nt.caps + ' 场 ' + nt.ntGoals + ' 球。');
+          }
+          const injury = Math.random() < 0.07;
+          if (injury) {
+            state.injured = 1;
+            state.ability = Math.max(24, state.ability - Math.round(fbRnd(1, 3)));
+            parts.push('【伤病】一次对抗后你倒地不起，诊断是韧带损伤，缺席了几个月。');
+          }
+          const tone = season.rating >= 7.3 ? 'good' : season.rating <= 6.2 ? 'tragic' : 'normal';
+          return { tone, text: parts.join(' '), effects: { mood: season.rating >= 7.2 ? 6 : season.rating <= 6.2 ? -5 : 1, wealth: Math.round(20 + state.ability * 1.6) } };
+        },
+      };
+    }
+
+    const FB_CAREER_NODE = {
+      id: 'modern_career',
+      at: 14,
+      chance: 1,
+      when: run => run.worldId === 'modern' && !run.flags.fb && !run.flags.careerAsked,
+      title: '职业生涯：要不要走职业这条路',
+      prompt: '体校教练看了你一眼，把一张报名表推过来：「想踢，就得现在决定。你踢哪个位置？」',
+      options: [
+        {
+          id: 'fb_st',
+          label: '前锋',
+          desc: '进球的人最容易被记住，也最容易被骂。',
+          requires: { body: 10 },
+          resolve(run) { fbInit(run, 'ST'); run.flags.careerAsked = true; return { tone: 'good', text: '你填了「前锋」。从那天起，你的生活被切成两半：上午上课，下午在草皮上跑。', effects: { mood: 8, body: 1, flags: { careerAsked: true } } } },
+        },
+        {
+          id: 'fb_cm',
+          label: '中场',
+          desc: '球在你脚下停一拍，整支队伍就跟着你转。',
+          requires: { int: 10 },
+          resolve(run) { fbInit(run, 'CM'); return { tone: 'good', text: '你填了「中场」。教练说这位置最费脑子，你点头，心里有点得意。', effects: { mood: 8, int: 1, flags: { careerAsked: true } } } },
+        },
+        {
+          id: 'fb_cb',
+          label: '后卫',
+          desc: '不出彩，但少了你，队伍就漏风。',
+          requires: { body: 12 },
+          resolve(run) { fbInit(run, 'CB'); return { tone: 'normal', text: '你填了「后卫」。父亲说这位置踏实，你笑着说，是不出名的意思吧。', effects: { mood: 6, body: 1, flags: { careerAsked: true } } } },
+        },
+        {
+          id: 'fb_gk',
+          label: '门将',
+          desc: '整场比赛只有你一个人穿不同颜色的衣服。',
+          requires: { int: 12 },
+          resolve(run) { fbInit(run, 'GK'); return { tone: 'normal', text: '你填了「门将」。第一次戴上门将手套，你发现世界安静了下来。', effects: { mood: 6, int: 1, flags: { careerAsked: true } } } },
+        },
+        {
+          id: 'fb_no',
+          label: '不踢了，好好读书',
+          desc: '把球鞋收进柜子，回到课桌前。',
+          resolve() { return { tone: 'normal', text: '你把报名表折好，放回教练桌上。那天下午你路过球场，听见哨声，脚步慢了半拍。', effects: { mood: -2, int: 1, flags: { careerAsked: true } } } },
+        },
+      ],
+    };
 
     const EVENTS = [
       // ── 童年 ────────────────────────────────────────────────────────────────
@@ -14153,6 +14532,7 @@ function attrCapFor(run) {
           COMMON_CHOICE_EXTRA,
           COMMON_CHOICE_MORE,
           CULTIVATION_COMMON,
+          FB_CAREER_NODE,
         )
       const seen = run.flags._choiceSeen || {}
       const cultivation = run.worldId === 'cultivation'
@@ -17130,6 +17510,7 @@ function attrCapFor(run) {
         const crisis = !partnerStory ? maybeCrisis(run) : null
         const powerMoment = !partnerStory && !crisis ? maybePowerMoment(run) : null
         const twist = !partnerStory && !crisis && !powerMoment && Math.random() < world.twistChance ? chooseTwist(run) : null
+        const football = !partnerStory && !crisis && !powerMoment && !twist ? maybeFootballYear(run) : null
         if (partnerStory) {
           source = 'partner'
           current = partnerStory
@@ -17142,6 +17523,9 @@ function attrCapFor(run) {
         } else if (twist) {
           source = 'twist'
           current = twist
+        } else if (football) {
+          source = 'football'
+          current = football
         } else if (Math.random() < quietChance(run.age)) {
           source = 'quiet'
           current = null
@@ -18797,7 +19181,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.30.0 · 2026-11-11</p>'
+      + '<p class="ver-line">v1.31.0 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -19434,6 +19818,7 @@ function aiPortraitFor(run) {
     return '<section class="ending">'
       + '<div class="ending-top"><div><span class="ending-kicker">ENDING · ' + esc(world.name) + (ending.comedy ? ' · 喜剧' : '') + '</span><h2>' + esc(ending.title) + '</h2></div><div class="score-ring"><b>' + ending.score + '</b><span>SCORE</span></div></div>'
       + '<p class="ending-desc">' + esc(ending.description) + '</p>'
+      + (run.flags.fb ? '<p class="ending-desc career-line">' + esc(fbCareerSummary(run)) + '</p>' : '')
       + '<div class="grade-line"><span class="grade-badge" data-grade="' + esc(grade.grade) + '">' + esc(grade.grade) + '</span><strong>' + esc(grade.label) + '</strong><span class="grade-cause">终局：' + esc(run.cause) + '</span></div>'
       + '<div class="ending-stats">' + stats + '</div>'
       + '<div class="ending-ach">' + achievements + '</div>'
