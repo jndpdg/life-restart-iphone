@@ -2643,7 +2643,7 @@ function attrCapFor(run) {
           lines.push('【身价】德转更新为 ' + fb.value + ' 万欧。');
         }
         // 退役之后
-        if (fb.retired && !fb.coachOffer && Math.random() < 0.4) {
+        if (fb.retired && !fb.coachOffer && !run.flags.coachPath && Math.random() < 0.4) {
           fb.coachOffer = true;
           lines.push('【退役之后】老东家递来一份青年队教练合同。');
         }
@@ -2671,7 +2671,7 @@ function attrCapFor(run) {
             lines.push('【总决赛 MVP】夺冠之夜捧起 FMVP 奖杯。');
           }
         }
-        if (bb.retired && !bb.coachOffer && Math.random() < 0.4) {
+        if (bb.retired && !bb.coachOffer && !run.flags.coachPath && Math.random() < 0.4) {
           bb.coachOffer = true;
           lines.push('【退役之后】转做球队助教，开始带年轻人。');
         }
@@ -2697,7 +2697,7 @@ function attrCapFor(run) {
         if (!es.retired && Math.random() < 0.18) {
           lines.push('【版本】新版本改动让你的英雄池被削了一刀，只能重新练。');
         }
-        if (es.retired && !es.streamDeal && Math.random() < 0.45) {
+        if (es.retired && !es.streamDeal && !run.flags.coachPath && Math.random() < 0.45) {
           es.streamDeal = true;
           lines.push('【退役之后】签了直播约，弹幕还在刷当年的名场面。');
         }
@@ -2783,7 +2783,7 @@ function attrCapFor(run) {
 
     function coachState(run) {
       if (!run.flags.coach) {
-        run.flags.coach = { level: 0, seasons: 0, wins: 0, draws: 0, losses: 0, titles: 0, clubs: [], done: false };
+        run.flags.coach = { level: 0, seasons: 0, wins: 0, draws: 0, losses: 0, titles: 0, clubs: ['老东家青年队'], done: false };
       }
       return run.flags.coach;
     }
