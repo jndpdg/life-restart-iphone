@@ -1912,7 +1912,7 @@ function attrCapFor(run) {
       const ballon = fbBallonDor(fb, rating, goals, league, continental, tournament);
 
       // 荣誉：球队成绩与俱乐部实力挂钩
-      const titleChance = fbClamp((club.strength - league.power + 8) / 34, 0.02, 0.52);
+      const titleChance = fbClamp((club.strength - league.power) / 70 + 0.05, 0.03, 0.28);
       let honour = null;
       if (Math.random() < titleChance) {
         honour = league.name + '冠军';
@@ -2233,7 +2233,7 @@ function attrCapFor(run) {
       bb.seasons += 1;
       bb.lastSeason = { games, ppg, rpg, apg, leagueId: league.id, club: club.name };
 
-      const titleChance = fbClamp((club.strength - league.power) / 45 + 0.03, 0.02, 0.22);
+      const titleChance = fbClamp((club.strength - league.power) / 70 + 0.03, 0.02, 0.14);
       let honour = null;
       if (Math.random() < titleChance) { honour = league.name + '总冠军'; bb.titles += 1; bb.honours.push(honour); }
       if (ppg > 18 && games > 55 && Math.random() < 0.55) bb.allStars += 1;
@@ -2431,18 +2431,26 @@ function attrCapFor(run) {
       es.lastSeason = { matches, wins, kda, league: league.league, team: team.name };
 
       let honour = null;
-      if (Math.random() < fbClamp((team.strength - league.power + 7) / 26, 0.03, 0.45)) {
+      if (Math.random() < fbClamp((team.strength - league.power) / 60 + 0.04, 0.02, 0.2)) {
         honour = league.league + '冠军';
         es.titles += 1;
         es.honours.push(honour);
       }
-      if (league.tier === 1 && Math.random() < fbClamp((team.strength - league.power) / 60 + (es.ability - 80) * 0.012, 0.005, 0.26)) {
-        honour = '世界赛冠军';
-        es.worldTitles += 1;
-        es.honours.push(es.game + '世界赛冠军');
+      let worlds = null;
+      if (league.tier === 1 && Math.random() < 0.85) {
+        const p = fbClamp((team.strength - league.power + 4) / 50 + (es.ability - 74) * 0.015, 0.02, 0.3);
+        if (Math.random() < p) {
+          honour = '世界赛冠军';
+          es.worldTitles += 1;
+          es.honours.push(es.game + '世界赛冠军');
+          worlds = '冠军';
+        } else {
+          worlds = fbPick(['八强', '四强', '小组出局']);
+          es.worldAppearances = (es.worldAppearances || 0) + 1;
+        }
       }
       if (kda > 4.2 && Math.random() < 0.3) { es.mvps += 1; es.honours.push(league.league + 'FMVP'); }
-      return { league, team, matches, wins, kda, honour, diff };
+      return { league, team, matches, wins, kda, honour, diff, worlds };
     }
 
     function esTransfer(run, season) {
@@ -2484,8 +2492,8 @@ function attrCapFor(run) {
       const role = ES_ROLES[es.role] || '选手';
       const winRate = es.matches ? Math.round((es.wins / es.matches) * 100) : 0;
       const titles = es.titles ? '，' + es.titles + ' 个联赛冠军' : '';
-      const worlds = es.worldTitles ? '，' + es.worldTitles + ' 座世界赛奖杯' : '';
       const mvp = es.mvps ? '，' + es.mvps + ' 次 FMVP' : '';
+      const worlds = es.worldTitles ? '，' + es.worldTitles + ' 座世界赛奖杯' : (es.worldAppearances ? '，' + es.worldAppearances + ' 次世界赛出场' : '');
       return es.game + ' ' + role + '生涯 ' + es.seasons + ' 个赛季：' + es.matches + ' 场 ' + winRate + '% 胜率，场均 KDA '
         + (es.kda || 0).toFixed(2) + titles + worlds + mvp + '。效力过 ' + Array.from(new Set(es.teamsPlayed)).join('、') + '。';
     }
@@ -2521,6 +2529,7 @@ function attrCapFor(run) {
           }
           parts.push(esTag(season.league, season.team) + ' 本赛季 ' + season.matches + ' 场 ' + season.wins + ' 胜，场均 KDA ' + season.kda.toFixed(2)
             + (season.honour ? '，' + season.honour : '') + '。');
+          if (season.worlds) parts.push('【' + state.game + '世界赛】' + season.worlds + '。');
           const tone = season.kda >= 4 ? 'good' : season.kda <= 2.4 ? 'tragic' : 'normal';
           return { tone, text: parts.join(' '), effects: { mood: season.kda >= 4 ? 6 : season.kda <= 2.4 ? -5 : 1, wealth: Math.round(40 + state.ability * 2.5), health: -2 } };
         },
@@ -17996,10 +18005,11 @@ function attrCapFor(run) {
       if (milestone) {
         source = 'milestone'
       } else {
-        const partnerStory = choosePartnerStory(run)
-        const crisis = !partnerStory ? maybeCrisis(run) : null
-        const powerMoment = !partnerStory && !crisis ? maybePowerMoment(run) : null
-        const twist = !partnerStory && !crisis && !powerMoment && Math.random() < world.twistChance ? chooseTwist(run) : null
+        const careerPrime = Boolean(run.flags.careerSport) && run.age >= 33
+        const partnerStory = careerPrime ? null : choosePartnerStory(run)
+        const crisis = !partnerStory && !careerPrime ? maybeCrisis(run) : null
+        const powerMoment = !partnerStory && !crisis && !careerPrime ? maybePowerMoment(run) : null
+        const twist = !partnerStory && !crisis && !powerMoment && !careerPrime && Math.random() < world.twistChance ? chooseTwist(run) : null
         const football = !partnerStory && !crisis && !powerMoment && !twist ? maybeCareerYear(run) : null
         if (partnerStory) {
           source = 'partner'
