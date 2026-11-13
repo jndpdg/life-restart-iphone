@@ -547,6 +547,38 @@
       font-size: 8px;
       letter-spacing: 0.04em;
     }
+    .save-panel {
+      margin: 14px 0 0;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+    }
+    .save-panel summary {
+      cursor: pointer;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+    .save-box {
+      width: 100%;
+      min-height: 88px;
+      margin-top: 8px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+      line-height: 1.6;
+      resize: vertical;
+    }
+    .save-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
     .topbar {
       position: sticky;
       top: var(--safe-top);
@@ -17681,43 +17713,134 @@ function attrCapFor(run) {
       return { version: 2, modes: { ...base.modes, [key]: nextModeRecord } }
     }
 
-    function readRecord() {
+    const BACKUP_KEY = STORAGE_KEY + '.bak'
+    let recordWarned = false
+
+    function parseRecordRaw(raw) {
+      if (!raw) return null
+      let parsed = null
       try {
-        const raw = window.localStorage.getItem(STORAGE_KEY)
-        if (!raw) return defaultRecord()
-        const parsed = JSON.parse(raw)
-        if (!parsed || typeof parsed !== 'object') return defaultRecord()
-        if (parsed.modes && typeof parsed.modes === 'object') {
-          return {
-            version: 2,
-            modes: {
-              interactive: normalizeModeRecord(parsed.modes.interactive),
-              text: normalizeModeRecord(parsed.modes.text),
-            },
-          }
-        }
-        if (!parsed.runs && !parsed.best && !parsed.last && !parsed.replay
-          && !Array.isArray(parsed.unlocked) && !Array.isArray(parsed.unlockedAchievements)) {
-          return defaultRecord()
-        }
-        const legacy = normalizeModeRecord(parsed)
+        parsed = JSON.parse(raw)
+      } catch {
+        return null
+      }
+      if (!parsed || typeof parsed !== 'object') return null
+      if (parsed.modes && typeof parsed.modes === 'object') {
         return {
           version: 2,
+          savedAt: Number(parsed.savedAt) || 0,
           modes: {
-            interactive: legacy,
-            text: normalizeModeRecord(parsed),
+            interactive: normalizeModeRecord(parsed.modes.interactive),
+            text: normalizeModeRecord(parsed.modes.text),
           },
         }
-      } catch {
-        return defaultRecord()
+      }
+      if (!parsed.runs && !parsed.best && !parsed.last && !parsed.replay
+        && !Array.isArray(parsed.unlocked) && !Array.isArray(parsed.unlockedAchievements)) {
+        return null
+      }
+      const legacy = normalizeModeRecord(parsed)
+      return {
+        version: 2,
+        savedAt: 0,
+        modes: {
+          interactive: legacy,
+          text: normalizeModeRecord(parsed),
+        },
       }
     }
 
-    function writeRecord(record) {
+    function recordIsEmpty(record) {
+      if (!record || !record.modes) return true
+      return ['interactive', 'text'].every(key => {
+        const bucket = record.modes[key]
+        if (!bucket) return true
+        return !bucket.runs && !bucket.best && !bucket.last && !bucket.replay
+          && !(bucket.unlocked && bucket.unlocked.length)
+          && !(bucket.unlockedAchievements && bucket.unlockedAchievements.length)
+      })
+    }
+
+    function readRecord() {
+      let primary = null
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(record))
+        primary = parseRecordRaw(window.localStorage.getItem(STORAGE_KEY))
       } catch {
-        /* Local storage can be unavailable; the game still works for this run. */
+        primary = null
+      }
+      if (primary && !recordIsEmpty(primary)) return primary
+      try {
+        const backup = parseRecordRaw(window.localStorage.getItem(BACKUP_KEY))
+        if (backup && !recordIsEmpty(backup)) return backup
+      } catch {
+        /* backup unreadable; fall through */
+      }
+      return primary || defaultRecord()
+    }
+
+    function notifySave(text) {
+      if (typeof showToast === 'function') {
+        showToast(text)
+        return
+      }
+      if (typeof console !== 'undefined' && console.warn) console.warn('[life-restart] ' + text)
+    }
+
+    function writeRecord(record) {
+      const payload = { ...record, savedAt: Date.now() }
+      try {
+        const previous = window.localStorage.getItem(STORAGE_KEY)
+        if (previous && previous !== JSON.stringify(payload)) {
+          const previousRecord = parseRecordRaw(previous)
+          if (previousRecord && !recordIsEmpty(previousRecord)) {
+            window.localStorage.setItem(BACKUP_KEY, previous)
+          }
+        }
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+      } catch {
+        try {
+          const slim = JSON.parse(JSON.stringify(payload))
+          for (const key of ['interactive', 'text']) {
+            const bucket = slim.modes && slim.modes[key]
+            if (bucket && bucket.replay && Array.isArray(bucket.replay.log)) {
+              bucket.replay.log = bucket.replay.log.slice(-120)
+            }
+          }
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(slim))
+          if (!recordWarned) {
+            recordWarned = true
+            notifySave('存档空间不足，已裁剪回放记录后保存')
+          }
+        } catch {
+          if (!recordWarned) {
+            recordWarned = true
+            notifySave('浏览器拒绝保存本地记录（隐私模式或空间已满）')
+          }
+        }
+      }
+    }
+
+    function mergeRecords(current, incoming) {
+      const base = current && current.modes ? current : defaultRecord()
+      const extra = incoming && incoming.modes ? incoming : defaultRecord()
+      const mergeMode = (a, b) => {
+        const newer = (b.savedAt || 0) >= (a.savedAt || 0) ? b : a
+        return {
+          runs: Math.max(a.runs || 0, b.runs || 0),
+          best: Math.max(a.best || 0, b.best || 0),
+          last: newer.last || a.last || b.last || null,
+          unlocked: [...new Set([...(a.unlocked || []), ...(b.unlocked || [])])],
+          unlockedAchievements: [...new Set([...(a.unlockedAchievements || []), ...(b.unlockedAchievements || [])])],
+          replay: newer.replay || a.replay || b.replay || null,
+        }
+      }
+      return {
+        version: 2,
+        savedAt: Math.max(base.savedAt || 0, extra.savedAt || 0),
+        modes: {
+          interactive: mergeMode(base.modes.interactive, extra.modes.interactive),
+          text: mergeMode(base.modes.text, extra.modes.text),
+        },
       }
     }
 
@@ -20423,14 +20546,19 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.35.1 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.35.2 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
       + '<button class="btn btn-primary" data-action="start-setup">开始新的一生 <span aria-hidden="true">→</span></button>'
       + (replay ? '<button class="btn btn-ghost" data-action="open-last-replay">回放上一生</button>' : '')
       + '</div>'
-      + '<div class="play-mode-switch" role="group" aria-label="游戏模式">'
++ '<details class="save-panel"><summary>存档备份 / 迁移</summary>'
+      + '<p class="panel-note">记录只存在这台设备的浏览器里（换端口、清缓存、无痕模式都会丢）。点「导出」把文本复制走，换设备后粘回来点「导入」。</p>'
+      + '<textarea class="save-box" id="save-box" spellcheck="false" autocomplete="off" placeholder="点「导出」在这里生成存档文本；或粘贴存档文本后点「导入」"></textarea>'
+      + '<div class="save-actions"><button class="btn btn-ghost btn-small" data-action="export-save">导出</button><button class="btn btn-ghost btn-small" data-action="import-save">导入</button></div>'
+      + '</details>'
+            + '<div class="play-mode-switch" role="group" aria-label="游戏模式">'
       + '<button data-action="set-mode" data-mode="interactive" data-active="' + (state.playMode === 'interactive' ? 'true' : 'false') + '"><b>互动模式</b><span>在命运岔路停下来，自己选</span></button>'
       + '<button data-action="set-mode" data-mode="text" data-active="' + (state.playMode === 'text' ? 'true' : 'false') + '"><b>纯文本模式</b><span>自动替你选，只负责读故事</span></button>'
       + '</div>'
@@ -21600,6 +21728,42 @@ function aiPortraitFor(run) {
       case 'inherit': inheritLife(); break;
       case 'restart': restartLife(); break;
       case 'clear-legacy': state.legacy = null; render(); break;
+      case 'export-save': {
+        const box = document.getElementById('save-box')
+        if (!box) break
+        box.value = JSON.stringify({ ...state.record, savedAt: Date.now() })
+        try {
+          box.focus()
+          box.select()
+          if (window.navigator && window.navigator.clipboard) window.navigator.clipboard.writeText(box.value).catch(() => {})
+        } catch { /* selection may fail on some browsers */ }
+        showToast('存档已填入文本框（并尝试复制），请自行保存这段文本')
+        break
+      }
+      case 'import-save': {
+        const box = document.getElementById('save-box')
+        if (!box || !box.value.trim()) {
+          showToast('先把存档文本粘贴到文本框里')
+          break
+        }
+        let parsed = null
+        try {
+          parsed = parseRecordRaw(box.value.trim())
+        } catch {
+          parsed = null
+        }
+        if (!parsed) {
+          showToast('这段文本不是有效的存档')
+          break
+        }
+        const merged = mergeRecords(state.record, parsed)
+        writeRecord(merged)
+        state.record = readRecord()
+        state.pendingScroll = 'top'
+        render()
+        showToast('存档已导入：第 ' + (modeRecord(state.record, state.playMode).runs || 0) + ' 世，最高 ' + (modeRecord(state.record, state.playMode).best || 0) + ' 分')
+        break
+      }
       case 'open-replay':
       case 'open-last-replay': openReplay(); break;
       case 'close-replay': closeReplay(); break;
