@@ -21173,8 +21173,10 @@ function attrCapFor(run) {
         clearAvatarDock(card);
         return;
       }
-      card.style.left = spacerRect.left + 'px';
-      card.style.width = spacerRect.width + 'px';
+      if (Math.abs(spacerRect.width - 32 - parseFloat(card.style.width || '0')) > 1) {
+        card.style.left = (spacerRect.left + 16) + 'px';
+        card.style.width = (spacerRect.width - 32) + 'px';
+      }
       return;
     }
     const rect = card.getBoundingClientRect();
