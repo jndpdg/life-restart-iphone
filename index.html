@@ -118,6 +118,7 @@
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
       overflow-x: hidden;
+      overflow-x: clip;
       overscroll-behavior-y: none;
       touch-action: manipulation;
     }
@@ -804,14 +805,17 @@
       border: 1px solid var(--line);
       border-radius: 15px;
       background: linear-gradient(145deg, color-mix(in srgb, var(--panel) 96%, transparent), color-mix(in srgb, var(--panel-2) 86%, transparent));
-      /* 固定在屏幕上方：滚动时人物形象始终可见 */
+      /* 置顶角色栏：滚动时人物形象始终可见（sticky 失效时由 syncAvatarDock 兜底为 fixed） */
       position: sticky;
-      top: calc(6px + env(safe-area-inset-top));
-      z-index: 9;
+      top: calc(6px + env(safe-area-inset-top, 0px));
+      z-index: 40;
       backdrop-filter: blur(14px) saturate(112%);
       -webkit-backdrop-filter: blur(14px) saturate(112%);
       box-shadow: 0 10px 24px rgba(0, 0, 0, .28);
     }
+    .avatar-pin-spacer { flex: none; height: 0; }
+    .avatar-card.is-pinned { box-shadow: 0 14px 30px rgba(0, 0, 0, .42); }
+    .log-tabs { scroll-margin-top: 200px; }
     .log-group { margin-top: 4px; }
     .log-group + .log-group { margin-top: 14px; }
     .log-group-head {
@@ -846,7 +850,7 @@
     .career-row b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
     .log-tabs {
       position: sticky;
-      top: calc(6px + env(safe-area-inset-top));
+      top: calc(196px + env(safe-area-inset-top, 0px));
       z-index: 8;
       display: flex;
       gap: 4px;
@@ -21119,6 +21123,60 @@ function attrCapFor(run) {
       + '</section></div>';
   }
 
+  function avatarDockTop() {
+    return 6;
+  }
+
+  function clearAvatarDock(card) {
+    card.style.position = '';
+    card.style.top = '';
+    card.style.left = '';
+    card.style.width = '';
+    card.style.margin = '';
+    card.classList.remove('is-pinned');
+    const spacer = card.parentNode ? card.parentNode.querySelector('.avatar-pin-spacer') : null;
+    if (spacer) spacer.remove();
+  }
+
+  // 角色栏置顶兜底：如果 position: sticky 在这个浏览器/容器里没生效（iOS Safari 的
+  // overflow-x 与 backdrop-filter 组合常见），就切换成 fixed 并在原位留出占位。
+  function syncAvatarDock() {
+    const card = document.querySelector('.screen.game > .avatar-card');
+    if (!card) return;
+    const top = avatarDockTop();
+    if (card.classList.contains('is-pinned')) {
+      const spacer = card.parentNode.querySelector('.avatar-pin-spacer');
+      if (!spacer) return;
+      const spacerRect = spacer.getBoundingClientRect();
+      if (spacerRect.top > top) {
+        clearAvatarDock(card);
+        return;
+      }
+      card.style.left = spacerRect.left + 'px';
+      card.style.width = spacerRect.width + 'px';
+      return;
+    }
+    const rect = card.getBoundingClientRect();
+    if (rect.top >= top - 1) return;
+    const spacer = document.createElement('div');
+    spacer.className = 'avatar-pin-spacer';
+    spacer.style.height = (rect.height + 8) + 'px';
+    card.parentNode.insertBefore(spacer, card);
+    card.classList.add('is-pinned');
+    card.style.position = 'fixed';
+    card.style.top = top + 'px';
+    card.style.left = rect.left + 'px';
+    card.style.width = rect.width + 'px';
+    card.style.margin = '0';
+  }
+
+  window.addEventListener('scroll', syncAvatarDock, { passive: true });
+  window.addEventListener('resize', () => {
+    const card = document.querySelector('.screen.game > .avatar-card');
+    if (card && card.classList.contains('is-pinned')) clearAvatarDock(card);
+    syncAvatarDock();
+  });
+
   function scrollAfterRender() {
     const mode = state.pendingScroll;
     state.pendingScroll = 'preserve';
@@ -21128,6 +21186,7 @@ function attrCapFor(run) {
       } else if (mode === 'bottom') {
         window.scrollTo(0, document.documentElement.scrollHeight);
       }
+      syncAvatarDock();
     });
   }
 
@@ -21207,7 +21266,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.38.0 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.38.1 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
