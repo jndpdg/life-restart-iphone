@@ -14413,6 +14413,192 @@ function attrCapFor(run) {
     ]
 
 
+    // ===== 职业生涯结局（仅现实世界会出现，优先于普通结局判定）=====
+    const CAREER_ENDINGS = [
+{
+        id: 'career_fb_ballon_king',
+        title: '金球王朝',
+        description: '你把金球奖摆成了一排。很多年后，人们争论谁是一个时代最好的球员时，你的名字总是第一个被提起。',
+        tone: 'legend',
+        when: run => Boolean(run.flags.fb && (run.flags.fb.ballonDors || 0) >= 3),
+      },
+{
+        id: 'career_fb_world_king',
+        title: '世界之王',
+        description: '俱乐部层面的奖杯堆满了一间屋子，国家队的那座奖杯放在最中间。你举起来的那天，整条街都在喊你的名字。',
+        tone: 'legend',
+        when: run => Boolean(run.flags.fb && (run.flags.fb.ballonDors || 0) >= 1 && (run.flags.fb.intTitles || 0) >= 1),
+      },
+{
+        id: 'career_fb_ballon',
+        title: '金球先生',
+        description: '那一年的颁奖礼上，你走上台，接过那只金色的球。你知道它不只属于你，还属于那些在你身后跑动的人。',
+        tone: 'legend',
+        when: run => Boolean(run.flags.fb && (run.flags.fb.ballonDors || 0) >= 1),
+      },
+{
+        id: 'career_fb_worldcup',
+        title: '举国之战',
+        description: '决赛的点球大战里，你是最后一个走上去的人。球进的那一刻，你听见的不是欢呼，是很多人在远处哭。',
+        tone: 'legend',
+        when: run => Boolean(run.flags.fb && (run.flags.fb.intTitles || 0) >= 1),
+      },
+{
+        id: 'career_fb_continental_king',
+        title: '欧冠之王',
+        description: '大耳朵杯被你举起过一次、两次。后来人们干脆把那项赛事和你的名字放在同一句话里。',
+        tone: 'legend',
+        when: run => Boolean(run.flags.fb && (run.flags.fb.continentalTitles || 0) >= 2),
+      },
+{
+        id: 'career_fb_continental',
+        title: '洲际之夜',
+        description: '决赛的灯光很亮，亮到你有一瞬间看不清球门。球进了之后，你只是站在原地，被队友们扑倒。',
+        tone: 'great',
+        when: run => Boolean(run.flags.fb && (run.flags.fb.continentalTitles || 0) >= 1),
+      },
+{
+        id: 'career_bb_hof',
+        title: '名人堂',
+        description: '很多年后，你的球衣被挂在了球馆最高的地方。介绍你的时候，播音员念了很久的名字和年份。',
+        tone: 'legend',
+        when: run => Boolean(run.flags.bb && (run.flags.bb.titles || 0) >= 1 && (run.flags.bb.allStars || 0) >= 4),
+      },
+{
+        id: 'career_bb_champ',
+        title: '总冠军戒指',
+        description: '终场哨响的时候，你被压在人群最底下。戒指发下来后，你一直戴在右手，连切菜都不摘。',
+        tone: 'great',
+        when: run => Boolean(run.flags.bb && (run.flags.bb.titles || 0) >= 1),
+      },
+{
+        id: 'career_bb_allstar',
+        title: '全明星',
+        description: '灯光暗下去，主持人念到你的名字。你从替补席站起来，走向球场中央，听见了整座城市的音量。',
+        tone: 'great',
+        when: run => Boolean(run.flags.bb && (run.flags.bb.allStars || 0) >= 3),
+      },
+{
+        id: 'career_es_worlds_3',
+        title: '三冠王朝',
+        description: '三次世界赛，三次站在最高的地方。后来的人把那段时期叫做你的版本，版本号至今没有更新。',
+        tone: 'legend',
+        when: run => Boolean(run.flags.es && (run.flags.es.worldTitles || 0) >= 3),
+      },
+{
+        id: 'career_es_worlds',
+        title: '世界冠军',
+        description: '决胜局水晶爆炸的那一刻，耳机里很吵。你摘下耳机，才听见场馆里有一万个人在喊。',
+        tone: 'legend',
+        when: run => Boolean(run.flags.es && (run.flags.es.worldTitles || 0) >= 1),
+      },
+{
+        id: 'career_es_msi',
+        title: '赛区之光',
+        description: '你被很多人记住，不是因为一座奖杯，而是因为你在这片赛区最灰暗的几年里，一直站在中路。',
+        tone: 'great',
+        when: run => Boolean(run.flags.es && (run.flags.es.mvps || 0) >= 2),
+      },
+{
+        id: 'career_es_streamer',
+        title: '退役之后，直播间',
+        description: '你把 ID 留在了赛场上，又把它挂在了直播间标题里。弹幕问你当年那一局，你讲了第四十七遍，还是很高兴。',
+        tone: 'normal',
+        when: run => Boolean(run.flags.es && run.flags.es.streamDeal),
+      },
+{
+        id: 'career_coach_legend',
+        title: '名帅',
+        description: '你在场边站了二十年。媒体说你固执、冷静、不好相处，但每一个被你带过的球员都说你记得他们的名字。',
+        tone: 'legend',
+        when: run => Boolean((run.flags.coach || {}).titles >= 5),
+      },
+{
+        id: 'career_coach_national',
+        title: '国家队主帅',
+        description: '你站上了那个位置。奏国歌的时候，你跟着唱，声音有点抖，没有人听得出来。',
+        tone: 'great',
+        when: run => Boolean((run.flags.coach || {}).national),
+      },
+{
+        id: 'career_coach_champion',
+        title: '场边的第一座奖杯',
+        description: '终场哨响，球员们冲进场内。你把手插在口袋里，站了很久，才慢慢走过去。',
+        tone: 'great',
+        when: run => Boolean((run.flags.coach || {}).titles >= 1),
+      },
+{
+        id: 'career_coach_teacher',
+        title: '青训教父',
+        description: '你带的孩子一个一个走上来，又一个一个走远。你还在那块场地上，摆同样的标志桶，说同样的话。',
+        tone: 'normal',
+        when: run => Boolean((run.flags.coach || {}).seasons >= 8 && ((run.flags.coach || {}).titles || 0) === 0),
+      },
+{
+        id: 'career_fb_one_club',
+        title: '一人一城',
+        description: '你没有换过球衣的颜色。退役那天，看台上举着的不是你的名字，是一座城。',
+        tone: 'great',
+        when: run => Boolean(run.flags.fb && (run.flags.fb.clubsPlayed || []).length <= 1 && (run.flags.fb.seasons || 0) >= 10),
+      },
+{
+        id: 'career_fb_captain',
+        title: '袖标与更衣室',
+        description: '你戴了很多年袖标。你做得最多的事不是进球，是把一群性格各异的人按在同一张桌子前。',
+        tone: 'great',
+        when: run => Boolean(run.flags.fb && run.flags.fb.captain && (run.flags.fb.honours || []).length >= 3),
+      },
+{
+        id: 'career_fb_bench',
+        title: '替补席上的十年',
+        description: '你上场的时间加起来也许不到一百小时，但每一次热身你都认真做完。有些人的职业生涯，就是这样安静地结束的。',
+        tone: 'normal',
+        when: run => Boolean(run.flags.fb && (run.flags.fb.seasons || 0) >= 8 && (run.flags.fb.honours || []).length === 0 && (run.flags.fb.clubsPlayed || []).length < 8),
+      },
+{
+        id: 'career_fb_nomad',
+        title: '足坛浪子',
+        description: '你换过很多城市，衣柜里有很多件颜色不同的球衣。最后一站的人问你从哪来，你想了一下才回答。',
+        tone: 'normal',
+        when: run => Boolean(run.flags.fb && (run.flags.fb.clubsPlayed || []).length >= 8),
+      },
+{
+        id: 'career_fb_early',
+        title: '没踢完的比赛',
+        description: '你的名字停在了一份还没到期的合同上。教练说，如果那天你没有被换上去，也许什么都不会发生。',
+        tone: 'tragic',
+        when: run => Boolean(run.flags.fb && (run.flags.fb.apps || 0) > 0 && run.age < 35),
+      },
+{
+        id: 'career_fb_plain',
+        title: '挂靴之后',
+        description: '你没有成为传奇，只是把这份工作做了十几年。退役那天，你在球场边站了一会儿，然后回家吃饭。',
+        tone: 'normal',
+        when: run => Boolean(run.flags.fb && run.flags.fb.retired),
+      },
+{
+        id: 'career_bb_plain',
+        title: '球馆里的灯',
+        description: '你打了十几年球，没有拿过冠军。可每次主场比赛前，你都会最后一个走进通道，因为你想多听一会儿那种声音。',
+        tone: 'normal',
+        when: run => Boolean(run.flags.bb && run.flags.bb.retired),
+      },
+{
+        id: 'career_es_plain',
+        title: '关掉电脑',
+        description: '你没有拿过世界冠军。最后一次训练赛后，你把外设收进包里，关掉电脑，走出基地的大门。',
+        tone: 'normal',
+        when: run => Boolean(run.flags.es && run.flags.es.retired),
+      },
+{
+        id: 'career_rich',
+        title: '球场富翁',
+        description: '你把这份职业做成了一门生意。退役后你不再看比分，只看财报，但偶尔还是会梦见草皮的味道。',
+        tone: 'great',
+        when: run => Boolean((run.flags.fb || run.flags.bb || run.flags.es) && run.peakWealth >= 1200),
+      },
+    ]
+
     const WORLDS = [
       {
         id: 'modern',
@@ -14445,7 +14631,7 @@ function attrCapFor(run) {
         quiet: QUIET_YEARS,
         twists: MODERN_TWISTS,
         twistChance: 0.14,
-        endings: MODERN_ENDINGS,
+        endings: MODERN_ENDINGS.concat(CAREER_ENDINGS),
         grades: GRADES,
         aging: {
           start: 55,
@@ -14628,6 +14814,44 @@ function attrCapFor(run) {
     const TOTAL_ENDINGS = WORLDS.reduce((total, world) => total + world.endings.length, 0)
     const COMEDY_TOTAL = COMEDY_ACHIEVEMENTS.length
 
+        const CAREER_ACHIEVEMENTS = [
+      { id: 'career_fb_debut', title: '职业首秀', desc: '你第一次以职业球员的身份踏上球场。', when: run => Boolean(run.flags.fb && run.flags.fb.debuted) },
+      { id: 'career_fb_first_goal', title: '处子球', desc: '你打进了职业生涯的第一粒进球。', when: run => Boolean(run.flags.fb && (run.flags.fb.goals || 0) >= 1) },
+      { id: 'career_fb_50_goals', title: '五十球', desc: '你的生涯进球数达到五十。', when: run => Boolean(run.flags.fb && (run.flags.fb.goals || 0) >= 50) },
+      { id: 'career_fb_150_goals', title: '一百五十球', desc: '你的生涯进球数达到一百五十。', when: run => Boolean(run.flags.fb && (run.flags.fb.goals || 0) >= 150) },
+      { id: 'career_fb_300_goals', title: '三百球', desc: '你的生涯进球数达到三百。', when: run => Boolean(run.flags.fb && (run.flags.fb.goals || 0) >= 300) },
+      { id: 'career_fb_50_assists', title: '五十次助攻', desc: '你送出了五十次助攻，也送出过很多次没人记得的跑动。', when: run => Boolean(run.flags.fb && (run.flags.fb.assists || 0) >= 50) },
+      { id: 'career_fb_captain', title: '戴上袖标', desc: '你成为了球队的队长。', when: run => Boolean(run.flags.fb && run.flags.fb.captain) },
+      { id: 'career_fb_transfer', title: '第一次转会', desc: '你第一次被另一家俱乐部买下。', when: run => Boolean(run.flags.fb && (run.flags.fb.transferFee || 0) > 0) },
+      { id: 'career_fb_big5', title: '登陆五大联赛', desc: '你站上了欧洲五大联赛的草皮。', when: run => Boolean(run.flags.fb && (run.flags.fb.leaguesPlayed || []).some(id => ['英超', '西甲', '意甲', '德甲', '法甲'].includes(id))) },
+      { id: 'career_fb_continental', title: '洲际冠军', desc: '你拿到了一座洲际俱乐部赛事的冠军。', when: run => Boolean(run.flags.fb && (run.flags.fb.continentalTitles || 0) >= 1) },
+      { id: 'career_fb_worldcup', title: '国家队冠军', desc: '你和国家队一起，把一座大赛奖杯带回了家。', when: run => Boolean(run.flags.fb && (run.flags.fb.intTitles || 0) >= 1) },
+      { id: 'career_fb_caps_100', title: '百场国脚', desc: '你为国家队出场一百次。', when: run => Boolean(run.flags.fb && (run.flags.fb.caps || 0) >= 100) },
+      { id: 'career_fb_ballon', title: '金球奖', desc: '你拿到了金球奖。', when: run => Boolean(run.flags.fb && (run.flags.fb.ballonDors || 0) >= 1) },
+      { id: 'career_fb_ballon_3', title: '三座金球', desc: '你第三次举起金球奖。', when: run => Boolean(run.flags.fb && (run.flags.fb.ballonDors || 0) >= 3) },
+      { id: 'career_fb_one_club', title: '一人一城', desc: '你整个职业生涯只效力过一家俱乐部。', when: run => Boolean(run.flags.fb && (run.flags.fb.clubsPlayed || []).length <= 1 && (run.flags.fb.seasons || 0) >= 10) },
+      { id: 'career_fb_nomad', title: '浪迹足坛', desc: '你效力过八家以上的俱乐部。', when: run => Boolean(run.flags.fb && (run.flags.fb.clubsPlayed || []).length >= 8) },
+      { id: 'career_fb_value', title: '身价千万', desc: '你的账面身价达到了一千万。', when: run => Boolean(run.flags.fb && (run.flags.fb.value || 0) >= 1000) },
+      { id: 'career_fb_retired', title: '挂靴', desc: '你结束了自己的球员生涯。', when: run => Boolean(run.flags.fb && run.flags.fb.retired) },
+      { id: 'career_bb_debut', title: '篮球首秀', desc: '你第一次在职业联赛里出场。', when: run => Boolean(run.flags.bb && (run.flags.bb.games || 0) >= 1) },
+      { id: 'career_bb_allstar', title: '全明星', desc: '你入选了全明星。', when: run => Boolean(run.flags.bb && (run.flags.bb.allStars || 0) >= 1) },
+      { id: 'career_bb_allstar_3', title: '三次全明星', desc: '你第三次入选全明星。', when: run => Boolean(run.flags.bb && (run.flags.bb.allStars || 0) >= 3) },
+      { id: 'career_bb_mvp', title: '常规赛 MVP', desc: '你拿到了常规赛最有价值球员。', when: run => Boolean(run.flags.bb && (run.flags.bb.mvps || 0) >= 1) },
+      { id: 'career_bb_champ', title: '总冠军', desc: '你随队拿到了总冠军。', when: run => Boolean(run.flags.bb && (run.flags.bb.titles || 0) >= 1) },
+      { id: 'career_bb_retired', title: '退役球衣', desc: '你结束了自己的篮球生涯。', when: run => Boolean(run.flags.bb && run.flags.bb.retired) },
+      { id: 'career_es_debut', title: '职业登场', desc: '你第一次在职业赛场上打完了整场比赛。', when: run => Boolean(run.flags.es && run.flags.es.debuted) },
+      { id: 'career_es_worlds', title: '世界赛冠军', desc: '你拿到了世界赛冠军。', when: run => Boolean(run.flags.es && (run.flags.es.worldTitles || 0) >= 1) },
+      { id: 'career_es_worlds_3', title: '三冠王朝', desc: '你第三次拿到世界赛冠军。', when: run => Boolean(run.flags.es && (run.flags.es.worldTitles || 0) >= 3) },
+      { id: 'career_es_mvp', title: '赛季 MVP', desc: '你被评为赛季最有价值选手。', when: run => Boolean(run.flags.es && (run.flags.es.mvps || 0) >= 1) },
+      { id: 'career_es_msi', title: '赛区之光', desc: '你第二次拿到赛季 MVP。', when: run => Boolean(run.flags.es && (run.flags.es.mvps || 0) >= 2) },
+      { id: 'career_es_streamer', title: '退役主播', desc: '退役后你签下了一份直播合同。', when: run => Boolean(run.flags.es && run.flags.es.streamDeal) },
+      { id: 'career_es_retired', title: '摘下耳机', desc: '你结束了自己的职业生涯。', when: run => Boolean(run.flags.es && run.flags.es.retired) },
+      { id: 'career_coach_first', title: '执教首季', desc: '你第一次以主教练的身份带队打完一个赛季。', when: run => Boolean((run.flags.coach || {}).seasons >= 1) },
+      { id: 'career_coach_title', title: '场边夺冠', desc: '你作为教练拿到了一座冠军。', when: run => Boolean((run.flags.coach || {}).titles >= 1) },
+      { id: 'career_coach_legend', title: '名帅', desc: '你作为教练拿到了五座冠军。', when: run => Boolean((run.flags.coach || {}).titles >= 5) },
+      { id: 'career_coach_national', title: '国家队主帅', desc: '你成为了国家队的主教练。', when: run => Boolean((run.flags.coach || {}).national) },
+      { id: 'career_coach_ten_years', title: '十年场边', desc: '你在教练席上待满了十个赛季。', when: run => Boolean((run.flags.coach || {}).seasons >= 10) },
+    ]
     const MILESTONE_ACHIEVEMENTS = (() => {
       const list = []
       const add = (id, title, desc, when) => list.push({ id, title, desc, when })
@@ -14687,7 +14911,7 @@ function attrCapFor(run) {
       ending: true,
     })))
 
-    const ALL_ACHIEVEMENTS = BASE_ACHIEVEMENTS.concat(MILESTONE_ACHIEVEMENTS, ENDING_ACHIEVEMENTS)
+    const ALL_ACHIEVEMENTS = BASE_ACHIEVEMENTS.concat(MILESTONE_ACHIEVEMENTS, CAREER_ACHIEVEMENTS, ENDING_ACHIEVEMENTS)
     const ACHIEVEMENT_TOTAL = ALL_ACHIEVEMENTS.length
 
     const CHOICE_NODES = {
@@ -19990,6 +20214,14 @@ function attrCapFor(run) {
 
     function determineEnding(run) {
       const world = worldOf(run)
+      if (run.flags.fb || run.flags.bb || run.flags.es || run.flags.coach) {
+        for (let i = 0; i < CAREER_ENDINGS.length; i += 1) {
+          const careerEnding = CAREER_ENDINGS[i]
+          try {
+            if (careerEnding.when(run)) return careerEnding
+          } catch (err) { /* 生涯结局判定失败时继续走普通结局 */ }
+        }
+      }
       const findById = id => world.endings.find(ending => ending.id === id)
       const forced = run.worldId === 'cultivation'
         ? run.flags.ascended || run.cause === '飞升'
@@ -20996,7 +21228,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.37.0 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.38.0 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
