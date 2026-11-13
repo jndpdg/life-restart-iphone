@@ -815,6 +815,17 @@
       -webkit-backdrop-filter: blur(14px) saturate(112%);
       box-shadow: 0 10px 24px rgba(0, 0, 0, .28);
     }
+    .log-group { margin-top: 4px; }
+    .log-group + .log-group { margin-top: 14px; }
+    .log-group-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin: 10px 0 6px; padding: 0 2px;
+      font-size: 12px; letter-spacing: .08em; color: var(--text-dim, #9aa0a6);
+    }
+    .log-group-head span { font-weight: 600; }
+    .log-group-head em { font-style: normal; font-size: 11px; opacity: .7; font-variant-numeric: tabular-nums; }
+    .log-group[data-career="true"] .log-group-head span { color: var(--accent, #d6a24a); }
+
     .career-card {
       margin: 6px 16px 0;
       padding: 9px 11px;
@@ -20985,7 +20996,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.36.0 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.37.0 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -21633,7 +21644,7 @@ function aiPortraitFor(run) {
 
   function logTabsHtml(run) {
     if (!run || !run.flags.careerSport) return '';
-    const items = [['all', '全部'], ['life', '普通生活'], ['career', '职业生涯']];
+    const items = [['all', '全部'], ['life', '普通人生'], ['career', '职业生涯']];
     return '<div class="log-tabs">' + items.map(function (item) {
       return '<button class="log-tab" data-action="log-filter" data-value="' + item[0] + '" data-active="' + (state.logFilter === item[0] ? 'true' : 'false') + '">' + item[1] + '</button>';
     }).join('') + '</div>';
@@ -21644,13 +21655,9 @@ function aiPortraitFor(run) {
     return '<div class="deltas">' + entry.deltas.map(delta => '<span class="delta" data-kind="' + esc(delta.kind || '') + '">' + esc(delta.label) + ' ' + (delta.value > 0 ? '+' : '') + delta.value + (delta.money ? (delta.unit || '') : '') + '</span>').join('') + '</div>';
   }
 
-  function logHtml(run, filter) {
-    const wantCareer = filter === 'career';
-    const wantLife = filter === 'life';
+  function logEntriesHtml(entries) {
     let html = '';
-    for (const entry of run.log) {
-      if (wantCareer && !entry.isCareer) continue;
-      if (wantLife && entry.isCareer) continue;
+    for (const entry of entries) {
       if (entry.kind === 'chapter') {
         html += '<div class="chapter-entry">' + esc(entry.text) + '<small>' + entry.age + ' 岁</small></div>';
         continue;
@@ -21670,6 +21677,24 @@ function aiPortraitFor(run) {
         + '<div class="entry-text">' + esc(entry.text) + '</div>' + deltaHtml(entry) + '</div></div>';
     }
     return html;
+  }
+
+  function logGroupHtml(title, body, count) {
+    return '<section class="log-group">'
+      + '<div class="log-group-head"><span>' + title + '</span><em>' + count + ' 条</em></div>'
+      + body + '</section>';
+  }
+
+  function logHtml(run, filter) {
+    const hasCareer = Boolean(run.flags && run.flags.careerSport);
+    if (!hasCareer) return logEntriesHtml(run.log);
+    const lifeEntries = run.log.filter(entry => !entry.isCareer);
+    const careerEntries = run.log.filter(entry => entry.isCareer);
+    const card = careerCardHtml(run);
+    if (filter === 'career') return logGroupHtml('职业生涯', card + logEntriesHtml(careerEntries), careerEntries.length);
+    if (filter === 'life') return logGroupHtml('普通人生', logEntriesHtml(lifeEntries), lifeEntries.length);
+    return logGroupHtml('普通人生', logEntriesHtml(lifeEntries), lifeEntries.length)
+      + logGroupHtml('职业生涯', card + logEntriesHtml(careerEntries), careerEntries.length);
   }
 
   function endingHtml(run) {
@@ -21734,7 +21759,6 @@ function aiPortraitFor(run) {
       + '</div>'
       + '</header>'
       + avatarHtml(run)
-      + careerCardHtml(run)
       + '<main class="log">' + logTabsHtml(run) + logHtml(run, state.logFilter) + (run.ending ? endingHtml(run) : '') + '</main>'
       + (death ? '' : '<div class="game-controls" style="padding-bottom:calc(9px + var(--safe-bottom))"><button class="btn btn-ghost" data-action="toggle-auto" data-auto="' + (state.auto ? 'true' : 'false') + '"><span class="auto-dot"></span>' + (state.auto ? '暂停自动' : '自动播放') + '</button><button class="btn btn-primary" data-action="advance">' + advanceLabel + '</button></div>')
       + '</div>';
