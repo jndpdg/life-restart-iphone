@@ -2297,6 +2297,7 @@ function attrCapFor(run) {
         titles: 0,
         allStars: 0,
         mvps: 0,
+        awards: [],
         caps: 0,
         honours: [],
         clubsPlayed: [club.name],
@@ -2499,6 +2500,7 @@ function attrCapFor(run) {
         wins: 0,
         titles: 0,
         worldTitles: 0,
+        awards: [],
         mvps: 0,
         teamsPlayed: [team.name],
         leaguesPlayed: [league.league],
@@ -2755,6 +2757,10 @@ function attrCapFor(run) {
           lines.push('【退役之后】签了直播约，弹幕还在刷当年的名场面。');
         }
       }
+      try {
+        const bonus = careerExtraSeason(run);
+        if (bonus) lines.push(bonus);
+      } catch (err) { /* 额外赛季内容失败不影响主流程 */ }
       // 日常层的细碎内容：让每个职业年都不太一样
       const extra = careerDayFlavor(run);
       if (extra) lines.push(extra);
@@ -2877,6 +2883,10 @@ function attrCapFor(run) {
           const losses = matches - wins - draws;
           c.wins += wins; c.draws += draws; c.losses += losses;
           parts.push('【执教】' + (c.clubs[c.clubs.length - 1] || '球队') + ' 本赛季 ' + matches + ' 场 ' + wins + ' 胜 ' + draws + ' 平 ' + losses + ' 负。');
+          try {
+            const coachExtra = coachExtraFlavor(inner, c);
+            if (coachExtra) parts.push(coachExtra);
+          } catch (err) { /* 教练额外剧情失败不影响主流程 */ }
           let title = null;
           if (Math.random() < fbClamp(0.02 + level * 0.03 + rep * 0.006 + winRate * 0.06, 0.01, 0.22)) {
             title = level >= 2 ? '顶级联赛冠军' : '次级联赛冠军';
@@ -2887,7 +2897,7 @@ function attrCapFor(run) {
             c.level = 2;
             parts.push('【升级】顶级联赛的球队来挖你，你成了别人口中的「名帅」。');
           }
-          if (level >= 1 && losses >= wins && Math.random() < 0.25) {
+          if (level >= 1 && losses >= Math.round(wins * 0.82) && Math.random() < 0.25) {
             parts.push('【下课】董事会解雇了你。你在停车场坐了半小时，然后回了家。');
             c.level = Math.max(0, c.level - 1);
           }
@@ -3061,6 +3071,411 @@ function attrCapFor(run) {
       if (Math.random() > 0.45) return '';
       return pool[Math.floor(Math.random() * pool.length)];
     }
+
+    // ===== 职业生涯：加深（v1.36）=====
+    // 额外的赛季赛事与荣誉：由 careerFlavor 每年调用一次，返回要追加到事件文本里的片段
+    function careerExtraSeason(run) {
+      const sport = run.flags.careerSport
+      if (!sport) return ''
+      const parts = []
+      if (sport === 'football' && run.flags.fb && !run.flags.fb.retired) {
+        const fb = run.flags.fb
+        const league = fbLeague(fb.leagueId)
+        const club = fbClub(league, fb.club)
+        const s = fb.lastSeason || { apps: 30, goals: 0, assists: 0, rating: 6.5 }
+        const nat = fbNation(fb.nation) || {}
+        const nationConfed = nat.confed || league.confed
+        if ((fb.continentalTitles >= 1 || club.strength >= 88) && Math.random() < 0.4) {
+          const r = fbPick(['冠军', '亚军', '四强', '小组出局'])
+          parts.push('【世俱杯】' + r + '。')
+          if (r === '冠军') {
+            fb.honours.push('世俱杯冠军')
+            fb.ability = Math.min(99, fb.ability + 1)
+          }
+        }
+        if (!FB_BIG5.has(league.name) && club.strength - league.power < 8 && Math.random() < 0.3) {
+          const cup = league.confed === 'UEFA' ? '欧联杯' : league.confed === 'CONMEBOL' ? '南美杯' : '亚足联杯'
+          const r = fbPick(['冠军', '亚军', '四强', '八强'])
+          parts.push('【' + cup + '】' + r + '。')
+          if (r === '冠军') fb.honours.push(cup + '冠军')
+        }
+        if (s.rating >= 7.3 && Math.random() < 0.32) {
+          fb.awards.push(league.name + '赛季最佳球员')
+          parts.push('【最佳球员】' + league.name + '把赛季最佳球员给了你。')
+        }
+        if (s.assists >= 6 && Math.random() < 0.38) {
+          fb.awards.push(league.name + '助攻王')
+          parts.push('【助攻王】' + s.assists + ' 次助攻，联赛第一。')
+        }
+        if (run.age <= 21 && s.rating >= 7.0 && Math.random() < 0.35) {
+          fb.awards.push(league.name + '最佳新人')
+          parts.push('【最佳新人】最佳新人的奖杯比想象中轻。')
+        }
+        if (fb.ballonDors >= 2 && Math.random() < 0.18) {
+          fb.awards.push('世界足球先生')
+          parts.push('【世界足球先生】国际足联的颁奖礼上，你又一次听到自己的名字。')
+        }
+        const confedCup = nationConfed === 'UEFA' ? '欧洲杯' : nationConfed === 'CONMEBOL' ? '美洲杯'
+          : nationConfed === 'CAF' ? '非洲杯' : nationConfed === 'AFC' ? '亚洲杯' : '中北美金杯'
+        if (run.age % 4 === 1 && Math.random() < 0.45) {
+          const r = fbPick(['冠军', '四强', '八强', '小组出局'])
+          parts.push('【' + confedCup + '】' + r + '。')
+          if (r === '冠军') fb.intTitles += 1
+        }
+      }
+      if (sport === 'basketball' && run.flags.bb && !run.flags.bb.retired) {
+        const bb = run.flags.bb
+        const league = bbLeague(bb.leagueId)
+        const s = bb.lastSeason || { games: 60, ppg: 10, rpg: 4, apg: 3 }
+        const star = s.ppg >= 18 || (bb.ability || 50) >= 78
+        if (star && Math.random() < 0.42) {
+          parts.push('【全明星】入选全明星阵容。')
+          if (Math.random() < 0.18) {
+            bb.awards.push('全明星 MVP')
+            parts.push('【全明星 MVP】全明星赛的 MVP 奖杯被你抱回了家。')
+          }
+        }
+        if (s.ppg >= 18 && Math.random() < 0.35) {
+          bb.awards.push('得分王')
+          parts.push('【得分王】场均 ' + s.ppg.toFixed(1) + ' 分，联盟第一。')
+        }
+        if (run.age <= 22 && s.ppg >= 14 && Math.random() < 0.3) {
+          bb.awards.push('最佳新秀')
+          parts.push('【最佳新秀】年度最佳新秀，媒体说你打球不像新人。')
+        }
+        if (s.rpg >= 6.5 && Math.random() < 0.3) {
+          bb.awards.push('篮板王')
+          parts.push('【篮板王】场均 ' + s.rpg.toFixed(1) + ' 个篮板。')
+        }
+        if (Math.random() < 0.5) {
+          const r = fbPick(['首轮出局', '次轮出局', '分区决赛', '总决赛'])
+          parts.push('【季后赛】' + r + '。')
+          if (r === '总决赛' && Math.random() < 0.42) {
+            bb.titles = (bb.titles || 0) + 1
+            bb.honours.push('总冠军')
+            parts.push('【总冠军】赢下总决赛，你在更衣室里被浇了一整桶冰水。')
+            if (Math.random() < 0.35) {
+              bb.awards.push('总决赛 MVP')
+              parts.push('【FMVP】总决赛 MVP 也是你的。')
+            }
+          }
+        }
+        if (run.age % 4 === 0 && Math.random() < 0.35) {
+          const r = fbPick(['金牌', '四强', '八强', '小组出局'])
+          parts.push('【奥运会】' + r + '。')
+          if (r === '金牌') bb.honours.push('奥运金牌')
+        }
+      }
+      if (sport === 'esports' && run.flags.es && !run.flags.es.retired) {
+        const es = run.flags.es
+        const s = es.lastSeason || { winRate: 0.5, kda: 3 }
+        const strong = (es.ability || 60) >= 76 || s.winRate >= 0.6
+        if (strong && Math.random() < 0.4) {
+          const r = fbPick(['冠军', '亚军', '四强'])
+          parts.push('【MSI】季中冠军赛 ' + r + '。')
+          if (r === '冠军') {
+            es.titles = (es.titles || 0) + 1
+            es.honours.push('MSI 冠军')
+          }
+        }
+        if (strong && Math.random() < 0.3) {
+          const r = fbPick(['冠军', '四强', '八强'])
+          parts.push('【电竞世界杯】' + r + '。')
+          if (r === '冠军') es.honours.push('电竞世界杯冠军')
+        }
+        if (run.age >= 20 && run.age % 2 === 0 && Math.random() < 0.3) {
+          const r = fbPick(['金牌', '四强', '小组出局'])
+          parts.push('【亚运会】' + r + '。')
+          if (r === '金牌') es.honours.push('亚运金牌')
+        }
+        if ((s.kda >= 2.6 || s.winRate >= 0.58) && Math.random() < 0.3) {
+          es.awards.push('赛季 MVP')
+          parts.push('【赛季 MVP】常规赛 MVP，解说把你叫作「版本答案」。')
+        }
+        if (run.age <= 20 && Math.random() < 0.3) {
+          es.awards.push('最佳新人')
+          parts.push('【最佳新人】最佳新人奖，你上台时手还在抖。')
+        }
+        if (!es.retired && Math.random() < 0.16) {
+          parts.push(fbPick(['【手伤】手腕的旧伤复发，队医让你休息两周。', '【版本】版本一改，你练了半年的英雄进了冷宫。', '【复盘】教练把决赛录像放了三遍，第四遍你闭上了眼睛。']))
+        }
+      }
+      return parts.join(' ')
+    }
+
+    // 教练线的额外剧情
+    function coachExtraFlavor(run, c) {
+      const lines = []
+      if (!c) return ''
+      if (c.level >= 1 && !c.national && run.age >= 44 && Math.random() < 0.2) {
+        c.national = true
+        c.level = 3
+        lines.push('【国家队主帅】足协把国家队的教鞭交到你手上，发布会上你只说了一句「先看训练」。')
+      }
+      if (Math.random() < 0.24) {
+        lines.push(fbPick([
+          '【更衣室】老将公开质疑你的轮换，你把战术板拍在桌上。',
+          '【保级】球队七轮不胜，董事会的车停在训练基地门口。',
+          '【名帅】媒体开始用「战术鬼才」称呼你，你把这四个字剪下来贴在办公室。',
+          '【青训】你把三个十八岁的孩子提上一线队，输了球也没改主意。',
+          '【德比】德比前夜你一个人在球场走了两圈。',
+        ]))
+      }
+      return lines.join(' ')
+    }
+
+    const CAREER_DEEP_NODES = [
+      {
+        id: 'career_transfer_saga',
+        at: 24,
+        until: 31,
+        chance: 0.72,
+        when: run => run.worldId === 'modern' && Boolean(run.flags.careerSport) && !careerRetired(run) && !run.flags.sagaDone,
+        title: '转会窗口：一份报价摆在桌上',
+        prompt: '经纪人在电话那头压低声音：「他们愿意出这个数。你自己想清楚——留下是旗帜，走是更大的舞台。」',
+        options: [
+          {
+            id: 'saga_push', label: '提交转会申请', desc: '把话说明白：我想走。',
+            resolve(run) {
+              run.flags.sagaDone = true
+              const st = careerStateOf(run)
+              if (st) { st.ability = Math.min(99, (st.ability || 50) + 2); st.transfers = (st.transfers || 0) + 1 }
+              careerMoveUp(run)
+              return { tone: 'good', text: '你把转会申请交到了俱乐部。三天后，新东家的官宣视频里，你穿着陌生的球衣笑得很克制。', effects: { mood: 3, wealth: 60, flags: { sagaDone: true } } }
+            },
+          },
+          {
+            id: 'saga_stay', label: '留下，当这里的旗帜', desc: '有些东西比更大的舞台重要。',
+            resolve(run) {
+              const st = careerStateOf(run)
+              if (st) { st.loyalty = true; st.ability = Math.min(99, (st.ability || 50) + 1) }
+              return { tone: 'good', text: '你在续约合同上签了字。看台挂出了你的巨幅海报，下面写着「他留下了」。', effects: { mood: 8, wealth: 25, flags: { sagaDone: true } } }
+            },
+          },
+          {
+            id: 'saga_wait', label: '让经纪人再抬一抬价', desc: '生意就是生意。',
+            resolve(run) {
+              const st = careerStateOf(run)
+              if (st) { st.wealth = (st.wealth || 0) + 1; st.ability = Math.min(99, (st.ability || 50) + 1) }
+              return { tone: 'normal', text: '你什么都没说。两周后，报价又高了两成，你才点了头。', effects: { mood: -1, wealth: 120, flags: { sagaDone: true } } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_club_crisis',
+        at: 25,
+        until: 34,
+        chance: 0.42,
+        when: run => run.worldId === 'modern' && Boolean(run.flags.careerSport) && !careerRetired(run) && !run.flags.crisisDone,
+        title: '俱乐部出事了',
+        prompt: '工资拖了两个月，训练基地的灯有一半不亮。队长把大家叫到更衣室：「总得有人去问。」',
+        options: [
+          {
+            id: 'crisis_lead', label: '带头去谈', desc: '总要有人开口。',
+            resolve(run) {
+              const st = careerStateOf(run)
+              if (st) st.ability = Math.min(99, (st.ability || 50) + 1)
+              return { tone: 'good', text: '你带着几个人去了办公室。三天后欠薪补上了，你在球迷眼里成了「敢说话的人」。', effects: { mood: 5, wealth: 10, flags: { crisisDone: true } } }
+            },
+          },
+          {
+            id: 'crisis_pay', label: '自掏腰包先垫上', desc: '先把日子过下去。',
+            resolve(run) {
+              const st = careerStateOf(run)
+              if (st) st.loyalty = true
+              return { tone: 'good', text: '你垫了队里三个年轻人的工资。很多年后他们还记得这件事。', effects: { mood: 6, wealth: -80, flags: { crisisDone: true } } }
+            },
+          },
+          {
+            id: 'crisis_leave', label: '申请解约，另寻出路', desc: '船要沉了，先上岸。',
+            resolve(run) {
+              careerMoveUp(run)
+              return { tone: 'normal', text: '你解了约，自由身加盟了新球队。老东家那年降了级，你没有回头看。', effects: { mood: -2, wealth: 20, flags: { crisisDone: true } } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_national_snub',
+        at: 25,
+        until: 30,
+        chance: 0.4,
+        when: run => run.worldId === 'modern' && (run.flags.fb || run.flags.bb) && !careerRetired(run) && !run.flags.snubDone,
+        title: '大赛名单上没有你',
+        prompt: '名单公布那天，你在训练基地的电视前站了很久。教练说：「这次先这样。」',
+        options: [
+          {
+            id: 'snub_train', label: '把火气练进身体里', desc: '下一次名单必须有我。',
+            resolve(run) {
+              const st = careerStateOf(run)
+              if (st) { st.ability = Math.min(99, (st.ability || 50) + 3); st.snubbed = true }
+              return { tone: 'good', text: '整个夏天你都在加练。下一个国际比赛日，名单第一个念到的是你。', effects: { mood: 2, health: -2, body: 1, flags: { snubDone: true } } }
+            },
+          },
+          {
+            id: 'snub_talk', label: '公开说两句', desc: '让所有人听见。',
+            resolve(run) {
+              return { tone: 'normal', text: '你在采访里说了句「我不理解」。第二天热搜挂了半天，主教练把你叫去谈了四十分钟。', effects: { mood: 4, wealth: 10, flags: { snubDone: true } } }
+            },
+          },
+          {
+            id: 'snub_accept', label: '接受，然后看比赛', desc: '有些门推不开就先等等。',
+            resolve(run) {
+              return { tone: 'normal', text: '你在家里看完了整届比赛。关掉电视那一刻，你决定再踢两年。', effects: { mood: -2, health: 2, int: 1, flags: { snubDone: true } } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_coach_offer',
+        at: 38,
+        until: 52,
+        chance: 0.6,
+        when: run => run.worldId === 'modern' && Boolean(run.flags.coachPath) && Boolean(run.flags.coach) && !run.flags.coach.done && !run.flags.coachOfferDone,
+        title: '教练席上的另一份合同',
+        prompt: '一封来自更大俱乐部的邀请放在桌上，另一封是国家队的。你的助教问：「去哪？」',
+        options: [
+          {
+            id: 'coach_big', label: '去更大的俱乐部', desc: '把自己扔进更大的火里。',
+            resolve(run) {
+              const c = coachState(run)
+              if (c) { c.level = Math.min(3, (c.level || 1) + 1); c.clubs.push(fbPick(['豪门', '劲旅', '首都球队'])) }
+              return { tone: 'good', text: '你签了那份合同。发布会上的闪光灯比当球员时还多。', effects: { mood: 6, wealth: 120, flags: { coachOfferDone: true } } }
+            },
+          },
+          {
+            id: 'coach_nation', label: '接国家队', desc: '把这身衣服穿到最后。',
+            resolve(run) {
+              const c = coachState(run)
+              if (c) { c.national = true; c.level = 3; c.clubs.push('国家队') }
+              return { tone: 'good', text: '你成了国家队主教练。第一次带队集训，你站在场边，忽然想起自己十九岁第一次穿上这身球衣。', effects: { mood: 10, wealth: 60, flags: { coachOfferDone: true } } }
+            },
+          },
+          {
+            id: 'coach_stay', label: '留在现在这支队伍', desc: '这摊事还没做完。',
+            resolve(run) {
+              const c = coachState(run)
+              if (c) c.loyalty = true
+              return { tone: 'normal', text: '你把邀请函退了回去。球员们知道了，训练时跑得比平时更凶。', effects: { mood: 5, wealth: 10, flags: { coachOfferDone: true } } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_es_roster',
+        at: 20,
+        until: 26,
+        chance: 0.55,
+        when: run => run.worldId === 'modern' && Boolean(run.flags.es) && !run.flags.es.retired && !run.flags.rosterDone,
+        title: '队友被挂上了转会名单',
+        prompt: '经理把名单发在群里，你熟悉的一个 ID 在后面。晚上训练赛，没有人说话。',
+        options: [
+          {
+            id: 'roster_lead', label: '带着新人练', desc: '总得有人把摊子撑住。',
+            resolve(run) {
+              const st = run.flags.es
+              if (st) { st.ability = Math.min(99, (st.ability || 60) + 2); st.leadership = true }
+              return { tone: 'good', text: '你把新人拉进训练房，从补刀教到视野。半个赛季后，他成了队里最稳的那个。', effects: { mood: 4, int: 1, flags: { rosterDone: true } } }
+            },
+          },
+          {
+            id: 'roster_leave', label: '要求换队', desc: '这支队已经不是原来那支了。',
+            resolve(run) {
+              careerMoveUp(run)
+              return { tone: 'normal', text: '你申请了转会。新队伍的训练室更亮，也更安静。', effects: { mood: 1, wealth: 40, flags: { rosterDone: true } } }
+            },
+          },
+          {
+            id: 'roster_cold', label: '冷处理，先打好自己的', desc: '职业选手，先看数据。',
+            resolve(run) {
+              const st = run.flags.es
+              if (st) st.ability = Math.min(99, (st.ability || 60) + 1)
+              return { tone: 'normal', text: '你什么都没说，把排位分又打高了两百。经理看你的眼神变了。', effects: { mood: -1, int: 1, flags: { rosterDone: true } } }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_bb_playoff',
+        at: 24,
+        until: 31,
+        chance: 0.5,
+        when: run => run.worldId === 'modern' && Boolean(run.flags.bb) && !run.flags.bb.retired && !run.flags.playoffDone,
+        title: '抢七，最后一攻',
+        prompt: '还剩 4.8 秒，落后 1 分。暂停时所有人都在看你，教练把战术板递过来：「你来画。」',
+        options: [
+          {
+            id: 'po_self', label: '自己投', desc: '这种球，我练了十万次。',
+            resolve(run) {
+              const st = run.flags.bb
+              const hit = Math.random() < 0.45
+              if (st && hit) { st.ability = Math.min(99, (st.ability || 50) + 2); st.titles = (st.titles || 0) }
+              return {
+                tone: hit ? 'good' : 'tragic',
+                text: hit ? '你运到中距离，起跳，出手。球在篮筐上弹了两下，落进网里。整个球馆炸了。' : '你晃开防守，后仰出手——球砸在篮筐前沿弹出。回防时你听见了主场球迷的叹气。',
+                effects: { mood: hit ? 10 : -6, flags: { playoffDone: true } },
+              }
+            },
+          },
+          {
+            id: 'po_pass', label: '交给手感最热的队友', desc: '信任也是一种选择。',
+            resolve(run) {
+              const hit = Math.random() < 0.5
+              return {
+                tone: hit ? 'good' : 'normal',
+                text: hit ? '你吸引包夹，把球分到底角。队友三分命中，冲过来抱住了你。' : '队友的出手偏了。回更衣室的路上，他一直在说对不起。',
+                effects: { mood: hit ? 8 : -3, flags: { playoffDone: true } },
+              }
+            },
+          },
+          {
+            id: 'po_foul', label: '造犯规，两罚', desc: '最稳的两分。',
+            resolve(run) {
+              const hit = Math.random() < 0.72
+              return {
+                tone: hit ? 'good' : 'tragic',
+                text: hit ? '你迎着防守起跳，哨响，两罚全中。' : '你两罚一中，比赛进了加时，最后输了。',
+                effects: { mood: hit ? 5 : -4, flags: { playoffDone: true } },
+              }
+            },
+          },
+        ],
+      },
+      {
+        id: 'career_retire_plan',
+        at: 30,
+        until: 34,
+        chance: 0.5,
+        when: run => run.worldId === 'modern' && Boolean(run.flags.careerSport) && !careerRetired(run) && !run.flags.planDone,
+        title: '退役之后，你打算做什么',
+        prompt: '经纪人来问你下一步：「教练、解说、还是做生意？趁现在还有人记得你。」',
+        options: [
+          {
+            id: 'plan_coach', label: '去考教练证', desc: '换一个位置继续待在球场边。',
+            resolve(run) {
+              run.flags.coachPath = true
+              return { tone: 'good', text: '你报了教练培训班，第一堂课讲的是「如何面对更衣室」。你在笔记本上写满了字。', effects: { mood: 4, int: 1, flags: { planDone: true } } }
+            },
+          },
+          {
+            id: 'plan_stream', label: '签解说 / 直播约', desc: '靠嘴也能吃这碗饭。',
+            resolve(run) {
+              const st = careerStateOf(run)
+              if (st) st.streamDeal = true
+              return { tone: 'good', text: '你签了解说合约。第一次直播，弹幕刷的全是你当年的名场面。', effects: { mood: 5, wealth: 90, flags: { planDone: true } } }
+            },
+          },
+          {
+            id: 'plan_business', label: '做点生意', desc: '球场之外也要有根。',
+            resolve(run) {
+              run.flags.entrepreneur = true
+              return { tone: 'normal', text: '你开了家运动康复工作室。开业那天来了很多老队友，花篮摆到了马路上。', effects: { mood: 2, wealth: 60, flags: { planDone: true } } }
+            },
+          },
+        ],
+      },
+    ]
 
     const CAREER_LIFE_NODES = [
       {
@@ -15816,6 +16231,7 @@ function attrCapFor(run) {
           ...CAREER_NODES,
           ...CAREER_LIFE_NODES,
           ...CAREER_CONTRACT_NODES,
+          ...CAREER_DEEP_NODES,
         )
       const seen = run.flags._choiceSeen || {}
       const cultivation = run.worldId === 'cultivation'
@@ -18884,7 +19300,9 @@ function attrCapFor(run) {
       } else {
         // 只有「还在踢/还在打」的运动员才需要让位给职业生涯；退役之后要把普通人的人生事件还给他
         const careerState = careerStateOf(run)
-        const careerPrime = Boolean(careerState && !careerState.retired) && run.age >= 33
+        const careerDue = Boolean(careerState && !careerState.retired)
+          && (run.flags.fb ? fbShouldRetire(run) : run.flags.bb ? bbShouldRetire(run) : run.flags.es ? esShouldRetire(run) : false)
+        const careerPrime = Boolean(careerState && !careerState.retired) && (careerDue || run.age >= 33)
         const partnerStory = careerPrime ? null : choosePartnerStory(run)
         const crisis = !partnerStory && !careerPrime ? maybeCrisis(run) : null
         const powerMoment = !partnerStory && !crisis && !careerPrime ? maybePowerMoment(run) : null
@@ -20567,7 +20985,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.35.2 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.36.0 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
