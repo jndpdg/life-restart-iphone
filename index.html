@@ -816,6 +816,33 @@
     .avatar-pin-spacer { flex: none; height: 0; }
     .avatar-card.is-pinned { box-shadow: 0 14px 30px rgba(0, 0, 0, .42); }
     .log-tabs { scroll-margin-top: 200px; }
+    .log-cols {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 9px;
+      align-items: start;
+      margin-top: 2px;
+    }
+    .log-col { min-width: 0; padding: 8px 7px 10px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--panel) 72%, transparent); }
+    .log-col[data-career="true"] { border-color: color-mix(in srgb, var(--brand) 30%, var(--line)); }
+    .log-col .log-group-head { margin: 0 0 7px; }
+    .log-col .entry { grid-template-columns: 42px minmax(0, 1fr); gap: 6px; padding: 5px 0; }
+    .log-col .entry-age { font-size: 10px; }
+    .log-col .entry-text { font-size: 12.5px; line-height: 1.55; }
+    .log-col .entry-tag { font-size: 8.5px; padding: 0 4px; }
+    .log-col .deltas { margin-top: 3px; gap: 3px; }
+    .log-col .delta { font-size: 9px; padding: 0 4px; }
+    .log-col .chapter-entry, .log-col .birth-entry, .log-col .death-entry { font-size: 12px; }
+    .log-col .career-card { margin: 0 0 8px; padding: 7px 8px; }
+    .log-col .career-grid { margin-top: 4px; }
+    .log-col .career-row { font-size: 10px; }
+    .log-col .career-row span { font-size: 9px; }
+    @media (max-width: 380px) {
+      .log-cols { gap: 6px; }
+      .log-col { padding: 6px 5px 8px; }
+      .log-col .entry-text { font-size: 11.5px; }
+      .log-col .entry { grid-template-columns: 36px minmax(0, 1fr); }
+    }
     .log-group { margin-top: 4px; }
     .log-group + .log-group { margin-top: 14px; }
     .log-group-head {
@@ -827,6 +854,24 @@
     .log-group-head em { font-style: normal; font-size: 11px; opacity: .7; font-variant-numeric: tabular-nums; }
     .log-group[data-career="true"] .log-group-head span { color: var(--accent, #d6a24a); }
 
+    .kit-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
+    .kit-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 7px 3px 4px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--panel) 70%, transparent); }
+    .kit-chip-copy { display: flex; flex-direction: column; line-height: 1.15; }
+    .kit-chip-copy b { font-size: 10.5px; }
+    .kit-chip-copy em { font-style: normal; font-size: 8.5px; color: var(--muted); }
+    .kit-open { margin-left: auto; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font-size: 9.5px; cursor: pointer; }
+    .kit-open:hover { color: var(--ink); border-color: var(--brand); }
+    .kit-modal { align-items: center; }
+    .kit-sheet { width: min(760px, calc(100vw - 22px)); max-height: 86vh; overflow-y: auto; padding: 16px 16px 20px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); }
+    .kit-leagues { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 8px; }
+    .kit-league { padding: 4px 9px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font-size: 10px; cursor: pointer; }
+    .kit-league[data-active="true"] { border-color: var(--brand); color: var(--ink); background: color-mix(in srgb, var(--brand) 14%, transparent); }
+    .kit-league-label { margin: 4px 0 8px; font-size: 10px; color: var(--muted); letter-spacing: .04em; }
+    .kit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+    .kit-grid-nation { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+    .kit-card { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px 7px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--bg) 46%, transparent); }
+    .kit-card b { font-size: 9.5px; font-weight: 600; text-align: center; line-height: 1.2; }
+    .kit-svg { display: block; }
     .career-card {
       margin: 6px 16px 0;
       padding: 9px 11px;
@@ -20338,6 +20383,8 @@ function attrCapFor(run) {
     musicOn: storedMusicOn(),
     track: storedTrack(),
     showTracks: false,
+    showKits: false,
+    kitLeague: null,
     playMode: storedPlayMode(),
     storyMode: storedStoryMode(),
     replay: null,
@@ -21199,12 +21246,13 @@ function attrCapFor(run) {
         ? setupHtml()
         : gameHtml();
     let overlay = ''
-    if (state.showTracks) overlay = tracksHtml()
+    if (state.showKits) overlay = kitsHtml()
+    else if (state.showTracks) overlay = tracksHtml()
     else if (state.replay) overlay = replayHtml()
     else if (state.run && state.run.pendingScene) overlay = sceneHtml()
     else if (state.run && state.run.pendingChoice) overlay = choiceHtml()
     app.innerHTML = html + overlay
-    document.body.classList.toggle('modal-open', Boolean(state.showTracks || state.replay || (state.run && (state.run.pendingScene || state.run.pendingChoice))))
+    document.body.classList.toggle('modal-open', Boolean(state.showKits || state.showTracks || state.replay || (state.run && (state.run.pendingScene || state.run.pendingChoice))))
     updateMusicMood(state.run)
     scrollAfterRender();
   }
@@ -21268,7 +21316,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.38.1 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.39.0 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -21859,6 +21907,191 @@ function aiPortraitFor(run) {
         + '</section>';
     }
 
+
+  // ── 队服图鉴 ─────────────────────────────────────────────
+  const KIT_STYLES = {
+    '曼城': '6CABDD/FFFFFF/solid', '阿森纳': 'EF0107/FFFFFF/solid', '利物浦': 'C8102E/FFFFFF/solid',
+    '曼联': 'DA291C/FFFFFF/solid', '切尔西': '034694/FFFFFF/solid', '热刺': 'FFFFFF/132257/solid',
+    '纽卡斯尔': '241F20/FFFFFF/stripes', '阿斯顿维拉': '670E36/95BFE5/solid', '布莱顿': '0057B8/FFFFFF/stripes',
+    '西汉姆': '7A263A/1BB1E7/solid', '水晶宫': '1B458F/FFFFFF/stripes', '埃弗顿': '003399/FFFFFF/solid',
+    '富勒姆': 'FFFFFF/000000/solid', '布伦特福德': 'E30613/FFFFFF/stripes', '诺丁汉森林': 'DD0000/FFFFFF/solid',
+    '狼队': 'FDB913/000000/solid', '利兹联': 'FFFFFF/FFCD00/solid', '伯恩利': '6C1D45/99D6EA/solid',
+    '谢菲尔德联': 'EE2737/FFFFFF/stripes', '桑德兰': 'EB172B/FFFFFF/stripes', '米德尔斯堡': 'E21C38/FFFFFF/solid',
+    '西布朗': '122F67/FFFFFF/stripes', '诺维奇': 'FFF200/007B40/solid', '沃特福德': 'FBEE23/ED2127/solid',
+    '斯托克城': 'E03A3E/FFFFFF/stripes', '谢周三': '0066B3/FFFFFF/stripes',
+    '皇家马德里': 'FFFFFF/FEBE10/solid', '巴塞罗那': '004D98/A50044/stripes', '马德里竞技': 'CE3524/FFFFFF/stripes',
+    '塞维利亚': 'FFFFFF/CE3524/solid', '比利亚雷亚尔': 'FFF200/005187/solid', '皇家社会': '0067B1/FFFFFF/stripes',
+    '毕尔巴鄂竞技': 'CE3524/FFFFFF/stripes', '皇家贝蒂斯': '00954C/FFFFFF/stripes', '瓦伦西亚': 'FFFFFF/EE3524/solid',
+    '赫罗纳': 'CE3524/FFFFFF/stripes', '塞尔塔': '8AC3EE/FFFFFF/solid', '马略卡': 'CE3524/000000/solid',
+    '拉斯帕尔马斯': 'FFF200/0057A8/solid', '阿拉维斯': '0057A8/FFFFFF/stripes', '赫塔菲': '0057A8/FFFFFF/solid',
+    '巴列卡诺': 'FFFFFF/CE3524/sash', '西班牙人': '0072BC/FFFFFF/stripes',
+    '国际米兰': '0068A8/000000/stripes', 'AC米兰': 'FB090B/000000/stripes', '尤文图斯': 'FFFFFF/000000/stripes',
+    '那不勒斯': '12A0D7/FFFFFF/solid', '罗马': '8E1F2F/F0BC42/solid', '拉齐奥': '87D8F7/FFFFFF/solid',
+    '亚特兰大': '1E71B8/000000/stripes', '佛罗伦萨': '5C2D91/FFFFFF/solid', '博洛尼亚': '1A2F48/9E1B32/solid',
+    '都灵': '8A1E2B/FFFFFF/solid', '乌迪内斯': '000000/FFFFFF/stripes', '热那亚': 'A8202E/1B3B6F/solid',
+    '帕尔马': 'FFE200/0057A8/hoops',
+    '拜仁慕尼黑': 'DC052D/FFFFFF/solid', '勒沃库森': 'E32221/000000/solid', '多特蒙德': 'FDE100/000000/solid',
+    '莱比锡红牛': 'DD0741/FFFFFF/solid', '斯图加特': 'E32219/FFFFFF/solid', '法兰克福': 'E1000F/000000/solid',
+    '霍芬海姆': '1C63B7/FFFFFF/solid', '弗赖堡': 'E2001A/000000/solid', '云达不莱梅': '1D9053/FFFFFF/solid',
+    '沃尔夫斯堡': '65B32E/FFFFFF/solid', '美因茨': 'C3141E/FFFFFF/solid', '门兴格拉德巴赫': 'FFFFFF/000000/solid',
+    '奥格斯堡': 'BA3733/FFFFFF/solid', '柏林联合': 'EB1923/FFFFFF/solid', '波鸿': '005CA9/FFFFFF/solid',
+    '圣保利': '5A3A2E/FFFFFF/solid', '汉堡': 'FFFFFF/0A3F86/solid', '沙尔克04': '004D9D/FFFFFF/solid',
+    '科隆': 'FFFFFF/ED1C24/solid', '柏林赫塔': '005CA9/FFFFFF/solid',
+    '巴黎圣日耳曼': '004170/DA291C/solid', '摩纳哥': 'E63946/FFFFFF/diag', '马赛': 'FFFFFF/2FAEE0/solid',
+    '里尔': 'E01E13/0B1B3A/solid', '里昂': 'FFFFFF/1B3C87/solid', '尼斯': 'C8102E/000000/solid',
+    '朗斯': 'FCD600/C8102E/solid', '雷恩': 'E23E2E/000000/stripes', '斯特拉斯堡': '0057B8/FFFFFF/solid',
+    '南特': 'FCD600/00843D/solid', '蒙彼利埃': '0057B8/F58220/solid', '兰斯': 'E31B23/FFFFFF/stripes',
+    '阿贾克斯': 'FFFFFF/C8102E/solid', '埃因霍温': 'E4002B/FFFFFF/solid', '费耶诺德': 'FFFFFF/C8102E/diag',
+    '阿尔克马尔': 'E4002B/FFFFFF/solid', '特温特': 'E4002B/FFFFFF/solid', '乌得勒支': 'FFFFFF/C8102E/diag',
+    '本菲卡': 'E30613/FFFFFF/solid', '波尔图': '004D98/FFFFFF/stripes', '葡萄牙体育': '00843D/FFFFFF/hoops',
+    '布拉加': 'C8102E/FFFFFF/solid', '吉马良斯': 'FFFFFF/0057B8/solid',
+    '凯尔特人': '00843D/FFFFFF/hoops', '格拉斯哥流浪者': '0057B8/FFFFFF/solid', '哈茨': '8B1A2B/FFFFFF/solid',
+    '加拉塔萨雷': 'E30613/FCD600/solid', '费内巴切': 'FCD600/0B1B3A/stripes', '贝西克塔斯': 'FFFFFF/000000/stripes',
+    '特拉布宗': '8B1A2B/6EC4E8/solid', '泽尼特': '0057B8/FFFFFF/solid', '克拉斯诺达尔': '0057B8/00843D/solid',
+    '莫斯科斯巴达': 'C8102E/FFFFFF/solid', '莫斯科中央陆军': 'C8102E/0057B8/solid', '莫斯科火车头': 'C8102E/FFFFFF/solid',
+    '布鲁日': '0057B8/000000/stripes', '安德莱赫特': 'FFFFFF/5B2C83/solid', '亨克': '0057B8/FFFFFF/solid',
+    '帕尔梅拉斯': '00843D/FFFFFF/solid', '弗拉门戈': 'C8102E/000000/hoops', '科林蒂安': 'FFFFFF/000000/solid',
+    '圣保罗': 'FFFFFF/C8102E/hoops', '格雷米奥': '0057B8/000000/stripes', '巴西国际': 'C8102E/FFFFFF/solid',
+    '米内罗竞技': '000000/FFFFFF/stripes', '克鲁塞罗': '0057B8/FFFFFF/solid', '博塔弗戈': '000000/FFFFFF/stripes',
+    '弗鲁米嫩塞': '8B1A2B/00843D/stripes', '桑托斯': 'FFFFFF/000000/solid', '瓦斯科达伽马': '000000/FFFFFF/sash',
+    '河床': 'FFFFFF/C8102E/sash', '博卡青年': '003399/FCD600/solid', '竞技': '6EC4E8/FFFFFF/stripes',
+    '独立': 'C8102E/FFFFFF/solid', '圣洛伦索': '0057B8/C8102E/stripes', '萨斯菲尔德': 'FFFFFF/0057B8/solid',
+    '墨西哥美洲': 'FCD600/0057B8/solid', '瓜达拉哈拉': 'C8102E/FFFFFF/solid', '蒙特雷': '0057B8/FFFFFF/stripes',
+    '老虎大学': 'FCD600/0057B8/solid', '蓝十字': '0057B8/FCD600/solid', '帕丘卡': '0057B8/FFFFFF/solid',
+    '洛杉矶FC': '000000/FCD600/solid', '洛杉矶银河': 'FFFFFF/0057B8/solid', '西雅图海湾人': '00843D/0057B8/solid',
+    '迈阿密国际': 'F7B5CD/000000/solid', '纽约红牛': 'FFFFFF/C8102E/solid', '亚特兰大联': '8B1A2B/FCD600/stripes',
+    '川崎前锋': '6EC4E8/000000/solid', '横滨水手': '0057B8/FFFFFF/solid', '神户胜利船': '8B1A2B/000000/solid',
+    '浦和红钻': 'C8102E/000000/solid', '鹿岛鹿角': '8B1A2B/FFFFFF/solid', '名古屋鲸八': '8B1A2B/FCD600/solid',
+    '蔚山HD': '0057B8/FCD600/solid', '全北现代': '00843D/FFFFFF/solid', '浦项制铁': 'C8102E/000000/stripes',
+    '首尔FC': 'C8102E/000000/stripes', '上海海港': 'C8102E/FFFFFF/solid', '上海申花': '0057B8/FFFFFF/solid',
+    '山东泰山': 'F58220/0057B8/solid', '成都蓉城': 'C8102E/FCD600/solid', '北京国安': '00843D/FFFFFF/solid',
+    '天津津门虎': '0057B8/FFFFFF/stripes', '浙江队': '00843D/000000/solid', '武汉三镇': '0057B8/FFFFFF/solid',
+    '利雅得新月': '0057B8/FFFFFF/solid', '利雅得胜利': 'FCD600/0057B8/solid', '吉达联合': 'FCD600/000000/stripes',
+    '吉达国民': '00843D/FFFFFF/solid', '墨尔本城': '6EC4E8/FFFFFF/solid', '墨尔本胜利': '0057B8/FFFFFF/solid',
+    '悉尼FC': '6EC4E8/0057B8/solid', '西悉尼流浪者': 'C8102E/000000/solid',
+    '中国': 'C8102E/FCD600/solid', '巴西': 'FCD600/00843D/solid', '阿根廷': '6EC4E8/FFFFFF/stripes',
+    '法国': '0057B8/FFFFFF/solid', '德国': 'FFFFFF/000000/solid', '西班牙': 'C8102E/FCD600/solid',
+    '英格兰': 'FFFFFF/C8102E/solid', '意大利': '0057B8/FFFFFF/solid', '荷兰': 'F58220/FFFFFF/solid',
+    '葡萄牙': 'C8102E/00843D/solid', '日本': '0057B8/FFFFFF/solid', '韩国': 'C8102E/0057B8/solid',
+    '沙特阿拉伯': '00843D/FFFFFF/solid', '澳大利亚': 'FCD600/00843D/solid', '美国': 'FFFFFF/0057B8/solid',
+    '墨西哥': '00843D/C8102E/solid', '乌拉圭': '6EC4E8/000000/solid', '哥伦比亚': 'FCD600/0057B8/solid',
+    '智利': 'C8102E/0057B8/solid', '秘鲁': 'FFFFFF/C8102E/sash', '尼日利亚': '00843D/FFFFFF/solid',
+    '摩洛哥': 'C8102E/00843D/solid', '塞内加尔': '00843D/FCD600/solid', '埃及': 'C8102E/FFFFFF/solid',
+    '喀麦隆': '00843D/C8102E/solid', '加纳': 'FFFFFF/FCD600/solid', '科特迪瓦': 'F58220/00843D/solid',
+    '土耳其': 'C8102E/FFFFFF/solid', '俄罗斯': 'FFFFFF/0057B8/solid', '比利时': 'C8102E/FCD600/solid',
+    '克罗地亚': 'FFFFFF/C8102E/hoops', '塞尔维亚': 'C8102E/0057B8/solid', '瑞士': 'C8102E/FFFFFF/solid',
+    '丹麦': 'C8102E/FFFFFF/solid', '瑞典': 'FCD600/0057B8/solid', '挪威': 'C8102E/FFFFFF/solid',
+    '波兰': 'FFFFFF/C8102E/solid', '乌克兰': 'FCD600/0057B8/solid', '奥地利': 'C8102E/FFFFFF/solid',
+    '加拿大': 'C8102E/FFFFFF/solid', '厄瓜多尔': 'FCD600/0057B8/solid', '巴拉圭': 'C8102E/FFFFFF/stripes',
+  };
+  const KIT_FALLBACK = {
+    UEFA: ['C8102E/FFFFFF/solid', '0057B8/FFFFFF/solid', 'FFFFFF/132257/solid', '111111/FFFFFF/stripes', '00843D/FFFFFF/solid', 'F58220/111111/solid', '6EC4E8/FFFFFF/hoops'],
+    CONMEBOL: ['FCD600/00843D/solid', '0057B8/FFFFFF/stripes', 'C8102E/FFFFFF/solid', 'FFFFFF/000000/solid', '6EC4E8/000000/solid'],
+    AFC: ['C8102E/FCD600/solid', '0057B8/FFFFFF/solid', '00843D/FFFFFF/solid', 'FFFFFF/C8102E/solid', 'FCD600/000000/solid'],
+    CONCACAF: ['00843D/C8102E/solid', '0057B8/FFFFFF/solid', 'C8102E/FFFFFF/stripes', 'FCD600/0057B8/solid'],
+    CAF: ['00843D/FCD600/solid', 'C8102E/FFFFFF/solid', 'F58220/00843D/solid', 'FFFFFF/00843D/solid'],
+    OFC: ['00247D/FFFFFF/solid', 'FCD600/00843D/solid'],
+  };
+  let kitSeq = 0;
+  function kitPick(name, confed) {
+    const raw = KIT_STYLES[name];
+    if (raw) return raw.split('/');
+    const pool = KIT_FALLBACK[confed] || KIT_FALLBACK.UEFA;
+    let h = 0;
+    for (let i = 0; i < name.length; i += 1) h = (h * 31 + name.charCodeAt(i)) % 99991;
+    return pool[h % pool.length].split('/');
+  }
+  function kitLum(hex) {
+    const n = parseInt(hex, 16);
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  }
+  function kitSvg(name, confed, size) {
+    const parts = kitPick(name, confed || 'UEFA');
+    const a = parts[0], b = parts[1] || 'FFFFFF', pattern = parts[2] || 'solid';
+    const id = 'kc' + (++kitSeq);
+    const BODY = 'M17 6 L31 6 L41 11 L45 25 L37 28 L34 52 L14 52 L11 28 L3 25 L7 11 Z';
+    let deco = '';
+    if (pattern === 'stripes') {
+      deco = '<g clip-path="url(#' + id + ')">' + Array.from({ length: 9 }, (v, i) =>
+        '<rect x="' + (6 + i * 4.4) + '" y="0" width="2.2" height="56" fill="#' + b + '" opacity="0.9"/>').join('') + '</g>';
+    } else if (pattern === 'hoops') {
+      deco = '<g clip-path="url(#' + id + ')">' + Array.from({ length: 7 }, (v, i) =>
+        '<rect x="0" y="' + (10 + i * 5.4) + '" width="48" height="2.6" fill="#' + b + '" opacity="0.85"/>').join('') + '</g>';
+    } else if (pattern === 'sash') {
+      deco = '<g clip-path="url(#' + id + ')"><rect x="-12" y="18" width="72" height="6.4" fill="#' + b + '" transform="rotate(-38 24 28)" opacity="0.92"/></g>';
+    } else if (pattern === 'halves') {
+      deco = '<g clip-path="url(#' + id + ')"><rect x="24" y="0" width="24" height="56" fill="#' + b + '" opacity="0.92"/></g>';
+    } else if (pattern === 'diag') {
+      deco = '<g clip-path="url(#' + id + ')"><rect x="0" y="0" width="48" height="28" fill="#' + b + '" opacity="0.9"/></g>';
+    }
+    const ink = kitLum(a) > 0.62 ? '#1a1a1a' : '#ffffff';
+    return '<svg class="kit-svg" viewBox="0 0 48 56" width="' + size + '" height="' + Math.round(size * 56 / 48) + '" role="img" aria-label="' + esc(name) + ' 队服">'
+      + '<defs><clipPath id="' + id + '"><path d="' + BODY + '"/></clipPath></defs>'
+      + '<path d="' + BODY + '" fill="#' + a + '" stroke="rgba(0,0,0,.28)" stroke-width="0.7"/>'
+      + deco
+      + '<path d="M19 6 L24 13 L29 6" fill="none" stroke="' + ink + '" stroke-opacity=".45" stroke-width="1.3"/>'
+      + '<path d="M7 11 L3 25 M41 11 L45 25" stroke="#' + b + '" stroke-width="1.6" opacity=".9"/>'
+      + '<circle cx="24" cy="22" r="4.6" fill="#' + b + '" opacity=".95"/>'
+      + '<text x="24" y="24" font-size="4.6" text-anchor="middle" fill="' + (kitLum(b) > 0.62 ? '#1a1a1a' : '#ffffff') + '" font-weight="600">' + esc(name.slice(0, 1)) + '</text>'
+      + '<text x="24" y="47" font-size="7.4" text-anchor="middle" fill="' + ink + '" fill-opacity=".55" font-weight="700">10</text>'
+      + '</svg>';
+  }
+  function careerKitHtml(run) {
+    const sport = run.flags.careerSport;
+    if (!sport) return '';
+    const chips = [];
+    if (sport === 'football' && run.flags.fb) {
+      const fb = run.flags.fb;
+      const league = FB_BY_ID.get(fb.leagueId) || FB_LEAGUES[0];
+      const nation = fbNation(fb.nation);
+      chips.push([fb.club, league.confed, league.name + ' · ' + league.country + ' · 第' + league.tier + '级']);
+      if (nation) chips.push([fb.nation, nation.confed, '国家队 · ' + nation.confed + ' · 实力 ' + nation.strength]);
+    } else if (sport === 'basketball' && run.flags.bb) {
+      const bb = run.flags.bb;
+      const league = bbLeague(bb.leagueId);
+      const nation = bbNation(bb.nation);
+      chips.push([bb.club, (league && league.confed) || 'CONCACAF', league ? league.name + ' · ' + league.country + ' · 第' + league.tier + '级' : '俱乐部']);
+      if (nation) chips.push([bb.nation, nation.confed || 'CONCACAF', '国家队 · 实力 ' + nation.strength]);
+    } else if (sport === 'esports' && run.flags.es) {
+      const es = run.flags.es;
+      const league = esLeague(es.game, es.league);
+      chips.push([es.team, 'UEFA', league ? league.league + ' · ' + league.game + ' · 第' + league.tier + '级' : '战队']);
+    }
+    if (!chips.length) return '';
+    return '<div class="kit-row">' + chips.map(chip =>
+      '<span class="kit-chip">' + kitSvg(chip[0], chip[1], 30) + '<span class="kit-chip-copy"><b>' + esc(chip[0]) + '</b><em>' + esc(chip[2]) + '</em></span></span>').join('')
+      + '<button class="kit-open" data-action="open-kits">队服图鉴</button></div>';
+  }
+  function kitGridHtml(names, confed) {
+    return '<div class="kit-grid">' + names.map(name =>
+      '<div class="kit-card">' + kitSvg(name, confed, 58) + '<b>' + esc(name) + '</b></div>').join('') + '</div>';
+  }
+  function kitsHtml() {
+    const current = state.kitLeague || (state.run && state.run.flags.fb ? state.run.flags.fb.leagueId : (FB_LEAGUES[0] && FB_LEAGUES[0].id));
+    const chips = FB_LEAGUES.map(league =>
+      '<button class="kit-league" data-action="kit-league" data-id="' + esc(league.id) + '" data-active="' + (league.id === current ? 'true' : 'false') + '">' + esc(league.name) + '</button>').join('')
+      + '<button class="kit-league" data-action="kit-league" data-id="nations" data-active="' + (current === 'nations' ? 'true' : 'false') + '">国家队</button>';
+    let body = '';
+    let label = '';
+    if (current === 'nations') {
+      label = '国家队 · ' + FB_NATIONS.length + ' 支';
+      body = '<div class="kit-grid kit-grid-nation">' + FB_NATIONS.map(nation =>
+        '<div class="kit-card">' + kitSvg(nation.name, nation.confed, 50) + '<b>' + esc(nation.name) + '</b></div>').join('') + '</div>';
+    } else {
+      const league = FB_BY_ID.get(current) || FB_LEAGUES[0];
+      label = league.name + ' · ' + league.country + ' · 第' + league.tier + '级 · ' + league.clubs.length + ' 支';
+      body = kitGridHtml(league.clubs.map(club => club.name), league.confed);
+    }
+    return '<div class="modal kit-modal" role="dialog" aria-modal="true" aria-label="队服图鉴">'
+      + '<section class="kit-sheet">'
+      + '<div class="track-head"><div><span class="modal-kicker">KITS</span><h2>队服图鉴</h2><p>二十五国联赛与国家队，按球会传统配色生成；找不到的球队用所属大洲的配色推导。</p></div><button class="close-btn" data-action="close-kits" aria-label="关闭">×</button></div>'
+      + '<div class="kit-leagues">' + chips + '</div>'
+      + '<div class="kit-league-label">' + esc(label) + '</div>'
+      + body
+      + '</section></div>';
+  }
+
   function careerCardHtml(run) {
     const sport = run.flags.careerSport;
     if (!sport) return '';
@@ -21908,6 +22141,7 @@ function aiPortraitFor(run) {
     return '<section class="career-card" data-sport="' + esc(sport) + '">'
       + '<div class="career-head"><span class="career-title">职业生涯 · ' + esc(title) + '</span>'
       + '<span class="career-tag">' + (retired ? '已退役' : '进行中') + '</span></div>'
+      + careerKitHtml(run)
       + '<div class="career-grid">' + rows.map(function (row) {
           return '<div class="career-row"><span>' + esc(row[0]) + '</span><b>' + esc(String(row[1])) + '</b></div>';
         }).join('') + '</div>'
@@ -21965,8 +22199,14 @@ function aiPortraitFor(run) {
     const card = careerCardHtml(run);
     if (filter === 'career') return logGroupHtml('职业生涯', card + logEntriesHtml(careerEntries), careerEntries.length);
     if (filter === 'life') return logGroupHtml('普通人生', logEntriesHtml(lifeEntries), lifeEntries.length);
-    return logGroupHtml('普通人生', logEntriesHtml(lifeEntries), lifeEntries.length)
-      + logGroupHtml('职业生涯', card + logEntriesHtml(careerEntries), careerEntries.length);
+    return '<div class="log-cols">'
+      + '<section class="log-group log-col" data-kind="life">'
+      + '<div class="log-group-head"><span>普通人生</span><em>' + lifeEntries.length + ' 条</em></div>'
+      + logEntriesHtml(lifeEntries) + '</section>'
+      + '<section class="log-group log-col" data-kind="career" data-career="true">'
+      + '<div class="log-group-head"><span>职业生涯</span><em>' + careerEntries.length + ' 条</em></div>'
+      + card + logEntriesHtml(careerEntries) + '</section>'
+      + '</div>';
   }
 
   function endingHtml(run) {
@@ -22422,6 +22662,9 @@ function aiPortraitFor(run) {
       case 'toggle-music': toggleMusic(); break;
       case 'open-tracks': state.showTracks = true; render(); break;
       case 'close-tracks': state.showTracks = false; render(); break;
+      case 'open-kits': state.showKits = true; state.kitLeague = state.run && state.run.flags.fb ? state.run.flags.fb.leagueId : (FB_LEAGUES[0] && FB_LEAGUES[0].id); render(); break;
+      case 'close-kits': state.showKits = false; render(); break;
+      case 'kit-league': state.kitLeague = target.dataset.id || 'nations'; render(); break;
       case 'pick-track': setMusicTrack(target.dataset.track); break;
       case 'set-mode': setPlayMode(target.dataset.mode); break;
       case 'set-story': setStoryMode(target.dataset.story); break;
