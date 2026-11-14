@@ -2241,6 +2241,13 @@ function attrCapFor(run) {
           if (!state.debuted) {
             state.debuted = true;
             const season = fbSeason(inner);
+          {
+            const careerStateRef = inner.flags.fb || inner.flags.bb || inner.flags.es;
+            if (careerStateRef) {
+              careerStateRef.contractYears = (careerStateRef.contractYears == null ? 3 : careerStateRef.contractYears) - 1;
+              if (careerStateRef.contractYears <= 0) { careerStateRef.contractYears = 0; inner.flags.transferDue = true; }
+            }
+          }
             return {
               tone: 'good',
               text: fbTag(season.league, state.club) + ' 你在一场无关紧要的联赛里替补登场，23 分钟，一次成功的抢断，一次传丢的直塞。'
@@ -2258,6 +2265,13 @@ function attrCapFor(run) {
             };
           }
           const season = fbSeason(inner);
+          {
+            const careerStateRef = inner.flags.fb || inner.flags.bb || inner.flags.es;
+            if (careerStateRef) {
+              careerStateRef.contractYears = (careerStateRef.contractYears == null ? 3 : careerStateRef.contractYears) - 1;
+              if (careerStateRef.contractYears <= 0) { careerStateRef.contractYears = 0; inner.flags.transferDue = true; }
+            }
+          }
           const transfer = fbTransfer(inner, season);
           const parts = [];
           if (transfer) {
@@ -2479,6 +2493,13 @@ function attrCapFor(run) {
           if (!state.debuted) {
             state.debuted = true;
             const season = bbSeason(inner);
+          {
+            const careerStateRef = inner.flags.fb || inner.flags.bb || inner.flags.es;
+            if (careerStateRef) {
+              careerStateRef.contractYears = (careerStateRef.contractYears == null ? 3 : careerStateRef.contractYears) - 1;
+              if (careerStateRef.contractYears <= 0) { careerStateRef.contractYears = 0; inner.flags.transferDue = true; }
+            }
+          }
             return { tone: 'good', text: bbTag(season.league, state.club) + ' 你第一次在正式比赛里登场，第四节垃圾时间，两分钟，一个篮板，一次被盖。回到更衣室，你把球衣叠得很整齐。', effects: { mood: 12, wealth: 8 } };
           }
           if (bbShouldRetire(inner)) {
@@ -2486,6 +2507,13 @@ function attrCapFor(run) {
             return { tone: 'good', text: bbTag(league, state.club) + ' 赛季结束，你宣布退役。' + bbCareerSummary(inner), effects: { mood: 6, health: 3 } };
           }
           const season = bbSeason(inner);
+          {
+            const careerStateRef = inner.flags.fb || inner.flags.bb || inner.flags.es;
+            if (careerStateRef) {
+              careerStateRef.contractYears = (careerStateRef.contractYears == null ? 3 : careerStateRef.contractYears) - 1;
+              if (careerStateRef.contractYears <= 0) { careerStateRef.contractYears = 0; inner.flags.transferDue = true; }
+            }
+          }
           const transfer = bbTransfer(inner, season);
           const parts = [];
           if (transfer) {
@@ -2679,6 +2707,13 @@ function attrCapFor(run) {
           if (!state.debuted) {
             state.debuted = true;
             const season = esSeason(inner);
+          {
+            const careerStateRef = inner.flags.fb || inner.flags.bb || inner.flags.es;
+            if (careerStateRef) {
+              careerStateRef.contractYears = (careerStateRef.contractYears == null ? 3 : careerStateRef.contractYears) - 1;
+              if (careerStateRef.contractYears <= 0) { careerStateRef.contractYears = 0; inner.flags.transferDue = true; }
+            }
+          }
             return { tone: 'good', text: esTag(season.league, state.team) + ' 你在一场常规赛里替补上场，第一局手抖得按错了键，第二局打回来一点。赛后教练拍了拍你的肩。', effects: { mood: 12, wealth: 10 } };
           }
           if (esShouldRetire(inner)) {
@@ -2686,6 +2721,13 @@ function attrCapFor(run) {
             return { tone: 'good', text: esTag(league, state.team) + ' 你在直播间里宣布退役。' + esCareerSummary(inner), effects: { mood: 6, health: 4 } };
           }
           const season = esSeason(inner);
+          {
+            const careerStateRef = inner.flags.fb || inner.flags.bb || inner.flags.es;
+            if (careerStateRef) {
+              careerStateRef.contractYears = (careerStateRef.contractYears == null ? 3 : careerStateRef.contractYears) - 1;
+              if (careerStateRef.contractYears <= 0) { careerStateRef.contractYears = 0; inner.flags.transferDue = true; }
+            }
+          }
           const transfer = esTransfer(inner, season);
           const parts = [];
           if (transfer) {
@@ -16509,8 +16551,168 @@ function attrCapFor(run) {
       return choiceRequirementEntries(run, option).map(item => item.text)
     }
 
+    function careerOfferPool(run) {
+      const out = []
+      if (run.flags.fb) {
+        const fb = run.flags.fb
+        const cur = FB_BY_ID.get(fb.leagueId) || FB_LEAGUES[0]
+        FB_LEAGUES.forEach(function (lg) {
+          if (lg.power < cur.power - 4) return
+          lg.clubs.forEach(function (club) {
+            if (lg.id === fb.leagueId && club.name === fb.club) return
+            if (club.strength < fb.ability - 8) return
+            out.push({ name: club.name, leagueId: lg.id, leagueName: lg.name, country: lg.country, tier: lg.tier, strength: Math.round(club.strength) })
+          })
+        })
+        return out
+      }
+      if (run.flags.bb) {
+        const bb = run.flags.bb
+        const cur = bbLeague(bb.leagueId) || BB_LEAGUES[0]
+        BB_LEAGUES.forEach(function (lg) {
+          if (lg.power < cur.power - 4) return
+          lg.clubs.forEach(function (club) {
+            if (lg.id === bb.leagueId && club.name === bb.club) return
+            if (club.strength < bb.ability - 8) return
+            out.push({ name: club.name, leagueId: lg.id, leagueName: lg.name, country: lg.country, tier: lg.tier, strength: Math.round(club.strength) })
+          })
+        })
+        return out
+      }
+      if (run.flags.es) {
+        const es = run.flags.es
+        ES_GAMES.forEach(function (game) {
+          (game.teams || []).forEach(function (team) {
+            if (team.name === es.team) return
+            if (team.strength < es.ability - 8) return
+            out.push({
+              name: team.name,
+              leagueId: game.league,
+              leagueName: game.league + ' · ' + game.game,
+              game: game.game,
+              country: game.country,
+              tier: game.tier,
+              strength: Math.round(team.strength),
+            })
+          })
+        })
+        return out
+      }
+      return out
+    }
+
+    function careerOffers(run) {
+      const pool = careerOfferPool(run)
+      if (!pool.length) return []
+      const state = run.flags.fb || run.flags.bb || run.flags.es
+      const ability = state && state.ability ? state.ability : 60
+      pool.sort(function (a, b) { return Math.abs(a.strength - ability) - Math.abs(b.strength - ability) })
+      const near = pool.slice(0, 30)
+      const picked = []
+      const used = {}
+      let guard = 0
+      while (picked.length < 6 && guard < 240) {
+        guard += 1
+        const item = near[Math.floor(Math.random() * near.length)]
+        if (!item || used[item.name]) continue
+        used[item.name] = true
+        picked.push(item)
+      }
+      return picked
+    }
+
+    function careerSignFor(run, index) {
+      const offers = run.flags.transferOffers || []
+      const offer = offers[index]
+      if (!offer) return { tone: 'normal', text: '转会窗关了，你哪儿也没去。', effects: { mood: -1 } }
+      const state = run.flags.fb || run.flags.bb || run.flags.es
+      const from = state.club || state.team || '老东家'
+      state.club = offer.name
+      if (run.flags.fb || run.flags.bb) {
+        state.leagueId = offer.leagueId
+        state.league = offer.leagueName
+        if (typeof state.clubsPlayed === 'number') state.clubsPlayed += 1
+      } else if (run.flags.es) {
+        state.team = offer.name
+        state.league = offer.leagueName
+        state.game = offer.game || state.game
+        if (typeof state.teamsPlayed === 'number') state.teamsPlayed += 1
+      }
+      state.contractYears = 3
+      run.flags.transferDue = false
+      run.flags.transferOffers = null
+      run.flags.transferRefreshLeft = 2
+      const fee = Math.round(60 + (state.ability || 60) * (state.ability || 60) * 0.18)
+      return {
+        tone: 'good',
+        text: '【转会】【' + offer.leagueName + ' · ' + offer.country + ' · 第' + offer.tier + '级】你从' + from + '转投' + offer.name + '，'
+          + '合同三年，转会费 ' + fee + ' 万。新更衣室的味道、新队友的口音，一切都要重新记。',
+        effects: { mood: 5, wealth: 40, body: 1 },
+      }
+    }
+
+    function careerStay(run) {
+      const state = run.flags.fb || run.flags.bb || run.flags.es
+      const club = state.club || state.team || '本队'
+      state.contractYears = 3
+      run.flags.transferDue = false
+      run.flags.transferOffers = null
+      run.flags.transferRefreshLeft = 2
+      return {
+        tone: 'normal',
+        text: '【续约】你和' + club + '续了三年。签字的时候笔尖顿了一下——你知道外面有更好的报价，但你也知道这里的食堂、理疗师和看台有多熟。',
+        effects: { mood: 4, wealth: 60 },
+      }
+    }
+
+    function buildTransferChoice(run, force) {
+      const state = run.flags.fb || run.flags.bb || run.flags.es
+      if (!state || state.retired) return null
+      if (!force && !run.flags.transferDue) return null
+      if (run.age < 15 || run.age > 34) { run.flags.transferDue = false; return null }
+      let offers = run.flags.transferOffers
+      if (!offers || !offers.length) {
+        offers = careerOffers(run)
+        run.flags.transferOffers = offers
+      }
+      if (!offers.length) { run.flags.transferDue = false; return null }
+      const left = run.flags.transferRefreshLeft == null ? 2 : run.flags.transferRefreshLeft
+      run.flags.transferRefreshLeft = left
+      const options = offers.slice(0, 6).map(function (offer, i) {
+        return {
+          id: 'sw_pick_' + i,
+          label: offer.name,
+          desc: offer.leagueName + ' · ' + offer.country + ' · 第' + offer.tier + '级 · 实力 ' + offer.strength,
+          resolve(inner) { return careerSignFor(inner, i) },
+        }
+      })
+      options.push({
+        id: 'sw_refresh',
+        label: '换一批（还剩 ' + left + ' 次）',
+        desc: '让经纪人再问几家俱乐部。',
+        resolve() { return { tone: 'normal', text: '' } },
+      })
+      options.push({
+        id: 'sw_stay',
+        label: '留在' + (state.club || state.team || '本队'),
+        desc: '续三年，熟悉的地方，熟悉的更衣室。',
+        resolve(inner) { return careerStay(inner) },
+      })
+      return {
+        id: 'career_offers',
+        title: '合同到期：下一站在哪',
+        prompt: '合同最后一年结束了。经纪人在桌上摊开几份合同，窗外是训练场，队友还在跑圈。',
+        options,
+      }
+    }
+
     function maybeOfferChoice(run) {
       if (!run || !run.alive || run.pendingChoice) return null
+      const transferChoice = buildTransferChoice(run)
+      if (transferChoice) {
+        run.pendingChoice = transferChoice
+        return run.pendingChoice
+      }
       const lastChoiceAge = Number(run.flags.lastChoiceAge)
       if (Number.isFinite(lastChoiceAge) && run.age - lastChoiceAge < 2) return null
       const nodes = (CHOICE_NODES[run.worldId] || [])
@@ -16569,6 +16771,20 @@ function attrCapFor(run) {
       const pending = next.pendingChoice
       const option = pending && pending.options.find(item => item.id === optionId)
       if (!option || !canChooseOption(next, option)) return source
+      if (option.id === 'sw_refresh') {
+        const left = next.flags.transferRefreshLeft == null ? 2 : next.flags.transferRefreshLeft
+        const alive = next.flags.fb || next.flags.bb || next.flags.es
+        if (left > 0 && alive && !alive.retired) {
+          next.flags.transferRefreshLeft = left - 1
+          next.flags.transferOffers = careerOffers(next)
+          const rebuilt = buildTransferChoice(next, true)
+          if (rebuilt) {
+            next.pendingChoice = rebuilt
+            return next
+          }
+        }
+        return source
+      }
       const before = snapshotNumbers(next)
       let result
       try {
@@ -21350,7 +21566,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.39.2 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.40.0 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
