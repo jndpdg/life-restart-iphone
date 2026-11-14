@@ -2224,7 +2224,11 @@ function attrCapFor(run) {
             const careerStateRef = inner.flags.fb || inner.flags.bb || inner.flags.es;
             if (careerStateRef) {
               careerStateRef.contractYears = (careerStateRef.contractYears == null ? 3 : careerStateRef.contractYears) - 1;
-              if (careerStateRef.contractYears <= 0) { careerStateRef.contractYears = 0; inner.flags.transferDue = true; }
+              if (careerStateRef.contractYears <= 0) {
+                careerStateRef.contractYears = 0
+                inner.flags.transferDue = true
+                inner.flags.transferFree = (careerStateRef.contractTerm === 1)
+              }
             }
           }
             return {
@@ -2248,7 +2252,11 @@ function attrCapFor(run) {
             const careerStateRef = inner.flags.fb || inner.flags.bb || inner.flags.es;
             if (careerStateRef) {
               careerStateRef.contractYears = (careerStateRef.contractYears == null ? 3 : careerStateRef.contractYears) - 1;
-              if (careerStateRef.contractYears <= 0) { careerStateRef.contractYears = 0; inner.flags.transferDue = true; }
+              if (careerStateRef.contractYears <= 0) {
+                careerStateRef.contractYears = 0
+                inner.flags.transferDue = true
+                inner.flags.transferFree = (careerStateRef.contractTerm === 1)
+              }
             }
           }
           const transfer = fbTransfer(inner, season);
@@ -2476,7 +2484,11 @@ function attrCapFor(run) {
             const careerStateRef = inner.flags.fb || inner.flags.bb || inner.flags.es;
             if (careerStateRef) {
               careerStateRef.contractYears = (careerStateRef.contractYears == null ? 3 : careerStateRef.contractYears) - 1;
-              if (careerStateRef.contractYears <= 0) { careerStateRef.contractYears = 0; inner.flags.transferDue = true; }
+              if (careerStateRef.contractYears <= 0) {
+                careerStateRef.contractYears = 0
+                inner.flags.transferDue = true
+                inner.flags.transferFree = (careerStateRef.contractTerm === 1)
+              }
             }
           }
             return { tone: 'good', text: bbTag(season.league, state.club) + ' 你第一次在正式比赛里登场，第四节垃圾时间，两分钟，一个篮板，一次被盖。回到更衣室，你把球衣叠得很整齐。', effects: { mood: 12, wealth: 8 } };
@@ -2490,7 +2502,11 @@ function attrCapFor(run) {
             const careerStateRef = inner.flags.fb || inner.flags.bb || inner.flags.es;
             if (careerStateRef) {
               careerStateRef.contractYears = (careerStateRef.contractYears == null ? 3 : careerStateRef.contractYears) - 1;
-              if (careerStateRef.contractYears <= 0) { careerStateRef.contractYears = 0; inner.flags.transferDue = true; }
+              if (careerStateRef.contractYears <= 0) {
+                careerStateRef.contractYears = 0
+                inner.flags.transferDue = true
+                inner.flags.transferFree = (careerStateRef.contractTerm === 1)
+              }
             }
           }
           const transfer = bbTransfer(inner, season);
@@ -2690,7 +2706,11 @@ function attrCapFor(run) {
             const careerStateRef = inner.flags.fb || inner.flags.bb || inner.flags.es;
             if (careerStateRef) {
               careerStateRef.contractYears = (careerStateRef.contractYears == null ? 3 : careerStateRef.contractYears) - 1;
-              if (careerStateRef.contractYears <= 0) { careerStateRef.contractYears = 0; inner.flags.transferDue = true; }
+              if (careerStateRef.contractYears <= 0) {
+                careerStateRef.contractYears = 0
+                inner.flags.transferDue = true
+                inner.flags.transferFree = (careerStateRef.contractTerm === 1)
+              }
             }
           }
             return { tone: 'good', text: esTag(season.league, state.team) + ' 你在一场常规赛里替补上场，第一局手抖得按错了键，第二局打回来一点。赛后教练拍了拍你的肩。', effects: { mood: 12, wealth: 10 } };
@@ -2704,7 +2724,11 @@ function attrCapFor(run) {
             const careerStateRef = inner.flags.fb || inner.flags.bb || inner.flags.es;
             if (careerStateRef) {
               careerStateRef.contractYears = (careerStateRef.contractYears == null ? 3 : careerStateRef.contractYears) - 1;
-              if (careerStateRef.contractYears <= 0) { careerStateRef.contractYears = 0; inner.flags.transferDue = true; }
+              if (careerStateRef.contractYears <= 0) {
+                careerStateRef.contractYears = 0
+                inner.flags.transferDue = true
+                inner.flags.transferFree = (careerStateRef.contractTerm === 1)
+              }
             }
           }
           const transfer = esTransfer(inner, season);
@@ -16532,14 +16556,17 @@ function attrCapFor(run) {
 
     function careerOfferPool(run) {
       const out = []
+      const free = Boolean(run.flags.transferFree)
+      const dropFloor = free ? 6 : 4
+      const abilityFloor = free ? 6 : 8
       if (run.flags.fb) {
         const fb = run.flags.fb
         const cur = FB_BY_ID.get(fb.leagueId) || FB_LEAGUES[0]
         FB_LEAGUES.forEach(function (lg) {
-          if (lg.power < cur.power - 4) return
+          if (lg.power < cur.power - dropFloor) return
           lg.clubs.forEach(function (club) {
             if (lg.id === fb.leagueId && club.name === fb.club) return
-            if (club.strength < fb.ability - 8) return
+            if (club.strength < fb.ability - abilityFloor) return
             out.push({ name: club.name, leagueId: lg.id, leagueName: lg.name, country: lg.country, tier: lg.tier, strength: Math.round(club.strength) })
           })
         })
@@ -16549,10 +16576,10 @@ function attrCapFor(run) {
         const bb = run.flags.bb
         const cur = bbLeague(bb.leagueId) || BB_LEAGUES[0]
         BB_LEAGUES.forEach(function (lg) {
-          if (lg.power < cur.power - 4) return
+          if (lg.power < cur.power - dropFloor) return
           lg.clubs.forEach(function (club) {
             if (lg.id === bb.leagueId && club.name === bb.club) return
-            if (club.strength < bb.ability - 8) return
+            if (club.strength < bb.ability - abilityFloor) return
             out.push({ name: club.name, leagueId: lg.id, leagueName: lg.name, country: lg.country, tier: lg.tier, strength: Math.round(club.strength) })
           })
         })
@@ -16563,7 +16590,7 @@ function attrCapFor(run) {
         ES_GAMES.forEach(function (game) {
           (game.teams || []).forEach(function (team) {
             if (team.name === es.team) return
-            if (team.strength < es.ability - 8) return
+            if (team.strength < es.ability - abilityFloor) return
             out.push({
               name: team.name,
               leagueId: game.league,
@@ -16581,6 +16608,7 @@ function attrCapFor(run) {
     }
 
     function careerOffers(run) {
+      const wantCount = run.flags.transferFree ? 8 : 6
       const pool = careerOfferPool(run)
       if (!pool.length) return []
       const state = run.flags.fb || run.flags.bb || run.flags.es
@@ -16590,7 +16618,7 @@ function attrCapFor(run) {
       const picked = []
       const used = {}
       let guard = 0
-      while (picked.length < 6 && guard < 240) {
+      while (picked.length < wantCount && guard < 240) {
         guard += 1
         const item = near[Math.floor(Math.random() * near.length)]
         if (!item || used[item.name]) continue
@@ -16627,18 +16655,30 @@ function attrCapFor(run) {
         state.game = offer.game || state.game
         if (typeof state.teamsPlayed === 'number') state.teamsPlayed += 1
       }
+      const wasFree = Boolean(run.flags.transferFree)
       state.contractYears = term
+      state.contractTerm = term
       state.wage = offer.wage || state.wage
+      run.flags.transferFree = false
       run.flags.transferDue = false
       run.flags.transferOffers = null
       run.flags.transferRefreshLeft = 2
-      const fee = Math.round(60 + (state.ability || 60) * (state.ability || 60) * 0.18)
+      const fee = wasFree ? 0 : Math.round(60 + (state.ability || 60) * (state.ability || 60) * 0.18)
+      const tag = wasFree ? '【自由身】' : '【转会】'
+      const text = tag + '【' + offer.leagueName + ' · ' + offer.country + ' · 第' + offer.tier + '级】'
+        + (wasFree
+          ? '合同到期，你成了自由球员。没有转会费，' + offer.name + '只用一份年薪就把你带走——'
+            + '签下 ' + term + ' 年合同（年薪 ' + (offer.wage || 0) + ' 万），签字费另算。'
+          : '你从' + from + '转投' + offer.name + '，签下 ' + term + ' 年合同（年薪 ' + (offer.wage || 0) + ' 万），转会费 ' + fee + ' 万。')
+        + '新更衣室的味道、新队友的口音，一切都要重新记。'
       return {
         tone: 'good',
-        text: '【转会】【' + offer.leagueName + ' · ' + offer.country + ' · 第' + offer.tier + '级】你从' + from + '转投' + offer.name + '，'
-          + '签下' + term + ' 年合同（年薪 ' + (offer.wage || 0) + ' 万），转会费 ' + fee + ' 万。'
-          + '新更衣室的味道、新队友的口音，一切都要重新记。',
-        effects: { mood: 5 + (term === 1 ? 2 : 0), wealth: Math.round((offer.wage || 20) * (1.1 + term * 0.35)), body: 1 },
+        text: text,
+        effects: {
+          mood: 5 + (term === 1 ? 2 : 0) + (wasFree ? 1 : 0),
+          wealth: Math.round((offer.wage || 20) * (1.1 + term * 0.35)) + (wasFree ? Math.round((offer.wage || 20) * 0.5) : 0),
+          body: 1,
+        },
       }
     }
 
@@ -16647,6 +16687,7 @@ function attrCapFor(run) {
       const club = state.club || state.team || '本队'
       const term = years || 3
       state.contractYears = term
+      state.contractTerm = term
       state.wage = Math.round((state.wage || 30) * (1 + (4 - term) * 0.06))
       run.flags.transferDue = false
       run.flags.transferOffers = null
@@ -16686,6 +16727,7 @@ function attrCapFor(run) {
       if (!state || state.retired) return null
       if (!force && !run.flags.transferDue) return null
       if (run.age < 15 || run.age > 34) { run.flags.transferDue = false; return null }
+      const freeAgent = Boolean(run.flags.transferFree)
       let offers = run.flags.transferOffers
       if (!offers || !offers.length) {
         offers = careerOffers(run)
@@ -16694,11 +16736,12 @@ function attrCapFor(run) {
       if (!offers.length) { run.flags.transferDue = false; return null }
       const left = run.flags.transferRefreshLeft == null ? 2 : run.flags.transferRefreshLeft
       run.flags.transferRefreshLeft = left
-      const options = offers.slice(0, 6).map(function (offer, i) {
+      const slotCount = freeAgent ? 8 : 6
+      const options = offers.slice(0, slotCount).map(function (offer, i) {
         return {
           id: 'sw_pick_' + i,
           label: offer.name,
-          desc: offer.leagueName + ' · ' + offer.country + ' · 第' + offer.tier + '级 · 实力 ' + offer.strength
+          desc: (freeAgent ? '免签 · ' : '') + offer.leagueName + ' · ' + offer.country + ' · 第' + offer.tier + '级 · 实力 ' + offer.strength
             + ' · 合同 ' + offer.years + ' 年 · 年薪 ' + offer.wage + ' 万',
           resolve(inner) { return careerSignFor(inner, i) },
         }
@@ -16716,9 +16759,12 @@ function attrCapFor(run) {
         resolve() { return { tone: 'normal', text: '' } },
       })
       return {
-        id: 'career_offers',
-        title: '合同到期：下一站在哪',
-        prompt: '合同最后一年结束了。经纪人在桌上摊开几份合同，窗外是训练场，队友还在跑圈。',
+        id: freeAgent ? 'career_free_agent' : 'career_offers',
+        title: freeAgent ? '自由身：不用转会费' : '合同到期：下一站在哪',
+        prompt: freeAgent
+          ? '一年的短约走到头了。你没有续约，也没有被卖——合同自然到期，你成了自由球员。'
+            + '经纪人把电话放在桌上，一上午响个不停：不用转会费的人，谁都想聊聊。'
+          : '合同最后一年结束了。经纪人在桌上摊开几份合同，窗外是训练场，队友还在跑圈。',
         options,
       }
     }
@@ -21591,7 +21637,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.41.0 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.42.0 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
