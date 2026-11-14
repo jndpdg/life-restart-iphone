@@ -868,6 +868,15 @@
       align-items: start;
       margin-top: 2px;
     }
+    .log-empty {
+      margin: 10px 0 2px;
+      padding: 10px 9px;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      font-size: 11.5px;
+      line-height: 1.7;
+      opacity: .6;
+    }
     .log-col { min-width: 0; padding: 8px 7px 10px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--panel) 72%, transparent); }
     .log-col[data-career="true"] { border-color: color-mix(in srgb, var(--brand) 30%, var(--line)); }
     .log-col .log-group-head { margin: 0 0 7px; }
@@ -21624,7 +21633,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.43.0';
+  const APP_VERSION = '1.44.0';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -21725,7 +21734,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.43.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.44.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -22602,20 +22611,22 @@ function aiPortraitFor(run) {
 
   function logHtml(run, filter) {
     const hasCareer = Boolean(run.flags && run.flags.careerSport);
-    if (!hasCareer) return logEntriesHtml(run.log);
     const lifeEntries = run.log.filter(entry => !entry.isCareer);
     const careerEntries = run.log.filter(entry => entry.isCareer);
     let card = '';
-    try { card = careerCardHtml(run) || ''; } catch (err) { card = ''; }
-    if (filter === 'career') return logGroupHtml('职业生涯', card + logEntriesHtml(careerEntries), careerEntries.length);
-    if (filter === 'life') return logGroupHtml('普通人生', logEntriesHtml(lifeEntries), lifeEntries.length);
+    if (hasCareer) {
+      try { card = careerCardHtml(run) || ''; } catch (err) { card = ''; }
+    }
+    const careerBody = hasCareer
+      ? card + logEntriesHtml(careerEntries)
+      : '<p class="log-empty">还没有开始职业生涯。<br>七岁那年会有人问你：足球、篮球、电竞，还是先不选。</p>';
     return '<div class="log-cols">'
       + '<section class="log-group log-col" data-kind="life">'
       + '<div class="log-group-head"><span>普通人生</span><em>' + lifeEntries.length + ' 条</em></div>'
       + logEntriesHtml(lifeEntries) + '</section>'
       + '<section class="log-group log-col" data-kind="career" data-career="true">'
       + '<div class="log-group-head"><span>职业生涯</span><em>' + careerEntries.length + ' 条</em></div>'
-      + card + logEntriesHtml(careerEntries) + '</section>'
+      + careerBody + '</section>'
       + '</div>';
   }
 
@@ -22681,7 +22692,7 @@ function aiPortraitFor(run) {
       + '</div>'
       + '</header>'
       + avatarHtml(run)
-      + '<main class="log">' + logTabsHtml(run) + logHtml(run, state.logFilter) + (run.ending ? endingHtml(run) : '') + '</main>'
+      + '<main class="log">' + logHtml(run, 'all') + (run.ending ? endingHtml(run) : '') + '</main>'
       + (death ? '' : '<div class="game-controls" style="padding-bottom:calc(9px + var(--safe-bottom))"><button class="btn btn-ghost" data-action="toggle-auto" data-auto="' + (state.auto ? 'true' : 'false') + '"><span class="auto-dot"></span>' + (state.auto ? '暂停自动' : '自动播放') + '</button><button class="btn btn-primary" data-action="advance">' + advanceLabel + '</button></div>')
       + '</div>';
   }
