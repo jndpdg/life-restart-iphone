@@ -16595,7 +16595,16 @@ function attrCapFor(run) {
         const item = near[Math.floor(Math.random() * near.length)]
         if (!item || used[item.name]) continue
         used[item.name] = true
-        picked.push(item)
+        const gap = item.strength - ability
+        const term = gap >= 8
+          ? (Math.random() < 0.72 ? 1 : 2)
+          : gap >= 1
+            ? (Math.random() < 0.4 ? 2 : Math.random() < 0.7 ? 1 : 3)
+            : gap >= -6
+              ? (Math.random() < 0.45 ? 3 : Math.random() < 0.75 ? 2 : 4)
+              : (Math.random() < 0.5 ? 4 : 3)
+        const wage = Math.round(14 + ability * 0.55 + Math.max(0, gap) * 1.8 + (4 - term) * 6)
+        picked.push(Object.assign({}, item, { years: term, wage }))
       }
       return picked
     }
@@ -16604,6 +16613,7 @@ function attrCapFor(run) {
       const offers = run.flags.transferOffers || []
       const offer = offers[index]
       if (!offer) return { tone: 'normal', text: '转会窗关了，你哪儿也没去。', effects: { mood: -1 } }
+      const term = offer.years || 3
       const state = run.flags.fb || run.flags.bb || run.flags.es
       const from = state.club || state.team || '老东家'
       state.club = offer.name
@@ -16617,7 +16627,8 @@ function attrCapFor(run) {
         state.game = offer.game || state.game
         if (typeof state.teamsPlayed === 'number') state.teamsPlayed += 1
       }
-      state.contractYears = 3
+      state.contractYears = term
+      state.wage = offer.wage || state.wage
       run.flags.transferDue = false
       run.flags.transferOffers = null
       run.flags.transferRefreshLeft = 2
@@ -16625,22 +16636,48 @@ function attrCapFor(run) {
       return {
         tone: 'good',
         text: '【转会】【' + offer.leagueName + ' · ' + offer.country + ' · 第' + offer.tier + '级】你从' + from + '转投' + offer.name + '，'
-          + '合同三年，转会费 ' + fee + ' 万。新更衣室的味道、新队友的口音，一切都要重新记。',
-        effects: { mood: 5, wealth: 40, body: 1 },
+          + '签下' + term + ' 年合同（年薪 ' + (offer.wage || 0) + ' 万），转会费 ' + fee + ' 万。'
+          + '新更衣室的味道、新队友的口音，一切都要重新记。',
+        effects: { mood: 5 + (term === 1 ? 2 : 0), wealth: Math.round((offer.wage || 20) * (1.1 + term * 0.35)), body: 1 },
       }
     }
 
-    function careerStay(run) {
+    function careerStay(run, years) {
       const state = run.flags.fb || run.flags.bb || run.flags.es
       const club = state.club || state.team || '本队'
-      state.contractYears = 3
+      const term = years || 3
+      state.contractYears = term
+      state.wage = Math.round((state.wage || 30) * (1 + (4 - term) * 0.06))
       run.flags.transferDue = false
       run.flags.transferOffers = null
       run.flags.transferRefreshLeft = 2
       return {
         tone: 'normal',
-        text: '【续约】你和' + club + '续了三年。签字的时候笔尖顿了一下——你知道外面有更好的报价，但你也知道这里的食堂、理疗师和看台有多熟。',
-        effects: { mood: 4, wealth: 60 },
+        text: '【续约】你和' + club + '续了' + term + ' 年（年薪 ' + state.wage + ' 万）。'
+          + '签字的时候笔尖顿了一下——你知道外面有更好的报价，但你也知道这里的食堂、理疗师和看台有多熟。',
+        effects: { mood: 4 + (term >= 4 ? 2 : 0), wealth: Math.round(20 * term + (4 - term) * 12) },
+      }
+    }
+
+    function buildRenewChoice(run) {
+      const state = run.flags.fb || run.flags.bb || run.flags.es
+      if (!state) return null
+      const club = state.club || state.team || '本队'
+      const base = state.wage || 30
+      const rows = [1, 2, 3, 4].map(function (years) {
+        const wage = Math.round(base * (1 + (4 - years) * 0.06))
+        return {
+          id: 'sw_renew_' + years,
+          label: '续 ' + years + ' 年',
+          desc: '年薪 ' + wage + ' 万 · ' + (years === 1 ? '随时可以再谈，但要冒自由身走人的风险' : years === 4 ? '长约锁死，安稳但议价空间小' : '折中的年限'),
+          resolve(inner) { return careerStay(inner, years) },
+        }
+      })
+      return {
+        id: 'career_renew_terms',
+        title: '续约几年',
+        prompt: '经纪人把空白合同推过来：' + club + '想要你留下，年限由你定。',
+        options: rows,
       }
     }
 
@@ -16661,7 +16698,8 @@ function attrCapFor(run) {
         return {
           id: 'sw_pick_' + i,
           label: offer.name,
-          desc: offer.leagueName + ' · ' + offer.country + ' · 第' + offer.tier + '级 · 实力 ' + offer.strength,
+          desc: offer.leagueName + ' · ' + offer.country + ' · 第' + offer.tier + '级 · 实力 ' + offer.strength
+            + ' · 合同 ' + offer.years + ' 年 · 年薪 ' + offer.wage + ' 万',
           resolve(inner) { return careerSignFor(inner, i) },
         }
       })
@@ -16674,8 +16712,8 @@ function attrCapFor(run) {
       options.push({
         id: 'sw_stay',
         label: '留在' + (state.club || state.team || '本队'),
-        desc: '续三年，熟悉的地方，熟悉的更衣室。',
-        resolve(inner) { return careerStay(inner) },
+        desc: '留下来，年限你自己挑（1、2、3 或 4 年）。',
+        resolve() { return { tone: 'normal', text: '' } },
       })
       return {
         id: 'career_offers',
@@ -16750,6 +16788,14 @@ function attrCapFor(run) {
       const pending = next.pendingChoice
       const option = pending && pending.options.find(item => item.id === optionId)
       if (!option || !canChooseOption(next, option)) return source
+      if (option.id === 'sw_stay') {
+        const renew = buildRenewChoice(next)
+        if (renew) {
+          next.pendingChoice = renew
+          return next
+        }
+        return source
+      }
       if (option.id === 'sw_refresh') {
         const left = next.flags.transferRefreshLeft == null ? 2 : next.flags.transferRefreshLeft
         const alive = next.flags.fb || next.flags.bb || next.flags.es
@@ -21545,7 +21591,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.40.0 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.41.0 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
