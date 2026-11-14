@@ -136,6 +136,48 @@
     }
     button:disabled { cursor: default; }
     h1, h2, h3, p { margin: 0; }
+.ver-link {
+      margin-left: 6px;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      font: inherit;
+      letter-spacing: inherit;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      opacity: .75;
+      cursor: pointer;
+    }
+    .update-banner {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      z-index: 70;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid color-mix(in srgb, var(--brand) 45%, var(--line));
+      border-radius: 13px;
+      background: color-mix(in srgb, var(--panel) 96%, transparent);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, .38);
+      font-size: 12.5px;
+    }
+    .update-banner[hidden] { display: none; }
+    .update-banner button {
+      flex: none;
+      padding: 6px 11px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--brand);
+      color: #10110f;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
     .ver-line {
       margin: 4px 0 0;
       font-size: 11px;
@@ -1571,6 +1613,7 @@
   </style>
 </head>
 <body>
+<div class="update-banner" id="update-banner" hidden><span id="update-banner-text">有新版本可用</span><button type="button" id="update-banner-btn">立即更新</button></div>
   <div id="app" class="app"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script>
@@ -21560,6 +21603,30 @@ function attrCapFor(run) {
     });
   }
 
+  const APP_VERSION = '1.43.0';
+
+  function forceReload() {
+    const url = location.pathname + '?v=' + Date.now();
+    location.replace(url);
+  }
+
+  function checkAppUpdate() {
+    try {
+      fetch('version.json?ts=' + Date.now(), { cache: 'no-store' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!data || !data.version || data.version === APP_VERSION) return;
+          const banner = document.getElementById('update-banner');
+          const text = document.getElementById('update-banner-text');
+          if (!banner) return;
+          if (text) text.textContent = '新版本 v' + data.version + ' 已发布 · 你正在跑 v' + APP_VERSION;
+          banner.hidden = false;
+          banner.dataset.version = data.version;
+        })
+        .catch(() => {});
+    } catch (err) {}
+  }
+
   function render() {
     const html = state.view === 'home'
       ? homeHtml()
@@ -21637,7 +21704,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.42.0 · 2026-11-13</p>'
+      + '<p class="ver-line"><span>v1.43.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -23026,6 +23093,7 @@ function aiPortraitFor(run) {
         break;
       case 'log-filter': state.logFilter = target.dataset.value || 'all'; render(); break;
       case 'inherit': inheritLife(); break;
+      case 'check-update': forceReload(); break;
       case 'restart': restartLife(); break;
       case 'clear-legacy': state.legacy = null; render(); break;
       case 'export-save': {
@@ -23102,7 +23170,11 @@ function aiPortraitFor(run) {
     if (music && music.timer) clearInterval(music.timer);
   });
 
+  const updateBtn = document.getElementById('update-banner-btn');
+  if (updateBtn) updateBtn.addEventListener('click', forceReload);
+
   render();
+  checkAppUpdate();
 })();
   </script>
 </body>
