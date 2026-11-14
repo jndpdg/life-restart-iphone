@@ -2989,7 +2989,7 @@ function attrCapFor(run) {
     ];
 
     function maybeCareerYear(run) {
-      if (run.worldId === 'modern' && run.flags.careerSport && run.age >= 26
+      if (run.worldId === 'modern' && run.flags.careerSport && run.age >= 19
         && !run.flags.fb && !run.flags.bb && !run.flags.es) {
         try {
           const sport = run.flags.careerSport
@@ -3009,23 +3009,23 @@ function attrCapFor(run) {
 
     const CAREER_NODE = {
       id: 'modern_career',
-      at: 14,
+      at: 7,
       chance: 1,
       when: run => run.worldId === 'modern' && !run.flags.careerAsked,
       title: '职业生涯：要不要走职业这条路',
-      prompt: '体校教练把一张报名表推过来：「足球、篮球、电竞——总得挑一样。想走职业，就得现在决定。」',
+      prompt: '小学的体育老师把一张报名表推过来：「足球、篮球、电竞——想走职业，就得从今天开始。」',
       options: [
         {
-          id: 'career_football', label: '足球', desc: '把十六岁到三十岁，交给一块草地。',
-          resolve() { return { tone: 'good', text: '你在纸上写下「足球」。教练点点头，说：那明天开始，你的下午归我了。', effects: { mood: 8, body: 1, flags: { careerSport: 'football' } } } },
+          id: 'career_football', label: '足球', desc: '从今天起，放学以后的时间交给一块草地。',
+          resolve() { return { tone: 'good', text: '你在纸上写下「足球」。教练点点头，说：那明天开始，你的下午归我了。', effects: { mood: 8, body: 1, flags: { careerSport: 'football', careerAsked: true } } } },
         },
         {
           id: 'career_basketball', label: '篮球', desc: '球馆的地板、汗味和球鞋摩擦声。',
-          resolve() { return { tone: 'good', text: '你在纸上写下「篮球」。教练笑了：个子还得再长，手感倒是不错。', effects: { mood: 8, body: 1, flags: { careerSport: 'basketball' } } } },
+          resolve() { return { tone: 'good', text: '你在纸上写下「篮球」。教练笑了：个子还得再长，手感倒是不错。', effects: { mood: 8, body: 1, flags: { careerSport: 'basketball', careerAsked: true } } } },
         },
         {
           id: 'career_esports', label: '电竞', desc: '键盘、屏幕、凌晨三点的排位。',
-          resolve() { return { tone: 'good', text: '你在纸上写下「电竞」。教练愣住了，说这不算体育——你说，赢就算。', effects: { mood: 8, int: 1, flags: { careerSport: 'esports' } } } },
+          resolve() { return { tone: 'good', text: '你在纸上写下「电竞」。教练愣住了，说这不算体育——你说，赢就算。', effects: { mood: 8, int: 1, flags: { careerSport: 'esports', careerAsked: true } } } },
         },
         {
           id: 'career_none', label: '不走了，好好读书', desc: '把球鞋和键盘都收进柜子。',
@@ -3036,7 +3036,7 @@ function attrCapFor(run) {
 
     const FB_ROLE_NODE = {
       id: 'career_football_role',
-      at: 15,
+      at: 8,
       chance: 1,
       when: run => run.worldId === 'modern' && run.flags.careerSport === 'football' && !run.flags.fb,
       title: '足球：你踢哪个位置',
@@ -3052,7 +3052,7 @@ function attrCapFor(run) {
 
     const BB_ROLE_NODE = {
       id: 'career_basketball_role',
-      at: 15,
+      at: 8,
       chance: 1,
       when: run => run.worldId === 'modern' && run.flags.careerSport === 'basketball' && !run.flags.bb,
       title: '篮球：你打哪个位置',
@@ -3068,7 +3068,7 @@ function attrCapFor(run) {
 
     const ES_ROLE_NODE = {
       id: 'career_esports_role',
-      at: 15,
+      at: 8,
       chance: 1,
       when: run => run.worldId === 'modern' && run.flags.careerSport === 'esports' && !run.flags.es,
       title: '电竞：项目与位置',
@@ -21329,7 +21329,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.39.1 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.39.2 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
