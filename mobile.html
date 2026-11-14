@@ -3010,6 +3010,16 @@ function attrCapFor(run) {
     ];
 
     function maybeCareerYear(run) {
+      if (run.worldId === 'modern' && run.flags.careerSport && run.age >= 26
+        && !run.flags.fb && !run.flags.bb && !run.flags.es) {
+        try {
+          const sport = run.flags.careerSport
+          if (sport === 'football') fbInit(run, 'CM')
+          else if (sport === 'basketball') bbInit(run, 'SG')
+          else if (sport === 'esports') esInit(run, '英雄联盟', 'mid')
+          run.flags.careerAsked = true
+        } catch (err) {}
+      }
       const coach = maybeCoachYear(run);
       if (coach) return coach;
       if (run.flags.fb) return maybeFootballYear(run);
@@ -16531,7 +16541,8 @@ function attrCapFor(run) {
       if (eligible.length === 0) return null
       // 走职业路线时，优先让职业相关的抉择冒出来，否则一年只有一个节点会被选中，职业线几乎轮不到
       const careerPool = run.flags.careerSport ? eligible.filter(item => /^(career_|cc_)/.test(item.id)) : []
-      const node = pick(careerPool.length && Math.random() < 0.62 ? careerPool : eligible)
+      const forcedRole = eligible.find(item => item.id === 'career_football_role' || item.id === 'career_basketball_role' || item.id === 'career_esports_role')
+      const node = forcedRole || pick(careerPool.length && Math.random() < 0.62 ? careerPool : eligible)
       const giftChoice = run.powerGift && run.powerGift.choice ? run.powerGift.choice : 0
       const choiceChance = clamp((node.chance == null ? 0.85 : node.chance) + giftChoice + (run.power ? 0.03 : 0), 0.1, 0.97)
       if (Math.random() > choiceChance) return null
@@ -19587,11 +19598,13 @@ function attrCapFor(run) {
         const careerDue = Boolean(careerState && !careerState.retired)
           && (run.flags.fb ? fbShouldRetire(run) : run.flags.bb ? bbShouldRetire(run) : run.flags.es ? esShouldRetire(run) : false)
         const careerPrime = Boolean(careerState && !careerState.retired) && (careerDue || run.age >= 33)
-        const partnerStory = careerPrime ? null : choosePartnerStory(run)
-        const crisis = !partnerStory && !careerPrime ? maybeCrisis(run) : null
-        const powerMoment = !partnerStory && !crisis && !careerPrime ? maybePowerMoment(run) : null
-        const twist = !partnerStory && !crisis && !powerMoment && !careerPrime && Math.random() < world.twistChance ? chooseTwist(run) : null
-        const football = !partnerStory && !crisis && !powerMoment && !twist ? maybeCareerYear(run) : null
+        const careerNow = maybeCareerYear(run)
+        const careerFirst = careerNow && (careerPrime || Math.random() < 0.72) ? careerNow : null
+        const partnerStory = careerFirst ? null : (careerPrime ? null : choosePartnerStory(run))
+        const crisis = !careerFirst && !partnerStory && !careerPrime ? maybeCrisis(run) : null
+        const powerMoment = !careerFirst && !partnerStory && !crisis && !careerPrime ? maybePowerMoment(run) : null
+        const twist = !careerFirst && !partnerStory && !crisis && !powerMoment && !careerPrime && Math.random() < world.twistChance ? chooseTwist(run) : null
+        const football = careerFirst || (!partnerStory && !crisis && !powerMoment && !twist ? careerNow : null)
         if (partnerStory) {
           source = 'partner'
           current = partnerStory
@@ -21337,7 +21350,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line">v1.39.0 · 2026-11-13</p>'
+      + '<p class="ver-line">v1.39.1 · 2026-11-13</p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -22217,7 +22230,8 @@ function aiPortraitFor(run) {
     if (!hasCareer) return logEntriesHtml(run.log);
     const lifeEntries = run.log.filter(entry => !entry.isCareer);
     const careerEntries = run.log.filter(entry => entry.isCareer);
-    const card = careerCardHtml(run);
+    let card = '';
+    try { card = careerCardHtml(run) || ''; } catch (err) { card = ''; }
     if (filter === 'career') return logGroupHtml('职业生涯', card + logEntriesHtml(careerEntries), careerEntries.length);
     if (filter === 'life') return logGroupHtml('普通人生', logEntriesHtml(lifeEntries), lifeEntries.length);
     return '<div class="log-cols">'
