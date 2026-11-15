@@ -1458,6 +1458,38 @@
     .replay-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
     .replay-controls .btn { flex: 1 1 42%; min-height: 38px; font-size: 10px; }
     .choice-modal { align-items: center; }
+    /* —— 动效（v1.45.0）：只做 CSS，避免每帧跑 JS —— */
+    @keyframes fxScreenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    @keyframes fxEntryIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+    @keyframes fxAgePop {
+      0% { transform: scale(1); }
+      38% { color: var(--brand); transform: scale(1.14); }
+      100% { transform: scale(1); }
+    }
+    @keyframes fxDeltaIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+    @keyframes fxOptionIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes fxEndingIn { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+
+    .screen[data-enter="1"] { animation: fxScreenIn .32s cubic-bezier(.22, 1, .36, 1) both; }
+    .entry.is-fresh { animation: fxEntryIn .34s cubic-bezier(.22, 1, .36, 1) both; }
+    .entry.is-fresh .entry-age { animation: fxAgePop .6s ease-out both; }
+    .entry.is-fresh .entry-delta { animation: fxDeltaIn .48s ease-out both; }
+    .choice-sheet .choice-option { animation: fxOptionIn .3s cubic-bezier(.22, 1, .36, 1) both; }
+    .choice-sheet .choice-option:nth-child(2) { animation-delay: .04s; }
+    .choice-sheet .choice-option:nth-child(3) { animation-delay: .08s; }
+    .choice-sheet .choice-option:nth-child(4) { animation-delay: .12s; }
+    .choice-sheet .choice-option:nth-child(5) { animation-delay: .16s; }
+    .choice-sheet .choice-option:nth-child(6) { animation-delay: .2s; }
+    .choice-sheet .choice-option:nth-child(7) { animation-delay: .24s; }
+    .choice-sheet .choice-option:nth-child(8) { animation-delay: .28s; }
+    .choice-sheet .choice-option:nth-child(9) { animation-delay: .32s; }
+    .ending { animation: fxEndingIn .46s cubic-bezier(.22, 1, .36, 1) both; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .screen[data-enter="1"], .entry.is-fresh, .entry.is-fresh .entry-age,
+      .entry.is-fresh .entry-delta, .choice-sheet .choice-option, .ending { animation: none !important; }
+    }
+
     .choice-sheet {
       width: 100%;
       max-width: 560px;
@@ -21633,7 +21665,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.44.3';
+  const APP_VERSION = '1.45.0';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -21658,6 +21690,8 @@ function attrCapFor(run) {
   }
 
   function render() {
+    const entering = state.__lastView !== state.view;
+    state.__lastView = state.view;
     const html = state.view === 'home'
       ? homeHtml()
       : state.view === 'setup'
@@ -21669,7 +21703,7 @@ function attrCapFor(run) {
     else if (state.replay) overlay = replayHtml()
     else if (state.run && state.run.pendingScene) overlay = sceneHtml()
     else if (state.run && state.run.pendingChoice) overlay = choiceHtml()
-    app.innerHTML = html + overlay
+    app.innerHTML = (entering ? html.replace('<div class="screen', '<div data-enter="1" class="screen') : html) + overlay
     document.body.classList.toggle('modal-open', Boolean(state.showKits || state.showTracks || state.replay || (state.run && (state.run.pendingScene || state.run.pendingChoice))))
     updateMusicMood(state.run)
     scrollAfterRender();
@@ -21734,7 +21768,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.44.3 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.45.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -22579,9 +22613,10 @@ function aiPortraitFor(run) {
     return '<div class="deltas">' + entry.deltas.map(delta => '<span class="delta" data-kind="' + esc(delta.kind || '') + '">' + esc(delta.label) + ' ' + (delta.value > 0 ? '+' : '') + delta.value + (delta.money ? (delta.unit || '') : '') + '</span>').join('') + '</div>';
   }
 
-  function logEntriesHtml(entries) {
+  function logEntriesHtml(entries, freshEntry) {
     let html = '';
-    for (const entry of entries) {
+    for (let entryIndex = 0; entryIndex < entries.length; entryIndex += 1) {
+      const entry = entries[entryIndex];
       if (entry.kind === 'chapter') {
         html += '<div class="chapter-entry">' + esc(entry.text) + '<small>' + entry.age + ' 岁</small></div>';
         continue;
@@ -22595,7 +22630,7 @@ function aiPortraitFor(run) {
         continue;
       }
       const tag = entry.isCareer ? '职业' : entry.isChoice ? (entry.autoChoice ? '命运选择 · ' : '抉择 · ') + (entry.choiceLabel || '命运岔路') : entry.isPartner ? '相伴' : entry.isTwist ? '意外' : entry.milestone ? '人生节点' : '';
-      html += '<div class="entry" data-tone="' + esc(entry.tone || 'normal') + '">'
+      html += '<div class="entry' + (entry === freshEntry ? ' is-fresh' : '') + '" data-tone="' + esc(entry.tone || 'normal') + '">'
         + '<div class="entry-age">' + entry.age + ' 岁' + (entry.span ? '<small>+' + entry.span + '年</small>' : '') + '</div>'
         + '<div class="entry-body">' + (tag ? '<span class="entry-tag ' + (entry.isTwist ? 'twist' : entry.isChoice ? 'choice' : entry.isPartner ? 'partner' : '') + '">' + tag + '</span>' : '')
         + '<div class="entry-text">' + esc(entry.text) + '</div>' + deltaHtml(entry) + '</div></div>';
@@ -22613,17 +22648,18 @@ function aiPortraitFor(run) {
     const hasCareer = Boolean(run.flags && run.flags.careerSport);
     const lifeEntries = run.log.filter(entry => !entry.isCareer);
     const careerEntries = run.log.filter(entry => entry.isCareer);
+    const newestEntry = run.log.length ? run.log[run.log.length - 1] : null;
     let card = '';
     if (hasCareer) {
       try { card = careerCardHtml(run) || ''; } catch (err) { card = ''; }
     }
     const careerBody = hasCareer
-      ? card + logEntriesHtml(careerEntries)
+      ? card + logEntriesHtml(careerEntries, newestEntry)
       : '<p class="log-empty">还没有开始职业生涯。<br>七岁那年会有人问你：足球、篮球、电竞，还是先不选。</p>';
     return '<div class="log-cols">'
       + '<section class="log-group log-col" data-kind="life">'
       + '<div class="log-group-head"><span>普通人生</span><em>' + lifeEntries.length + ' 条</em></div>'
-      + logEntriesHtml(lifeEntries) + '</section>'
+      + logEntriesHtml(lifeEntries, newestEntry) + '</section>'
       + '<section class="log-group log-col" data-kind="career" data-career="true">'
       + '<div class="log-group-head"><span>职业生涯</span><em>' + careerEntries.length + ' 条</em></div>'
       + careerBody + '</section>'
