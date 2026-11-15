@@ -1455,7 +1455,7 @@
     .replay-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
     .replay-controls .btn { flex: 1 1 42%; min-height: 38px; font-size: 10px; }
     .choice-modal { align-items: center; }
-    /* —— 动效（v1.46.0）：只做 CSS，避免每帧跑 JS —— */
+    /* —— 动效（v1.47.0）：只做 CSS，避免每帧跑 JS —— */
     @keyframes fxScreenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     @keyframes fxEntryIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
     @keyframes fxAgePop {
@@ -1487,7 +1487,7 @@
       .entry.is-fresh .entry-delta, .choice-sheet .choice-option, .ending { animation: none !important; }
     }
 
-    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.46.0）—— */
+    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.47.0）—— */
     @keyframes fxCardIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
     @keyframes fxEndingGlow {
       0%, 100% { box-shadow: 0 18px 44px rgba(15, 23, 42, .09); }
@@ -1912,6 +1912,42 @@ function attrCapFor(run) {
         health: 6,
         luck: 1,
         flags: ['escape'],
+      },
+      {
+        id: 'night_owl',
+        name: '夜猫子',
+        rarity: '良',
+        desc: '白天像在待机，夜里才真正开机。智力 +1、心境 +4，但身体一直不太情愿。',
+        mods: { int: 1 },
+        health: -3,
+        mood: 4,
+      },
+      {
+        id: 'sunny',
+        name: '阳光体质',
+        rarity: '良',
+        desc: '晒一会儿太阳就能回血。健康 +8、心境 +6，寿命 +2 年。',
+        health: 8,
+        mood: 6,
+        lifespan: 2,
+      },
+      {
+        id: 'old_money',
+        name: '老钱人家',
+        rarity: '奇',
+        desc: '你家的钱不是赚来的，是留下来的。家境 +2，开局家产 +14 万并 ×1.4。',
+        mods: { family: 2 },
+        wealth: 14,
+        wealthMul: 1.4,
+      },
+      {
+        id: 'steady_hands',
+        name: '手很稳',
+        rarity: '良',
+        desc: '穿针、投篮、端汤，你的手从来不抖。体质 +1、心境 +2，运动类事件更顺。',
+        mods: { body: 1 },
+        mood: 2,
+        flags: ['athlete'],
       },
     ]
 
@@ -6075,6 +6111,83 @@ function attrCapFor(run) {
         when: run => run.score >= 680 && run.achievements.filter(item => !item.fun && !item.persistent).length >= 8,
       },
       {
+        id: 'modern_craftsman',
+        title: '一双手',
+        description: '你没有留下名字，只留下了很多还能用的东西。有人说，这就算没白活。',
+        tone: 'normal',
+        when: run => run.attrs.body >= 16 && run.peakWealth >= 60 && run.age >= 65,
+      },
+      {
+        id: 'modern_quiet_rich',
+        title: '安静的富足',
+        description: '你不缺钱，也不缺人等你回家。日子没什么好讲，这本身就是一种成就。',
+        tone: 'great',
+        when: run => run.peakWealth >= 150 && run.mood >= 72 && (run.flags.children || 0) >= 1 && run.age >= 60,
+      },
+      {
+        id: 'modern_hollow',
+        title: '空心',
+        description: '账户里的数字很漂亮，屋子里的回声也很漂亮。你什么都有了，就是没有想做的事。',
+        tone: 'tragic',
+        when: run => run.peakWealth >= 180 && run.mood <= 30,
+      },
+      {
+        id: 'modern_solo_old',
+        title: '一个人的房间',
+        description: '你把一个人的日子过得很整齐：杯子有固定的位置，灯也总是在同一个时间关。',
+        tone: 'normal',
+        when: run => run.age >= 78 && !run.flags.married && !run.flags.partner && !run.flags.daoPartner && (run.flags.children || 0) === 0,
+      },
+      {
+        id: 'modern_clan',
+        title: '一大家子',
+        description: '过年的时候，屋子小得坐不下，你被挤在中间，笑得最大声。',
+        tone: 'warm',
+        when: run => (run.flags.children || 0) >= 3 && run.age >= 72 && run.mood >= 60,
+      },
+      {
+        id: 'modern_second_wind',
+        title: '第二幕',
+        description: '别人以为你已经定型了，你却在后半程换了一条路，而且走得比原来远。',
+        tone: 'great',
+        when: run => run.flags.employed && run.age >= 68 && run.achievements.filter(item => !item.fun && !item.persistent).length >= 6,
+      },
+      {
+        id: 'modern_giver',
+        title: '点灯的人',
+        description: '你没做出什么惊天动地的事，只是很多人想起你时，会觉得那几年没那么难。',
+        tone: 'warm',
+        when: run => (run.flags.social || run.flags.volunteer) && run.mood >= 72 && run.age >= 62,
+      },
+      {
+        id: 'modern_grace_loss',
+        title: '体面地输',
+        description: '你没能赢过命，但你把输的样子做得很体面。这也是要练的。',
+        tone: 'normal',
+        when: run => run.peakWealth < 30 && run.age >= 75 && run.mood >= 50,
+      },
+      {
+        id: 'modern_body_first',
+        title: '身体先退场',
+        description: '你还有很多事想做，身体先替你说了不。它陪你撑了很多年，也确实累了。',
+        tone: 'tragic',
+        when: run => run.health <= 20 && run.age >= 58,
+      },
+      {
+        id: 'modern_centenarian',
+        title: '百年',
+        description: '你活过了一个世纪，见过的东西太多，最后只记得几个下午的光。',
+        tone: 'legend',
+        when: run => run.age >= 96,
+      },
+      {
+        id: 'modern_blackboard',
+        title: '黑板前',
+        description: '你在同一块黑板前站了很多年，粉笔灰落在袖口上，像一场很小的雪。',
+        tone: 'great',
+        when: run => Boolean(run.flags.headmaster) && run.attrs.int >= 14,
+      },
+      {
         id: 'modern_rich',
         title: '富甲一方',
         description: '你留下的数字，足够让后来的人过得更轻松一些。',
@@ -6387,6 +6500,13 @@ function attrCapFor(run) {
         tone: "strange",
         comedy: true,
         when: run => run.attrs.int >= 16 && run.age >= 75,
+      },
+      {
+        id: 'modern_absurd_normal',
+        title: '一切正常',
+        description: '你这一生充满了说不清的事，但你始终坚称：一切正常。',
+        tone: 'comedy',
+        when: run => run.age >= 60 && run.achievements.filter(item => item.fun).length >= 4,
       },
       {
         id: 'modern_ordinary',
@@ -7472,7 +7592,39 @@ function attrCapFor(run) {
       { id: 'chaos_lowint', title: '傻人有傻福', desc: '你不太聪明，但命运似乎懒得欺负你。', when: run => run.attrs.int <= 3 && run.age >= 60 },
     ]
 
-    const BASE_ACHIEVEMENTS = COMEDY_ACHIEVEMENTS.concat(EXTRA_ACHIEVEMENTS, CHAOS_ACHIEVEMENTS)
+    const MORE_ACHIEVEMENTS = [
+      { id: 'more_body18', title: '筋骨人', desc: '你的身体被你用成了一件称手的工具。', when: run => run.attrs.body >= 18 && run.age >= 60 },
+      { id: 'more_int18', title: '想得明白', desc: '很多事你都想通了，包括想不通这件事。', when: run => run.attrs.int >= 18 && run.age >= 60 },
+      { id: 'more_looks18', title: '岁月偏心', desc: '时间在你脸上走得比别人慢。', when: run => run.attrs.looks >= 18 && run.age >= 50 },
+      { id: 'more_family18', title: '背后有人', desc: '你身后站着一整个家族，风大也不怕。', when: run => run.attrs.family >= 18 && run.age >= 50 },
+      { id: 'more_all12', title: '样样都行', desc: '没有一项顶尖，但没有一项拖后腿。', when: run => Object.values(run.attrs).every(v => v >= 12) && run.age >= 50 },
+      { id: 'more_peak500', title: '五十万', desc: '你的账户峰值够在老家买一套房，还带个院子。', when: run => run.peakWealth >= 500 },
+      { id: 'more_peak1500', title: '一百五十万', desc: '这个数字你已经不敢在饭桌上随口说了。', when: run => run.peakWealth >= 1500 },
+      { id: 'more_mood95', title: '心宽体不胖', desc: '你很少真的被什么困住。', when: run => run.mood >= 95 && run.age >= 65 },
+      { id: 'more_health95', title: '体检报告很好', desc: '医生翻了两遍，问你平时到底怎么活的。', when: run => run.health >= 95 && run.age >= 65 },
+      { id: 'more_kids3', title: '三个孩子', desc: '你终于明白，热闹也是要付代价的。', when: run => (run.flags.children || 0) >= 3 },
+      { id: 'more_kids5', title: '五个孩子', desc: '吃饭要排队，出门要点名。', when: run => (run.flags.children || 0) >= 5 },
+      { id: 'more_married60', title: '一起变老', desc: '你们一起走到了六十岁，还没有走散。', when: run => run.flags.married && run.age >= 60 && !run.flags.partnerLost },
+      { id: 'more_single90', title: '九十岁一个人', desc: '你一个人过了很久，久到已经不需要解释。', when: run => run.age >= 90 && !run.flags.married && !run.flags.daoPartner },
+      { id: 'more_quests15', title: '十五件差事', desc: '街坊邻里都记得你办事靠谱。', when: run => (run.flags.questsDone || 0) >= 15 },
+      { id: 'more_quests25', title: '二十五件差事', desc: '你几乎成了这条街上默认的「那个人」。', when: run => (run.flags.questsDone || 0) >= 25 },
+      { id: 'more_uni_top', title: '名校毕业', desc: '你从那扇门里走出来，衣服上还带着图书馆的味道。', when: run => run.flags.uni === 'top' },
+      { id: 'more_professor', title: '教授', desc: '你终于有了一个不需要解释自己为什么加班的头衔。', when: run => run.flags.professor },
+      { id: 'more_headmaster', title: '校长', desc: '你管的不是学生，是一整个学校的琐事。', when: run => run.flags.headmaster },
+      { id: 'more_coach', title: '教练席', desc: '你从场上退到边线，喊得比当年跑得还多。', when: run => run.flags.coachPath },
+      { id: 'more_captain', title: '队长', desc: '袖标戴上以后，你说话开始有人听。', when: run => run.flags.captain },
+      { id: 'more_engineer', title: '工程师', desc: '你参与造过一些比你的名字更长寿的东西。', when: run => run.flags.engineer },
+      { id: 'more_corpo', title: '公司人', desc: '你在一栋玻璃楼里度过了一段很长的时间。', when: run => run.flags.corpEmployee },
+      { id: 'more_sect_master', title: '一宗之主', desc: '山门上下几千人，从今天起等你一句话。', when: run => run.flags.sectMaster },
+      { id: 'more_ascended', title: '飞升', desc: '你从这个世界离开的方式，不太像离开。', when: run => run.flags.ascended },
+      { id: 'more_realm5', title: '化神', desc: '你已经很久没有用「年」来计算时间了。', when: run => (run.flags.realmIndex || 0) >= 5 },
+      { id: 'more_realm8', title: '大乘', desc: '天道开始认真地看你。', when: run => (run.flags.realmIndex || 0) >= 8 },
+      { id: 'more_magic3', title: '高阶法师', desc: '学院的名册上，你的名字被单独写了一行。', when: run => (run.flags.magicRankIndex || 0) >= 3 },
+      { id: 'more_uploaded', title: '上传', desc: '你把自己搬到了一个不需要呼吸的地方。', when: run => run.flags.uploaded },
+      { id: 'more_dao_partner', title: '道侣', desc: '修行这条长路上，你不是一个人。', when: run => run.flags.daoPartner && run.age >= 60 },
+      { id: 'more_legacy60', title: '余荫', desc: '你活到六十岁，身上还留着上一世的影子。', when: run => run.flags.legacy && run.age >= 60 },
+    ]
+    const BASE_ACHIEVEMENTS = COMEDY_ACHIEVEMENTS.concat(EXTRA_ACHIEVEMENTS, CHAOS_ACHIEVEMENTS, MORE_ACHIEVEMENTS)
     const COMEDY_IDS = new Set(COMEDY_ACHIEVEMENTS.map(item => item.id))
 
     const CULTIVATION_TALENTS = [
@@ -7659,6 +7811,41 @@ function attrCapFor(run) {
         health: 8,
         flags: ['fireAlchemist'],
       },
+      {
+        id: 'thunder_body',
+        name: '雷灵体',
+        rarity: '奇',
+        desc: '雷雨天你浑身发麻，不是害怕，是在充电。体魄 +1、元气 +8。',
+        mods: { body: 1 },
+        health: 8,
+        mood: 2,
+      },
+      {
+        id: 'pill_luck',
+        name: '丹缘',
+        rarity: '良',
+        desc: '别人炼十炉废九炉，你随手一炉就有丹香。智力 +1、气运 +1。',
+        mods: { int: 1 },
+        mood: 4,
+        luck: 1,
+      },
+      {
+        id: 'sword_sleep',
+        name: '枕剑而眠',
+        rarity: '良',
+        desc: '你抱着剑睡，梦里也在练。体魄 +1、元气 +6。',
+        mods: { body: 1 },
+        health: 6,
+      },
+      {
+        id: 'mountain_heart',
+        name: '山居心性',
+        rarity: '良',
+        desc: '给你一间茅屋、一壶茶，你能坐上一整天。道心 +8、元气 +4，寿命 +3 年。',
+        mood: 8,
+        health: 4,
+        lifespan: 3,
+      },
     ]
 
     const WASTELAND_TALENTS = [
@@ -7836,6 +8023,39 @@ function attrCapFor(run) {
         mods: { body: 1 },
         health: 5,
         flags: ['hardTack'],
+      },
+      {
+        id: 'scrap_luck',
+        name: '废料运气',
+        rarity: '良',
+        desc: '别人翻三遍空手，你随手一摸就是能用的零件。智力 +1、气运 +1。',
+        mods: { int: 1 },
+        luck: 1,
+      },
+      {
+        id: 'iron_gut',
+        name: '铁胃',
+        rarity: '良',
+        desc: '过期的罐头、发苦的水，你都能咽下去。体魄 +1、生命 +8。',
+        mods: { body: 1 },
+        health: 8,
+      },
+      {
+        id: 'quiet_step',
+        name: '轻脚',
+        rarity: '良',
+        desc: '你在碎玻璃上走，声音比风还轻。体魄 +1、心境 +2。',
+        mods: { body: 1 },
+        mood: 2,
+      },
+      {
+        id: 'old_map',
+        name: '半张旧地图',
+        rarity: '奇',
+        desc: '上面画着一条早该消失的路，但你真的靠它找到过一次东西。智力 +1、家产 +6 万、气运 +1。',
+        mods: { int: 1 },
+        wealth: 6,
+        luck: 1,
       },
     ]
 
@@ -10612,6 +10832,37 @@ function attrCapFor(run) {
         lifespan: 5,
         flags: ['phoenixBlood'],
       },
+      {
+        id: 'rune_eye',
+        name: '符文眼',
+        rarity: '奇',
+        desc: '看什么都像在看注释。魔力 +2，符文与咒文事件更顺。',
+        mods: { int: 2 },
+      },
+      {
+        id: 'gentle_mana',
+        name: '温和魔力',
+        rarity: '良',
+        desc: '你的魔力不烫手，像温水。健康 +6、理智 +4。',
+        health: 6,
+        mood: 4,
+      },
+      {
+        id: 'beast_kin',
+        name: '兽缘',
+        rarity: '良',
+        desc: '野猫会跟在你身后走三条街。颜值 +1、理智 +5。',
+        mods: { looks: 1 },
+        mood: 5,
+      },
+      {
+        id: 'book_worm_mage',
+        name: '书虫',
+        rarity: '凡',
+        desc: '你能背下整本《基础咒式》，但跑两百步就喘。魔力 +1、健康 -2。',
+        mods: { int: 1 },
+        health: -2,
+      },
     ]
 
     const MAGIC_EVENTS = [
@@ -11882,6 +12133,36 @@ function attrCapFor(run) {
         mood: 8,
         flags: ['offgrid'],
       },
+      {
+        id: 'cold_head',
+        name: '冷头脑',
+        rarity: '奇',
+        desc: '枪顶着头你也先算概率。技术 +2、理智 -3。',
+        mods: { int: 2 },
+        mood: -3,
+      },
+      {
+        id: 'chrome_luck',
+        name: '义体运气',
+        rarity: '良',
+        desc: '医生说你这次排斥反应的概率是三成，结果你连发烧都没有。气运 +1。',
+        luck: 1,
+      },
+      {
+        id: 'clean_blood',
+        name: '干净血液',
+        rarity: '良',
+        desc: '在这座城里，干净的血液比芯片贵。健康 +8。',
+        health: 8,
+      },
+      {
+        id: 'street_ear',
+        name: '街头耳朵',
+        rarity: '良',
+        desc: '你总能听见别人还没说完的那句话。技术 +1、理智 +2。',
+        mods: { int: 1 },
+        mood: 2,
+      },
     ]
 
     const CYBER_EVENTS = [
@@ -12975,6 +13256,37 @@ function attrCapFor(run) {
         mods: {"int": 1},
         flags: ["hacker"],
       },
+      {
+        id: 'void_ear',
+        name: '虚空听觉',
+        rarity: '奇',
+        desc: '你能听见船体在真空里「呼吸」。技术 +2。',
+        mods: { int: 2 },
+      },
+      {
+        id: 'low_gene',
+        name: '低重力体质',
+        rarity: '良',
+        desc: '落地之后骨头有点沉，但在船上你比谁都轻。体魄 +1、健康 +5。',
+        mods: { body: 1 },
+        health: 5,
+      },
+      {
+        id: 'crew_bond',
+        name: '船员缘',
+        rarity: '良',
+        desc: '换三艘船，三艘船的人都记得你。理智 +6，社交事件更顺。',
+        mood: 6,
+        flags: ['social'],
+      },
+      {
+        id: 'long_sleep',
+        name: '长眠适应',
+        rarity: '凡',
+        desc: '冷冻舱醒来，别人吐了一整天，你只是饿。健康 +4、寿命 +4 年。',
+        health: 4,
+        lifespan: 4,
+      },
     ]
 
 
@@ -13880,6 +14192,38 @@ function attrCapFor(run) {
         mods: {"body": 1},
         mood: 3,
         flags: ["runner"],
+      },
+      {
+        id: 'iron_liver',
+        name: '千杯不醉',
+        rarity: '良',
+        desc: '酒桌上谈成的生意，比刀剑上多。健康 +6、心境 +3。',
+        health: 6,
+        mood: 3,
+      },
+      {
+        id: 'light_step',
+        name: '踏雪无痕',
+        rarity: '奇',
+        desc: '雪地上走过去，回头看不见脚印。根骨 +2。',
+        mods: { body: 2 },
+      },
+      {
+        id: 'old_wound',
+        name: '旧伤',
+        rarity: '凡',
+        desc: '阴雨天你先知道。根骨 +1、健康 -6，但你在险境里反而更清醒。',
+        mods: { body: 1 },
+        health: -6,
+        luck: 1,
+      },
+      {
+        id: 'teahouse_ear',
+        name: '茶馆耳朵',
+        rarity: '良',
+        desc: '一壶茶的工夫，你听完了半个城的事。智力 +1、心境 +3。',
+        mods: { int: 1 },
+        mood: 3,
       },
     ]
 
@@ -19971,7 +20315,7 @@ function attrCapFor(run) {
       }
     }
 
-    // —— 年度重点：把「推进一年」变成一次小选择（v1.46.0）——
+    // —— 年度重点：把「推进一年」变成一次小选择（v1.47.0）——
     const FOCUS_SETS = {
       life: [
         { id: 'fx_fit', label: '健身', hint: '体魄 +1', effects: { body: 1 } },
@@ -21768,7 +22112,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.46.0';
+  const APP_VERSION = '1.47.0';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -21871,7 +22215,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.46.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.47.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
