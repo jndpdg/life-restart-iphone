@@ -1455,7 +1455,7 @@
     .replay-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
     .replay-controls .btn { flex: 1 1 42%; min-height: 38px; font-size: 10px; }
     .choice-modal { align-items: center; }
-    /* —— 动效（v1.45.0）：只做 CSS，避免每帧跑 JS —— */
+    /* —— 动效（v1.46.0）：只做 CSS，避免每帧跑 JS —— */
     @keyframes fxScreenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     @keyframes fxEntryIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
     @keyframes fxAgePop {
@@ -1485,6 +1485,32 @@
     @media (prefers-reduced-motion: reduce) {
       .screen[data-enter="1"], .entry.is-fresh, .entry.is-fresh .entry-age,
       .entry.is-fresh .entry-delta, .choice-sheet .choice-option, .ending { animation: none !important; }
+    }
+
+    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.46.0）—— */
+    @keyframes fxCardIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+    @keyframes fxEndingGlow {
+      0%, 100% { box-shadow: 0 18px 44px rgba(15, 23, 42, .09); }
+      50% { box-shadow: 0 22px 54px rgba(15, 23, 42, .16); }
+    }
+    .focus-row { display: flex; flex: 1 1 auto; gap: 6px; min-width: 0; }
+    .focus-btn {
+      display: flex; flex: 1 1 0; flex-direction: column; align-items: center; justify-content: center;
+      gap: 1px; min-width: 0; padding: 7px 4px; line-height: 1.2; text-align: center;
+    }
+    .focus-btn b { font-size: 11px; font-weight: 650; white-space: nowrap; }
+    .focus-btn span { font-size: 8px; font-weight: 400; opacity: .72; white-space: nowrap; }
+    .screen[data-enter="1"] .world-chip { animation: fxCardIn .34s cubic-bezier(.22, 1, .36, 1) both; }
+    .screen[data-enter="1"] .world-chip:nth-child(2) { animation-delay: .03s; }
+    .screen[data-enter="1"] .world-chip:nth-child(3) { animation-delay: .06s; }
+    .screen[data-enter="1"] .world-chip:nth-child(4) { animation-delay: .09s; }
+    .screen[data-enter="1"] .world-chip:nth-child(5) { animation-delay: .12s; }
+    .screen[data-enter="1"] .world-chip:nth-child(6) { animation-delay: .15s; }
+    .screen[data-enter="1"] .world-chip:nth-child(7) { animation-delay: .18s; }
+    .screen[data-enter="1"] .world-chip:nth-child(8) { animation-delay: .21s; }
+    .ending { animation: fxEndingIn .46s cubic-bezier(.22, 1, .36, 1) both, fxEndingGlow 6s ease-in-out 1s infinite; }
+    @media (prefers-reduced-motion: reduce) {
+      .screen[data-enter="1"] .world-chip, .ending { animation: none !important; }
     }
 
     .choice-sheet {
@@ -19945,6 +19971,100 @@ function attrCapFor(run) {
       }
     }
 
+    // —— 年度重点：把「推进一年」变成一次小选择（v1.46.0）——
+    const FOCUS_SETS = {
+      life: [
+        { id: 'fx_fit', label: '健身', hint: '体魄 +1', effects: { body: 1 } },
+        { id: 'fx_read', label: '读书', hint: '智力 +1', effects: { int: 1 } },
+        { id: 'fx_family', label: '陪家人', hint: '心情 +3', effects: { mood: 3 } },
+      ],
+      football: [
+        { id: 'fx_fb_train', label: '加练射门', hint: '能力 +0.9 · 健康 -1', ability: 0.9, effects: { health: -1 } },
+        { id: 'fx_fb_fit', label: '恢复体能', hint: '健康 +3', effects: { health: 3, mood: 1 } },
+        { id: 'fx_fb_video', label: '看录像', hint: '智力 +1 · 能力 +0.3', ability: 0.3, effects: { int: 1 } },
+      ],
+      basketball: [
+        { id: 'fx_bb_shot', label: '加练投篮', hint: '能力 +0.9 · 健康 -1', ability: 0.9, effects: { health: -1 } },
+        { id: 'fx_bb_fit', label: '力量训练', hint: '能力 +0.4 · 心情 -1', ability: 0.4, effects: { mood: -1 } },
+        { id: 'fx_bb_video', label: '看录像', hint: '智力 +1', effects: { int: 1 } },
+      ],
+      esports: [
+        { id: 'fx_es_rank', label: '冲排位', hint: '能力 +0.9 · 健康 -1', ability: 0.9, effects: { health: -1 } },
+        { id: 'fx_es_review', label: '复盘', hint: '智力 +1 · 能力 +0.3', ability: 0.3, effects: { int: 1 } },
+        { id: 'fx_es_rest', label: '早睡', hint: '健康 +3 · 心情 +2', effects: { health: 3, mood: 2 } },
+      ],
+    }
+
+    function focusOptions(run) {
+      const career = careerStateOf(run)
+      if (career && !career.retired) {
+        if (run.flags.fb) return FOCUS_SETS.football
+        if (run.flags.bb) return FOCUS_SETS.basketball
+        if (run.flags.es) return FOCUS_SETS.esports
+      }
+      return FOCUS_SETS.life
+    }
+
+    function applyFocus(run) {
+      const id = run.focus
+      if (!id) return
+      const option = focusOptions(run).find(item => item.id === id)
+      if (!option) return
+      const before = snapshotNumbers(run)
+      if (option.ability) {
+        const career = careerStateOf(run)
+        if (career) {
+          const ceiling = Math.max(career.ability, typeof career.potential === 'number' ? career.potential : career.ability + 6)
+          career.ability = Math.min(ceiling, career.ability + option.ability)
+        }
+      }
+      if (option.effects) applyEffects(run, option.effects)
+      const deltas = numberDeltas(before, run)
+      if (option.ability) {
+        deltas.push({ key: 'ability', label: '能力', value: Math.round(option.ability * 10) / 10, kind: 'up' })
+      }
+      const last = run.log[run.log.length - 1]
+      if (last && deltas.length) last.deltas = (last.deltas || []).concat(deltas)
+    }
+
+    function makeDecadeChoice(run) {
+      const from = Math.max(0, run.age - 10)
+      const recent = run.log.filter(entry => entry.age > from && entry.age <= run.age)
+      const decisions = recent.filter(entry => entry.isChoice).length
+      const events = recent.filter(entry => entry.kind === 'event').length
+      return {
+        id: 'decade_review',
+        title: '十年小结',
+        prompt: '从 ' + from + ' 岁到 ' + run.age + ' 岁：' + events + ' 件事、' + decisions + ' 次抉择。挑一件今年最想补上的事。',
+        options: [
+          {
+            id: 'dec_body',
+            label: '把身体补回来',
+            desc: '体魄 +2 · 健康 +4',
+            resolve() {
+              return { tone: 'good', text: '这十年欠下的觉，你决定先还一部分。每天早上多走两站路，晚上十一点前上床。', effects: { body: 2, health: 4 } }
+            },
+          },
+          {
+            id: 'dec_mind',
+            label: '读点书，静一静',
+            desc: '智力 +2 · 心情 +5',
+            resolve() {
+              return { tone: 'good', text: '你重新拾起书。不是为了考试，也不是为了谁，只是想在字与字之间坐一会儿。', effects: { int: 2, mood: 5 } }
+            },
+          },
+          {
+            id: 'dec_coin',
+            label: '攒一笔钱',
+            desc: '财富 +180',
+            resolve() {
+              return { tone: 'normal', text: '你把零碎的钱归到一个账户里。数字不大，但看着它一点点往上涨，心里踏实。', effects: { wealth: 180 } }
+            },
+          },
+        ],
+      }
+    }
+
     function addYear(run) {
       const world = worldOf(run)
       const previousStage = run.stage
@@ -20069,6 +20189,7 @@ function attrCapFor(run) {
         })
       }
 
+      applyFocus(run)
       updateObjectives(run)
 
       if (run.ascending) {
@@ -20118,6 +20239,9 @@ function attrCapFor(run) {
       if (run.alive && !run.pendingChoice && !run.pendingScene) maybeOfferQuest(run)
       if (run.pendingScene) return run
       if (run.alive && !run.pendingChoice) maybeOfferChoice(run)
+      if (run.alive && !run.pendingChoice && !run.pendingScene && run.age % 10 === 0) {
+        run.pendingChoice = makeDecadeChoice(run)
+      }
       if (run.pendingChoice && run.playMode === 'text') return autoResolveChoice(run)
       return run
     }
@@ -21644,7 +21768,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.45.0';
+  const APP_VERSION = '1.46.0';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -21747,7 +21871,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.45.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.46.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -22708,7 +22832,7 @@ function aiPortraitFor(run) {
       + '</header>'
       + avatarHtml(run)
       + '<main class="log">' + logHtml(run, 'all') + (run.ending ? endingHtml(run) : '') + '</main>'
-      + (death ? '' : '<div class="game-controls" style="padding-bottom:calc(9px + var(--safe-bottom))"><button class="btn btn-ghost" data-action="toggle-auto" data-auto="' + (state.auto ? 'true' : 'false') + '"><span class="auto-dot"></span>' + (state.auto ? '暂停自动' : '自动播放') + '</button><button class="btn btn-primary" data-action="advance">' + advanceLabel + '</button></div>')
+      + (death ? '' : '<div class="game-controls" style="padding-bottom:calc(9px + var(--safe-bottom))"><button class="btn btn-ghost" data-action="toggle-auto" data-auto="' + (state.auto ? 'true' : 'false') + '"><span class="auto-dot"></span>' + (state.auto ? '暂停自动' : '自动播放') + '</button><div class="focus-row">' + focusOptions(run).map(option => '<button class="btn btn-primary focus-btn" data-action="advance-focus" data-focus="' + option.id + '" title="' + esc(option.hint) + '"><b>' + esc(option.label) + '</b><span>' + esc(option.hint) + '</span></button>').join('') + '</div></div>')
       + '</div>';
   }
 
@@ -22848,8 +22972,9 @@ function aiPortraitFor(run) {
     }, AUTO_PLAY_MS);
   }
 
-  function advanceLife() {
+  function advanceLife(focusId) {
     if (!state.run || !state.run.alive || state.run.pendingChoice || state.run.pendingScene) return;
+    if (focusId) state.run.focus = focusId;
     state.run = advanceRun(state.run);
     if (!state.run.alive) {
       stopAuto();
@@ -23126,6 +23251,7 @@ function aiPortraitFor(run) {
         break;
       case 'start-life': startLife(); break;
       case 'advance': advanceLife(); break;
+      case 'advance-focus': advanceLife(target.dataset.focus); break;
       case 'choose-option': chooseOption(target.dataset.id); break;
       case 'refresh-quest': stopAuto(); state.run = refreshPendingQuest(state.run); render(); break;
       case 'close-scene': if (state.run) { state.run.pendingScene = null; state.pendingScroll = 'bottom'; render(); } break;
