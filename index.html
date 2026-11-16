@@ -1460,7 +1460,7 @@
     .replay-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
     .replay-controls .btn { flex: 1 1 42%; min-height: 38px; font-size: 10px; }
     .choice-modal { align-items: center; }
-    /* —— 动效（v1.49.0）：只做 CSS，避免每帧跑 JS —— */
+    /* —— 动效（v1.49.1）：只做 CSS，避免每帧跑 JS —— */
     @keyframes fxScreenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     @keyframes fxEntryIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
     @keyframes fxAgePop {
@@ -1492,7 +1492,7 @@
       .entry.is-fresh .entry-delta, .choice-sheet .choice-option, .ending { animation: none !important; }
     }
 
-    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.49.0）—— */
+    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.49.1）—— */
     @keyframes fxCardIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
     @keyframes fxEndingGlow {
       0%, 100% { box-shadow: 0 18px 44px rgba(15, 23, 42, .09); }
@@ -15409,7 +15409,8 @@ function attrCapFor(run) {
 
     function rollPsi() {
       const roll = Math.random()
-      const type = roll < 0.07 ? 'innate' : roll < 0.27 ? 'acquired' : 'none'
+      // 天生 22% / 后天 38% / 不幸者 40%（v1.49.1 上调）
+      const type = roll < 0.22 ? 'innate' : roll < 0.60 ? 'acquired' : 'none'
       if (type === 'none') {
         return { type, label: '不幸者', powers: [], best: '无' }
       }
@@ -20752,7 +20753,7 @@ function attrCapFor(run) {
       }
     }
 
-    // —— 年度重点：把「推进一年」变成一次小选择（v1.49.0）——
+    // —— 年度重点：把「推进一年」变成一次小选择（v1.49.1）——
     const FOCUS_SETS = {
       magic: [
         { id: 'fx_mg_train', label: '元素冥想', hint: '主元素 +3 · 智力 +1 · 健康 -1', effects: { elements: 3, int: 1, health: -1 } },
@@ -22562,7 +22563,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.49.0';
+  const APP_VERSION = '1.49.1';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -22665,7 +22666,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.49.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.49.1 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
