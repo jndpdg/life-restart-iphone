@@ -849,7 +849,7 @@
       background: linear-gradient(145deg, color-mix(in srgb, var(--panel) 96%, transparent), color-mix(in srgb, var(--panel-2) 86%, transparent));
       /* 置顶角色栏：滚动时人物形象始终可见（sticky 失效时由 syncAvatarDock 兜底为 fixed） */
       position: sticky;
-      top: calc(var(--safe-top, 0px) + 60px);
+      top: calc(var(--safe-top, 0px) + 52px);
       z-index: 40;
       backdrop-filter: blur(14px) saturate(112%);
       -webkit-backdrop-filter: blur(14px) saturate(112%);
@@ -983,7 +983,7 @@
     .avatar-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; margin-top: 6px; }
     .avatar-stat { display: flex; align-items: baseline; justify-content: space-between; gap: 3px; padding: 2px 5px; border: 1px solid var(--line); border-radius: 6px; background: color-mix(in srgb, var(--panel-2) 60%, transparent); }
     .avatar-stat i { font-style: normal; font-size: 8.5px; color: var(--muted); }
-    .avatar-stat b { font-size: 10.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+    .avatar-stat b { min-width: 0; overflow: hidden; font-size: 10.5px; font-weight: 650; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
     .avatar-stat[data-low="true"] b { color: #d9534f; }
     .avatar-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
     .avatar-tag {
@@ -1460,7 +1460,7 @@
     .replay-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
     .replay-controls .btn { flex: 1 1 42%; min-height: 38px; font-size: 10px; }
     .choice-modal { align-items: center; }
-    /* —— 动效（v1.50.0）：只做 CSS，避免每帧跑 JS —— */
+    /* —— 动效（v1.50.1）：只做 CSS，避免每帧跑 JS —— */
     @keyframes fxScreenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     @keyframes fxEntryIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
     @keyframes fxAgePop {
@@ -1492,7 +1492,7 @@
       .entry.is-fresh .entry-delta, .choice-sheet .choice-option, .ending { animation: none !important; }
     }
 
-    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.50.0）—— */
+    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.50.1）—— */
     @keyframes fxCardIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
     @keyframes fxEndingGlow {
       0%, 100% { box-shadow: 0 18px 44px rgba(15, 23, 42, .09); }
@@ -15432,7 +15432,7 @@ function attrCapFor(run) {
 
     function rollPsi() {
       const roll = Math.random()
-      // 天生 22% / 后天 52% / 不幸者 26%（v1.50.0）
+      // 天生 22% / 后天 52% / 不幸者 26%（v1.50.1）
       const type = roll < 0.22 ? 'innate' : roll < 0.74 ? 'acquired' : 'none'
       if (type === 'none') {
         return { type, label: '不幸者', powers: [], best: '无' }
@@ -20776,7 +20776,7 @@ function attrCapFor(run) {
       }
     }
 
-    // —— 年度重点：把「推进一年」变成一次小选择（v1.50.0）——
+    // —— 年度重点：把「推进一年」变成一次小选择（v1.50.1）——
     const FOCUS_SETS = {
       magic: [
         { id: 'fx_mg_train', label: '元素冥想', hint: '主元素 +3 · 智力 +1 · 健康 -1', effects: { elements: 3, int: 1, health: -1 } },
@@ -21738,7 +21738,6 @@ function attrCapFor(run) {
     showAllAchievements: false,
     achPage: 0,
     pendingScroll: 'top',
-    logFilter: 'all',
   };
 
   const WORLD_GLYPHS = {
@@ -22518,7 +22517,16 @@ function attrCapFor(run) {
   }
 
   function avatarDockTop() {
-    return 60;
+    // sticky 用的是 calc(var(--safe-top) + 52px)，fixed 兜底必须同样计入安全区，
+    // 否则刘海屏上角色栏会钻到状态栏下面。
+    let safe = 0;
+    try {
+      const raw = window.getComputedStyle(document.documentElement).getPropertyValue('--safe-top');
+      safe = parseFloat(raw) || 0;
+    } catch (err) {
+      safe = 0;
+    }
+    return safe + 52;
   }
 
   function clearAvatarDock(card) {
@@ -22689,7 +22697,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / IPHONE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.50.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.50.1 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -23291,9 +23299,9 @@ function aiPortraitFor(run) {
         + '<span class="avatar-stat" data-low="' + (moodNow < 30 ? 'true' : 'false') + '"><i>' + esc(world.vitals.mood) + '</i><b>' + moodNow + '</b></span>'
         + '<span class="avatar-stat"><i>' + esc(world.vitals.wealth) + '</i><b>' + esc(formatMoney(run, run.wealth)) + '</b></span>'
         + '<span class="avatar-stat"><i>气运</i><b>' + (run.luck || 0) + '</b></span>';
-      const psiState = run.flags && run.flags.psi
-      const rootState = run.flags && run.flags.spiritRoot
-      const magicState = run.flags && run.flags.elements
+      const psiState = run.flags && run.flags.psi;
+      const rootState = run.flags && run.flags.spiritRoot;
+      const magicState = run.flags && run.flags.elements;
       const powerTag = psiState && psiState.powers && psiState.powers.length
         ? '异能 ' + psiState.label + ' · ' + psiState.powers[0].grade
         : rootState ? '灵根 ' + rootState.name
@@ -23553,13 +23561,6 @@ function aiPortraitFor(run) {
       + '</section>';
   }
 
-  function logTabsHtml(run) {
-    if (!run || !run.flags.careerSport) return '';
-    const items = [['all', '全部'], ['life', '普通人生'], ['career', '职业生涯']];
-    return '<div class="log-tabs">' + items.map(function (item) {
-      return '<button class="log-tab" data-action="log-filter" data-value="' + item[0] + '" data-active="' + (state.logFilter === item[0] ? 'true' : 'false') + '">' + item[1] + '</button>';
-    }).join('') + '</div>';
-  }
 
   function deltaHtml(entry) {
     if (!Array.isArray(entry.deltas) || entry.deltas.length === 0) return '';
@@ -24123,7 +24124,6 @@ function aiPortraitFor(run) {
           render();
         }
         break;
-      case 'log-filter': state.logFilter = target.dataset.value || 'all'; render(); break;
       case 'inherit': inheritLife(); break;
       case 'check-update': forceReload(); break;
       case 'restart': restartLife(); break;
