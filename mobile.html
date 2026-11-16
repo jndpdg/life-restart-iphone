@@ -628,7 +628,7 @@
     .topbar {
       position: sticky;
       top: var(--safe-top);
-      z-index: 20;
+      z-index: 60;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -852,7 +852,7 @@
       background: linear-gradient(145deg, color-mix(in srgb, var(--panel) 96%, transparent), color-mix(in srgb, var(--panel-2) 86%, transparent));
       /* 置顶角色栏：滚动时人物形象始终可见（sticky 失效时由 syncAvatarDock 兜底为 fixed） */
       position: sticky;
-      top: calc(6px + env(safe-area-inset-top, 0px));
+      top: calc(var(--safe-top, 0px) + 60px);
       z-index: 40;
       backdrop-filter: blur(14px) saturate(112%);
       -webkit-backdrop-filter: blur(14px) saturate(112%);
@@ -983,6 +983,11 @@
     .avatar-head b { color: var(--ink); font-size: 13.5px; font-weight: 700; }
     .avatar-head span { flex: none; color: var(--brand); font-size: 9px; }
     .avatar-sub { margin-top: 3px; color: var(--muted); font-size: 9.5px; line-height: 1.5; }
+    .avatar-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; margin-top: 6px; }
+    .avatar-stat { display: flex; align-items: baseline; justify-content: space-between; gap: 3px; padding: 2px 5px; border: 1px solid var(--line); border-radius: 6px; background: color-mix(in srgb, var(--panel-2) 60%, transparent); }
+    .avatar-stat i { font-style: normal; font-size: 8.5px; color: var(--muted); }
+    .avatar-stat b { font-size: 10.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+    .avatar-stat[data-low="true"] b { color: #d9534f; }
     .avatar-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
     .avatar-tag {
       max-width: 100%;
@@ -1458,7 +1463,7 @@
     .replay-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
     .replay-controls .btn { flex: 1 1 42%; min-height: 38px; font-size: 10px; }
     .choice-modal { align-items: center; }
-    /* —— 动效（v1.47.0）：只做 CSS，避免每帧跑 JS —— */
+    /* —— 动效（v1.48.0）：只做 CSS，避免每帧跑 JS —— */
     @keyframes fxScreenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     @keyframes fxEntryIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
     @keyframes fxAgePop {
@@ -1490,7 +1495,7 @@
       .entry.is-fresh .entry-delta, .choice-sheet .choice-option, .ending { animation: none !important; }
     }
 
-    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.47.0）—— */
+    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.48.0）—— */
     @keyframes fxCardIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
     @keyframes fxEndingGlow {
       0%, 100% { box-shadow: 0 18px 44px rgba(15, 23, 42, .09); }
@@ -15389,6 +15394,239 @@ function attrCapFor(run) {
       },
     ]
 
+    // ── 特殊能力体系：废土异能 / 修仙灵根 ─────────────────────────
+    const PSI_GRADE_TABLE = [
+      ['SSS', 1], ['SS', 3], ['S', 8], ['A', 26], ['B', 60],
+      ['C', 110], ['D', 170], ['E', 250], ['F', 330],
+    ]
+    const PSI_ROOTS = ['焚', '霜', '雷', '风', '岩', '潮', '藤', '铁', '光', '影', '念', '隙', '律', '压', '鸣', '蚀', '愈', '兽', '兆', '骨', '镜', '梦', '尘', '血', '雨', '砂', '盐', '菌', '焰', '冬']
+    const PSI_FORMS = ['爆', '域', '鸣', '塑', '视', '爪', '盾', '步', '吟', '刃', '笼', '引', '蜕', '锁', '涌', '刻', '隐', '合']
+
+    function psiGradeRank(grade) {
+      return PSI_GRADE_TABLE.findIndex(item => item[0] === grade)
+    }
+
+    function rollPsiGrade() {
+      const total = PSI_GRADE_TABLE.reduce((sum, item) => sum + item[1], 0)
+      let roll = Math.random() * total
+      for (const item of PSI_GRADE_TABLE) {
+        roll -= item[1]
+        if (roll <= 0) return item[0]
+      }
+      return 'F'
+    }
+
+    function psiPowerName(index) {
+      const root = PSI_ROOTS[index % PSI_ROOTS.length]
+      const form = PSI_FORMS[Math.floor(index / PSI_ROOTS.length) % PSI_FORMS.length]
+      const round = Math.floor(index / (PSI_ROOTS.length * PSI_FORMS.length))
+      return root + form + (round > 0 ? '·' + (round + 1) : '')
+    }
+
+    function rollPsiPower(origin, index) {
+      const grade = rollPsiGrade()
+      return { origin, grade, name: psiPowerName(index * 7 + Math.floor(Math.random() * 61)) }
+    }
+
+    function rollPsi() {
+      const roll = Math.random()
+      const type = roll < 0.07 ? 'innate' : roll < 0.27 ? 'acquired' : 'none'
+      if (type === 'none') {
+        return { type, label: '不幸者', powers: [], best: '无' }
+      }
+      const powers = []
+      const innateCount = type === 'innate' ? (Math.random() < 0.35 ? 2 : 1) : 0
+      for (let i = 0; i < innateCount; i += 1) powers.push(rollPsiPower('先天', i))
+      for (let i = 0; i < 2; i += 1) powers.push(rollPsiPower('后天', innateCount + i))
+      const best = powers.reduce((top, item) => (psiGradeRank(item.grade) < psiGradeRank(top) ? item.grade : top), powers[0].grade)
+      return { type, label: type === 'innate' ? '天生异能者' : '后天异能者', powers, best }
+    }
+
+    const SPIRIT_ROOTS = [
+      { name: '天灵根', weight: 3, speed: 0.55, desc: '百年不遇，灵气自来。' },
+      { name: '单灵根', weight: 9, speed: 0.7, desc: '一脉纯粹，修行最稳。' },
+      { name: '双灵根', weight: 20, speed: 0.85, desc: '两气相济，进境不慢。' },
+      { name: '三灵根', weight: 30, speed: 1, desc: '中人之姿，全看勤勉。' },
+      { name: '四灵根', weight: 24, speed: 1.12, desc: '灵气驳杂，步步吃力。' },
+      { name: '五灵根', weight: 14, speed: 1.25, desc: '杂而不纯，凡人之始。' },
+    ]
+
+    function rollSpiritRoot() {
+      const total = SPIRIT_ROOTS.reduce((sum, item) => sum + item.weight, 0)
+      let roll = Math.random() * total
+      for (const item of SPIRIT_ROOTS) {
+        roll -= item.weight
+        if (roll <= 0) return { name: item.name, speed: item.speed, desc: item.desc }
+      }
+      return { name: '五灵根', speed: 1.25, desc: '杂而不纯。' }
+    }
+
+    function extraEvent(id, stage, minAge, maxAge, weight, good, text, effects, when) {
+      return {
+        id, stage, minAge, maxAge, weight, good, when: when || null,
+        resolve(run) {
+          return {
+            text: typeof text === 'function' ? text(run) : text,
+            tone: good ? 'good' : 'normal',
+            effects: typeof effects === 'function' ? effects(run) : (effects || {}),
+          }
+        },
+      }
+    }
+
+    const WORLD_EXTRA_EVENTS = {
+      modern: [
+        extraEvent('m_raise', 'adult', 26, 48, 0.9, true, '涨薪的通知发到邮箱时，你在工位上坐了一会儿才点开。', { wealth: 9, mood: 4 }),
+        extraEvent('m_old_friend', 'youth', 18, 28, 0.8, true, '旧同学约你在校门口的小店吃饭，聊到天黑。', { mood: 5, companions: 1 }),
+        extraEvent('m_kitchen_fire', 'adult', 30, 55, 0.6, false, '厨房的油锅烧了起来，你手忙脚乱地盖上锅盖。', { health: -4, wealth: -6, mood: -2 }),
+        extraEvent('m_side_gig', 'youth', 18, 30, 0.7, true, '你接了一份私活，连着两周熬到凌晨。', { wealth: 6, health: -2, int: 1 }),
+        extraEvent('m_night_walk', 'elder', 65, 92, 0.8, true, '夜里睡不着，你沿着河边慢慢走了一圈。', { mood: 3, health: 1 }),
+      ],
+      cultivation: [
+        extraEvent('c_root_awaken', 'child', 8, 12, 0.95, true,
+          run => '测灵石贴上手心，光柱停在' + ((run.flags.spiritRoot && run.flags.spiritRoot.name) || '五灵根') + '上。执事多看了你一眼。',
+          { int: 1, mood: 6, flags: { rootSeen: true } },
+          run => Boolean(run.flags.spiritRoot) && !run.flags.rootSeen),
+        extraEvent('c_sword_wash', 'teen', 12, 17, 0.85, true, '你在洗剑池边坐了一个下午，看剑穗在水里散开。', { int: 1, mood: 3 }),
+        extraEvent('c_sect_trial', 'youth', 18, 30, 0.9, true, '入门试炼的石阶一共三千级，你数到第二百级就不数了。', { body: 1, mood: 3 }),
+        extraEvent('c_demon_whisper', 'adult', 60, 400, 0.7, false, '闭关第三个月，有个声音在识海里叫你的名字。', { mood: -5, int: 2 }),
+        extraEvent('c_dao_rain', 'elder', 900, 12000, 0.8, true, '道雨落在山门前的青石上，你伸手接了一捧。', { lifespan: 3, mood: 5 }),
+      ],
+      wasteland: [
+        extraEvent('w_psi_awaken', 'child', 6, 12, 0.95, true,
+          run => '第一次觉醒时，' + ((run.flags.psi && run.flags.psi.powers[0] && run.flags.psi.powers[0].name) || '某种力量') + '在你掌心炸开，玻璃渣悬在半空。',
+          { body: 1, mood: 4, flags: { psiAwakened: true } },
+          run => Boolean(run.flags.psi) && run.flags.psi.powers.length > 0 && !run.flags.psiAwakened),
+        extraEvent('w_psi_hunt', 'youth', 15, 26, 0.9, true, '你独自追一只变异的沙狼，追到盐碱地尽头。', { wealth: 6, health: -3, flags: { psiHunter: true } },
+          run => Boolean(run.flags.psiAwakened)),
+        extraEvent('w_psi_black', 'adult', 26, 52, 0.8, true, '黑市的人只收异能的货，你把手套摘了。', { wealth: 12, mood: -2 },
+          run => Boolean(run.flags.psiAwakened)),
+        extraEvent('w_psi_mutate', 'middle', 52, 120, 0.6, false, '异能暴走的那一夜，你自己的影子先站了起来。', { health: -8, body: 2 },
+          run => Boolean(run.flags.psi) && ['SSS', 'SS', 'S'].includes(run.flags.psi.best)),
+        extraEvent('w_psi_child', 'adult', 24, 60, 0.7, true, '孩子三岁那年，桌上的铁勺慢慢浮了起来。', { mood: 8, flags: { psiChild: true } },
+          run => Boolean(run.flags.psi) && run.flags.psi.powers.length > 0 && (run.flags.children || 0) >= 1 && !run.flags.psiChild),
+      ],
+      magic: [
+        extraEvent('g_library', 'teen', 12, 17, 0.85, true, '你在图书馆最里面找到一本没有编号的书，书脊是温的。', { int: 2, mood: -2 }),
+        extraEvent('g_familiar', 'youth', 18, 30, 0.8, true, '一只不大的使魔在窗台上等你，尾巴卷着你的魔杖。', { companions: 1, mood: 4 }),
+        extraEvent('g_duel', 'youth', 18, 36, 0.75, true, '决斗场的沙地被风卷起来，你的第一个咒语没有念错。', { int: 1, body: 1, mood: 3 }),
+        extraEvent('g_forbidden', 'adult', 30, 90, 0.55, false, '你翻到禁咒的最后一页，指尖被墨迹烫了一下。', { int: 2, mood: -4, flags: { forbiddenMagic: true } }),
+        extraEvent('g_old_professor', 'elder', 60, 140, 0.7, true, '老教授把一叠手稿推给你，说他写不动了。', { int: 2, mood: 3 }),
+      ],
+      cyber: [
+        extraEvent('y_clinic', 'teen', 13, 18, 0.8, true, '你在黑诊所打下手，学会在断电之前缝合。', { int: 1, wealth: 2 }),
+        extraEvent('y_ghost', 'youth', 18, 32, 0.7, true, '你在旧服务器里遇到一个会回话的幽灵进程。', { int: 2, flags: { dataGhost: true } }),
+        extraEvent('y_corp', 'adult', 25, 46, 0.8, true, '大厂的合同有三页附加条款，你只看了薪水。', { wealth: 15, health: -4 }),
+        extraEvent('y_chrome', 'middle', 46, 72, 0.65, true, '新换的义体在你抬手之前就动了。', { body: 2, health: -3, flags: { chromeAffinity: true } }),
+        extraEvent('y_netdeath', 'adult', 30, 60, 0.5, false, '你的网络身份在某天凌晨被宣告死亡。', { mood: -3, int: 1, flags: { netDeath: true } }),
+      ],
+      starship: [
+        extraEvent('s_drill', 'teen', 14, 18, 0.8, true, '逃生演习里你跑错了舱段，被关在气闸外三十秒。', { health: -4, body: 1 }),
+        extraEvent('s_signal', 'youth', 20, 36, 0.75, true, '值班时你截到一段不属于任何已知文明的脉冲。', { int: 2, mood: 2, flags: { alienSignal: true } }),
+        extraEvent('s_reactor', 'adult', 28, 52, 0.6, false, '反应堆泄漏，你把最后一个同事推出舱门。', { health: -6, mood: 5, flags: { reactorHero: true } }),
+        extraEvent('s_crew', 'middle', 46, 72, 0.8, true, '航行第十年，船员们给你过了一个没有蛋糕的生日。', { companions: 2, mood: 4 }),
+        extraEvent('s_derelict', 'elder', 70, 120, 0.7, true, '你在一艘废弃船上找到同型号的旧照片。', { wealth: 10, mood: 2 }),
+      ],
+      jianghu: [
+        extraEvent('j_rumor', 'child', 8, 12, 0.85, true, '茶馆里说书人讲了三遍同一把剑，你听出他每次说的都不一样。', { int: 1 }),
+        extraEvent('j_grave', 'teen', 14, 18, 0.8, true, '你在后山看见一座没有名字的剑冢，插着七把断剑。', { int: 1, mood: 3 }),
+        extraEvent('j_invite', 'youth', 18, 28, 0.8, true, '有位穿灰袍的人递给你一块木牌，说山门缺人。', { body: 1, mood: 3 }),
+        extraEvent('j_duel', 'adult', 30, 52, 0.75, true, '江边的约战没有观众，只有渡船在等你们打完。', { health: -3, mood: 5 }),
+        extraEvent('j_old_enemy', 'elder', 60, 95, 0.7, false, '旧敌在雨里等你，他的剑比记忆里慢了半拍。', { mood: -2, body: 1 }),
+      ],
+    }
+
+    const WORLD_EXTRA_ENDINGS = {
+      modern: [
+        { id: 'm_style_icon', title: '靠脸吃饭', description: '你把「好看」这件事做成了职业，也做成了一辈子的体面。', tone: 'good', when: run => run.attrs.looks >= 22 && run.age >= 50 },
+      ],
+      wasteland: [
+        { id: 'w_psi_apex', title: '异能顶端', description: '废土上的人记得你抬手的样子，像记得一场天气。', tone: 'legend', when: run => Boolean(run.flags.psi) && ['SSS', 'SS'].includes(run.flags.psi.best) && run.age >= 60 },
+        { id: 'w_psi_zero', title: '不幸者', description: '你没有异能，也活到了最后，这本身就是一种本事。', tone: 'normal', when: run => Boolean(run.flags.psi) && run.flags.psi.type === 'none' && run.age >= 70 },
+      ],
+      cultivation: [
+        { id: 'c_root_heaven', title: '天灵根', description: '测灵石的光柱贯穿屋顶那天，山门里所有人都抬头看了一眼。', tone: 'legend', when: run => Boolean(run.flags.spiritRoot) && run.flags.spiritRoot.name === '天灵根' && (run.flags.realmIndex || 0) >= 6 },
+      ],
+      magic: [
+        { id: 'g_forbidden_author', title: '禁书作者', description: '你写下的那本书被锁进最深处，钥匙熔进了铜钟。', tone: 'strange', when: run => Boolean(run.flags.forbiddenMagic) && Boolean(run.flags.professor) },
+      ],
+      cyber: [
+        { id: 'y_ghost_legend', title: '赛博幽灵', description: '你的名字在网络上是一个无法封禁的进程号。', tone: 'legend', when: run => Boolean(run.flags.dataGhost) && Boolean(run.flags.legend) },
+      ],
+      starship: [
+        { id: 's_first_contact_hero', title: '第一次接触', description: '人类第一次听见另一个文明的声音时，你站在通讯台前。', tone: 'legend', when: run => Boolean(run.flags.alienSignal) && Boolean(run.flags.firstContact) },
+      ],
+      jianghu: [
+        { id: 'j_sword_grave', title: '剑冢守墓人', description: '你在后山住了下来，替七把断剑扫了一辈子落叶。', tone: 'good', when: run => Boolean(run.flags.swordHeart) && Boolean(run.flags.hiddenMaster) },
+      ],
+    }
+
+    const EXTRA_WORLD_ACHIEVEMENTS = [
+      { id: 'more_psi_sss', title: 'SSS 级', desc: '你的异能评级是 SSS。', when: run => Boolean(run.flags.psi && run.flags.psi.best === 'SSS') },
+      { id: 'more_psi_innate', title: '天生异能者', desc: '有些人生下来就不用问「为什么是我」。', when: run => Boolean(run.flags.psi && run.flags.psi.type === 'innate') },
+      { id: 'more_psi_none', title: '不幸者', desc: '废土上没有异能的人，也被称作「不幸者」。', when: run => Boolean(run.flags.psi && run.flags.psi.type === 'none') },
+      { id: 'more_psi_child', title: '遗传', desc: '你的孩子在三岁那年让铁勺浮了起来。', when: run => Boolean(run.flags.psiChild) },
+      { id: 'more_root_heaven', title: '天灵根', desc: '测灵石为你亮到了顶。', when: run => Boolean(run.flags.spiritRoot && run.flags.spiritRoot.name === '天灵根') },
+      { id: 'more_root_five', title: '五灵根，也一样', desc: '灵气驳杂的人，只能靠年月补。', when: run => Boolean(run.flags.spiritRoot && run.flags.spiritRoot.name === '五灵根' && (run.flags.realmIndex || 0) >= 4) },
+      { id: 'more_looks22', title: '岁月偏心', desc: '颜值达到 22。', when: run => run.attrs.looks >= 22 },
+      { id: 'more_looks26', title: '风华', desc: '颜值达到 26。', when: run => run.attrs.looks >= 26 },
+      { id: 'more_focus_style', title: '打理自己', desc: '你把一年时间花在了自己身上。', when: run => Boolean(run.focus === 'fx_style') },
+      { id: 'more_psi_hunter', title: '猎手', desc: '你在废土上独自追过变异兽。', when: run => Boolean(run.flags.psiHunter) },
+      { id: 'more_alien_signal', title: '脉冲', desc: '你截到一段不属于已知文明的信号。', when: run => Boolean(run.flags.alienSignal) },
+      { id: 'more_forbidden', title: '禁咒', desc: '你读过不该读的那一页。', when: run => Boolean(run.flags.forbiddenMagic) },
+      { id: 'more_psi_lineage', title: '血脉', desc: '你的孩子也觉醒了异能。', when: run => Boolean(run.flags.lineagePsi || run.flags.psiChild) },
+      { id: 'more_root_lineage', title: '仙种', desc: '上一世的灵根，留到了这一世。', when: run => Boolean(run.flags.lineageRoot) },
+    ]
+
+    const LOOKS_NODES = [{
+      id: 'looks_care',
+      at: 16,
+      chance: 0.8,
+      title: '镜子里的自己',
+      prompt: '你开始在意别人看你的方式。',
+      options: [
+        { id: 'lk_gym', label: '练出线条', desc: '颜值 +2 · 体魄 +1 · 健康 -1', resolve() { return { text: '你开始每天练一小时，镜子里的轮廓慢慢清楚了。', tone: 'good', effects: { looks: 2, body: 1, health: -1 } } } },
+        { id: 'lk_style', label: '学穿搭与仪态', desc: '颜值 +2 · 心情 +2 · 财富 -8', resolve() { return { text: '你把衣柜清了一遍，学会站直、说话时看着对方的眼睛。', tone: 'good', effects: { looks: 2, wealth: -8, mood: 2 } } } },
+        { id: 'lk_natural', label: '顺其自然', desc: '心情 +3', resolve() { return { text: '你决定不跟镜子较劲，把时间花在别处。', tone: 'normal', effects: { mood: 3 } } } },
+      ],
+    }]
+
+    for (const world of WORLDS) {
+      if (WORLD_EXTRA_EVENTS[world.id]) world.events = (world.events || []).concat(WORLD_EXTRA_EVENTS[world.id])
+      if (WORLD_EXTRA_ENDINGS[world.id]) world.endings = (world.endings || []).concat(WORLD_EXTRA_ENDINGS[world.id])
+    }
+
+    const EXTRA_TALENTS = {
+      modern: [
+        { id: 'good_genes', name: '好基因', rarity: '良', desc: '父母给你的底子很好。颜值 +1、生命 +3。', mods: { looks: 1 }, health: 3 },
+      ],
+      cultivation: [
+        { id: 'root_blessed', name: '灵秀之姿', rarity: '奇', desc: '测灵石在你手里会亮得比别人稳。智力 +1，四灵根、五灵根有六成机会被看成三灵根。', mods: { int: 1 }, flags: ['rootBlessed'] },
+        { id: 'root_damaged', name: '灵根有损', rarity: '凡', desc: '小时候落过一次水，灵脉从此不太顺。智力 -1、心情 -2。', mods: { int: -1 }, mood: -2 },
+      ],
+      wasteland: [
+        { id: 'psi_affinity', name: '异能亲和', rarity: '奇', desc: '废土上的异能对你有种说不清的亲近。心情 +2，若不幸者有一半机会觉醒为后天异能者。', mood: 2, flags: ['psiAffinity'] },
+        { id: 'psi_scarred', name: '异能疤痕', rarity: '良', desc: '一次暴走在你背上留下痕迹。体魄 +1、生命 -5，但你更懂异能。', mods: { body: 1 }, health: -5 },
+      ],
+      magic: [
+        { id: 'mana_blood', name: '魔力血脉', rarity: '奇', desc: '你的血里流着一点不属于人类的东西。智力 +1、心情 +2。', mods: { int: 1 }, mood: 2 },
+      ],
+      cyber: [
+        { id: 'chrome_tolerance', name: '义体耐受', rarity: '良', desc: '别人换一块义体要躺三个月，你三天就能上手。体魄 +1、生命 +4。', mods: { body: 1 }, health: 4 },
+      ],
+      starship: [
+        { id: 'void_born', name: '生于真空', rarity: '良', desc: '你在船上出生，重力从来没真正约束过你。体魄 +1、生命 +3。', mods: { body: 1 }, health: 3 },
+      ],
+      jianghu: [
+        { id: 'inner_breath', name: '内息绵长', rarity: '良', desc: '你练的功夫在呼吸之间。体魄 +1、寿元 +2。', mods: { body: 1 }, lifespan: 2 },
+      ],
+    }
+
+    for (const [worldId, list] of Object.entries(EXTRA_TALENTS)) {
+      const pool = { modern: TALENTS, cultivation: CULTIVATION_TALENTS, wasteland: WASTELAND_TALENTS, magic: MAGIC_TALENTS, cyber: CYBER_TALENTS, starship: STARSHIP_TALENTS, jianghu: JIANGHU_TALENTS }[worldId]
+      if (pool) pool.push(...list)
+    }
+
     const WORLD_BY_ID = Object.fromEntries(WORLDS.map(world => [world.id, world]))
     const TOTAL_ENDINGS = WORLDS.reduce((total, world) => total + world.endings.length, 0)
     const COMEDY_TOTAL = COMEDY_ACHIEVEMENTS.length
@@ -15491,6 +15729,7 @@ function attrCapFor(run) {
     })))
 
     const ALL_ACHIEVEMENTS = BASE_ACHIEVEMENTS.concat(MILESTONE_ACHIEVEMENTS, CAREER_ACHIEVEMENTS, ENDING_ACHIEVEMENTS)
+    ALL_ACHIEVEMENTS.push(...EXTRA_WORLD_ACHIEVEMENTS)
     const ACHIEVEMENT_TOTAL = ALL_ACHIEVEMENTS.length
 
     const CHOICE_NODES = {
@@ -16987,9 +17226,17 @@ function attrCapFor(run) {
 
     function fillerText(run) {
       const pool = fillerExtras(run.worldId)
-      const recent = run.recentTexts || []
-      const fresh = pool.filter(text => !recent.includes(text))
-      return pick(fresh.length ? fresh : pool)
+      // 一局之内同一句日常只出现一次；全用完后才重置
+      let used = run.flags._fillerSeen
+      if (!Array.isArray(used)) used = []
+      let fresh = pool.filter(text => !used.includes(text))
+      if (!fresh.length) {
+        used = []
+        fresh = pool.slice()
+      }
+      const text = pick(fresh)
+      run.flags._fillerSeen = used.concat(text).slice(-240)
+      return text
     }
 
     function choiceRequirementEntries(run, option) {
@@ -17191,7 +17438,7 @@ function attrCapFor(run) {
       })
       return {
         id: 'career_renew_terms',
-        title: '续约几年',
+        title: run.age + ' 岁 · 续约几年',
         prompt: '经纪人把空白合同推过来：' + club + '想要你留下，年限由你定。',
         options: rows,
       }
@@ -17235,7 +17482,7 @@ function attrCapFor(run) {
       })
       return {
         id: freeAgent ? 'career_free_agent' : 'career_offers',
-        title: freeAgent ? '自由身：不用转会费' : '合同到期：下一站在哪',
+        title: run.age + ' 岁 · ' + (freeAgent ? '自由身：不用转会费' : '合同到期：下一站在哪'),
         prompt: freeAgent
           ? '一年的短约走到头了。你没有续约，也没有被卖——合同自然到期，你成了自由球员。'
             + '经纪人把电话放在桌上，一上午响个不停：不用转会费的人，谁都想聊聊。'
@@ -17261,6 +17508,7 @@ function attrCapFor(run) {
           COMMON_CHOICE_NODES,
           COMMON_CHOICE_EXTRA,
           COMMON_CHOICE_MORE,
+          ...LOOKS_NODES,
           CULTIVATION_COMMON,
           ...CAREER_NODES,
           ...CAREER_LIFE_NODES,
@@ -17268,9 +17516,11 @@ function attrCapFor(run) {
           ...CAREER_DEEP_NODES,
         )
       const seen = run.flags._choiceSeen || {}
+      const titleSeen = run.flags._choiceTitleSeen || []
       const cultivation = run.worldId === 'cultivation'
       const eligible = nodes.filter(node => {
         if (seen[node.id]) return false
+        if (titleSeen.includes(node.title)) return false
         if (run.age < node.at) return false
         if (cultivation && /^(common|more)_/.test(node.id)) return false
         if (!cultivation && node.until == null && run.age > node.at + 10) return false
@@ -17345,6 +17595,7 @@ function attrCapFor(run) {
       applyEffects(next, result.effects)
       const deltas = numberDeltas(before, next)
       next.flags._choiceSeen = { ...(next.flags._choiceSeen || {}), [pending.id]: option.id }
+      next.flags._choiceTitleSeen = (next.flags._choiceTitleSeen || []).concat(pending.title || '').slice(-80)
       next.flags.lastChoice = option.id
       next.flags.lastChoiceAge = next.age
       next.flags.choicesMade = (next.flags.choicesMade || 0) + 1
@@ -18972,7 +19223,7 @@ function attrCapFor(run) {
       return {
         kind: 'quest',
         id: 'quest-' + run.age + '-' + rnd(9999),
-        title: '这一年的任务',
+        title: run.age + ' 岁 · 这一年的任务',
         prompt: '四件事放在你面前。你可以挑一件去做，也可以刷新，看看还有没有别的路。',
         refreshLeft: 4,
         questIds: offers.map(quest => quest.id),
@@ -19162,7 +19413,10 @@ function attrCapFor(run) {
     function cultivationYears(run) {
       if (run.age < 18) return 1
       const realm = run.flags.realmIndex || 0
-      return REALM_YEAR_STEPS[realm] || 1
+      const base = REALM_YEAR_STEPS[realm] || 1
+      const root = run.flags.spiritRoot
+      const speed = root && root.speed ? root.speed : 1
+      return Math.max(1, Math.round(base * speed))
     }
 
     function emptyModeRecord() {
@@ -19767,6 +20021,7 @@ function attrCapFor(run) {
         flags.children = 0
         flags.daoPartner = false
         flags.realmIndex = 0
+        flags.spiritRoot = rollSpiritRoot()
         flags.realmName = '凡人'
         flags.realm = '凡人'
         flags.sect = null
@@ -19830,6 +20085,7 @@ function attrCapFor(run) {
         flags.children = 0
         flags.partner = false
         flags.companions = 0
+        flags.psi = rollPsi()
         flags.infected = false
         flags.baseLeader = false
         flags.tyrant = false
@@ -19853,6 +20109,30 @@ function attrCapFor(run) {
       if (flags.lastPowerAge == null) flags.lastPowerAge = 0
       if (flags._powerSeen == null) flags._powerSeen = {}
       aggregate.flags.forEach(flag => { flags[flag] = true })
+      if (flags.psiAffinity && world.id === 'wasteland' && flags.psi && flags.psi.type === 'none' && Math.random() < 0.5) {
+        const first = rollPsiPower('后天', Math.floor(Math.random() * 61))
+        const second = rollPsiPower('后天', Math.floor(Math.random() * 61))
+        flags.psi = { type: 'acquired', label: '后天异能者', powers: [first, second], best: psiGradeRank(first.grade) < psiGradeRank(second.grade) ? first.grade : second.grade }
+      }
+      if (flags.rootBlessed && world.id === 'cultivation' && flags.spiritRoot && ['四灵根', '五灵根'].includes(flags.spiritRoot.name) && Math.random() < 0.6) {
+        flags.spiritRoot = { name: '三灵根', speed: 1, desc: '灵气驳杂，但比旁人稳。' }
+      }
+      if (legacy && legacy.lineage) {
+        if (world.id === 'wasteland' && legacy.lineage.kind === 'psi') {
+          if (!flags.psi || flags.psi.type === 'none' || Math.random() < 0.55) {
+            const first = rollPsiPower('先天', Math.floor(Math.random() * 61))
+            const second = rollPsiPower('后天', Math.floor(Math.random() * 61))
+            flags.psi = { type: 'innate', label: '天生异能者', powers: [first, second], best: psiGradeRank(first.grade) < psiGradeRank(second.grade) ? first.grade : second.grade }
+            flags.lineagePsi = true
+          }
+        } else if (world.id === 'cultivation' && legacy.lineage.kind === 'root') {
+          if (!flags.spiritRoot || Math.random() < 0.55) {
+            const root = legacy.lineage.grade === '天灵根' ? SPIRIT_ROOTS[0] : SPIRIT_ROOTS[1]
+            flags.spiritRoot = { name: root.name, speed: root.speed, desc: root.desc }
+            flags.lineageRoot = true
+          }
+        }
+      }
       if (!flags._choiceSeen) flags._choiceSeen = {}
       if (legacy) {
         flags.legacy = true
@@ -20042,7 +20322,7 @@ function attrCapFor(run) {
     function pushEntry(run, entry) {
       const span = entry.kind === 'event' && (run.lastYears || 1) > 1 ? run.lastYears : null
       run.log = run.log.concat({ ...entry, span, id: run.seq })
-      if (entry.text) run.recentTexts = (run.recentTexts || []).concat(entry.text).slice(-12)
+      if (entry.text) run.recentTexts = (run.recentTexts || []).concat(entry.text).slice(-40)
       run.seq += 1
     }
 
@@ -20336,12 +20616,13 @@ function attrCapFor(run) {
       }
     }
 
-    // —— 年度重点：把「推进一年」变成一次小选择（v1.47.0）——
+    // —— 年度重点：把「推进一年」变成一次小选择（v1.48.0）——
     const FOCUS_SETS = {
       life: [
         { id: 'fx_fit', label: '健身', hint: '体魄 +1', effects: { body: 1 } },
         { id: 'fx_read', label: '读书', hint: '智力 +1', effects: { int: 1 } },
         { id: 'fx_family', label: '陪家人', hint: '心情 +3', effects: { mood: 3 } },
+        { id: 'fx_style', label: '打理自己', hint: '颜值 +1 · 财富 -2', effects: { looks: 1, wealth: -2 } },
       ],
       football: [
         { id: 'fx_fb_train', label: '加练射门', hint: '能力 +0.9 · 健康 -1', ability: 0.9, effects: { health: -1 } },
@@ -20399,7 +20680,7 @@ function attrCapFor(run) {
       const events = recent.filter(entry => entry.kind === 'event').length
       return {
         id: 'decade_review',
-        title: '十年小结',
+        title: run.age + ' 岁 · 十年小结',
         prompt: '从 ' + from + ' 岁到 ' + run.age + ' 岁：' + events + ' 件事、' + decisions + ' 次抉择。挑一件今年最想补上的事。',
         options: [
           {
@@ -22065,7 +22346,7 @@ function attrCapFor(run) {
   }
 
   function avatarDockTop() {
-    return 6;
+    return 60;
   }
 
   function clearAvatarDock(card) {
@@ -22133,7 +22414,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.47.0';
+  const APP_VERSION = '1.48.0';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -22236,7 +22517,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.47.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.48.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -22814,6 +23095,21 @@ function aiPortraitFor(run) {
           ? '伴侣已远行'
           : '还没有遇见伴侣';
       const childText = (run.flags.children || 0) > 0 ? ' · ' + run.flags.children + ' 个孩子' : '';
+      const attrCells = world.attrs.map(def => {
+        const value = Math.round((run.attrs && run.attrs[def.key]) || 0);
+        return '<span class="avatar-stat" data-key="' + esc(def.key) + '"><i>' + esc(def.name) + '</i><b>' + value + '</b></span>';
+      }).join('');
+      const healthNow = Math.round(run.health);
+      const moodNow = Math.round(run.mood);
+      const vitalCells = '<span class="avatar-stat" data-low="' + (healthNow < 30 ? 'true' : 'false') + '"><i>' + esc(world.vitals.health) + '</i><b>' + healthNow + '</b></span>'
+        + '<span class="avatar-stat" data-low="' + (moodNow < 30 ? 'true' : 'false') + '"><i>' + esc(world.vitals.mood) + '</i><b>' + moodNow + '</b></span>'
+        + '<span class="avatar-stat"><i>' + esc(world.vitals.wealth) + '</i><b>' + esc(formatMoney(run, run.wealth)) + '</b></span>'
+        + '<span class="avatar-stat"><i>气运</i><b>' + (run.luck || 0) + '</b></span>';
+      const psiState = run.flags && run.flags.psi
+      const rootState = run.flags && run.flags.spiritRoot
+      const powerTag = psiState && psiState.powers && psiState.powers.length
+        ? '异能 ' + psiState.label + ' · ' + psiState.powers[0].grade
+        : rootState ? '灵根 ' + rootState.name : '';
       const aiPortrait = aiPortraitFor(run);
       const aiTag = aiPortrait ? '<span class="avatar-tag">AI 绘</span>' : '';
       const portrait = avatarSvg(run) + (aiPortrait
@@ -22823,7 +23119,8 @@ function aiPortraitFor(run) {
         + '<div class="avatar-art">' + portrait + '</div>'
         + '<div class="avatar-copy"><div class="avatar-head"><b>' + esc(genderLabel) + ' · ' + run.age + ' 岁</b><span>' + esc(realmText(run)) + '</span></div>'
         + '<p class="avatar-sub">' + esc(partner) + esc(childText) + ' · ' + esc(stage.label) + '</p>'
-        + '<div class="avatar-tags"><span class="avatar-tag">性别 ' + esc(genderLabel) + '</span><span class="avatar-tag">' + esc(realmText(run)) + '</span><span class="avatar-tag">天赋 ' + esc(talentText) + '</span><span class="avatar-tag">装备 ' + esc(equipmentLabel(run)) + '</span>' + aiTag + '</div></div>'
+        + '<div class="avatar-stats">' + attrCells + vitalCells + '</div>'
+        + '<div class="avatar-tags"><span class="avatar-tag">性别 ' + esc(genderLabel) + '</span><span class="avatar-tag">' + esc(realmText(run)) + '</span><span class="avatar-tag">天赋 ' + esc(talentText) + '</span><span class="avatar-tag">装备 ' + esc(equipmentLabel(run)) + '</span>' + (powerTag ? '<span class="avatar-tag power-tag">' + esc(powerTag) + '</span>' : '') + aiTag + '</div></div>'
         + '</section>';
     }
 
@@ -23113,10 +23410,12 @@ function aiPortraitFor(run) {
   }
 
   function logHtml(run, filter) {
+    const newestEntry = run.log.length ? run.log[run.log.length - 1] : null;
+    // 只有现实世界区分「普通人生 / 职业生涯」两栏；其他世界保持单列全宽
+    if (run.worldId !== 'modern') return logEntriesHtml(run.log, newestEntry);
     const hasCareer = Boolean(run.flags && run.flags.careerSport);
     const lifeEntries = run.log.filter(entry => !entry.isCareer);
     const careerEntries = run.log.filter(entry => entry.isCareer);
-    const newestEntry = run.log.length ? run.log[run.log.length - 1] : null;
     let card = '';
     if (hasCareer) {
       try { card = careerCardHtml(run) || ''; } catch (err) { card = ''; }
@@ -23484,6 +23783,13 @@ function aiPortraitFor(run) {
       sourceTitle: run.ending.title,
       sourceAge: run.age,
       sourceGrade: run.ending.grade.grade,
+      lineage: (() => {
+        const psi = run.flags && run.flags.psi
+        const root = run.flags && run.flags.spiritRoot
+        if (psi && psi.powers && psi.powers.length && ['SSS', 'SS', 'S'].includes(psi.best)) return { kind: 'psi', grade: psi.best, name: psi.powers[0].name }
+        if (root && ['天灵根', '单灵根'].includes(root.name)) return { kind: 'root', grade: root.name }
+        return null
+      })(),
     };
     state.run = null;
     state.view = 'setup';
