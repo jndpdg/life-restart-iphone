@@ -1463,7 +1463,7 @@
     .replay-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
     .replay-controls .btn { flex: 1 1 42%; min-height: 38px; font-size: 10px; }
     .choice-modal { align-items: center; }
-    /* —— 动效（v1.48.0）：只做 CSS，避免每帧跑 JS —— */
+    /* —— 动效（v1.49.0）：只做 CSS，避免每帧跑 JS —— */
     @keyframes fxScreenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     @keyframes fxEntryIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
     @keyframes fxAgePop {
@@ -1495,7 +1495,7 @@
       .entry.is-fresh .entry-delta, .choice-sheet .choice-option, .ending { animation: none !important; }
     }
 
-    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.48.0）—— */
+    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.49.0）—— */
     @keyframes fxCardIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
     @keyframes fxEndingGlow {
       0%, 100% { box-shadow: 0 18px 44px rgba(15, 23, 42, .09); }
@@ -15627,6 +15627,146 @@ function attrCapFor(run) {
       if (pool) pool.push(...list)
     }
 
+    // ── 魔法世界：元素亲和度 ──────────────────────────────────────
+    const MAGIC_ELEMENTS = [
+      { id: 'fire', name: '火' },
+      { id: 'water', name: '水' },
+      { id: 'wind', name: '风' },
+      { id: 'earth', name: '土' },
+      { id: 'lightning', name: '雷' },
+      { id: 'light', name: '光' },
+      { id: 'dark', name: '暗' },
+    ]
+
+    function elementTier(value) {
+      if (value >= 90) return '圣'
+      if (value >= 75) return '大师'
+      if (value >= 55) return '熟练'
+      if (value >= 35) return '入门'
+      return '微弱'
+    }
+
+    function refreshElementTop(elements) {
+      let top = MAGIC_ELEMENTS[0]
+      let topValue = -1
+      let second = null
+      let secondValue = -1
+      for (const element of MAGIC_ELEMENTS) {
+        const value = elements.map[element.id] || 0
+        if (value > topValue) {
+          second = top
+          secondValue = topValue
+          top = element
+          topValue = value
+        } else if (value > secondValue) {
+          second = element
+          secondValue = value
+        }
+      }
+      elements.top = top.id
+      elements.topName = top.name
+      elements.topValue = topValue
+      elements.second = second ? second.id : null
+      elements.secondName = second ? second.name : null
+      elements.secondValue = secondValue
+      elements.score = MAGIC_ELEMENTS.reduce((sum, element) => sum + (elements.map[element.id] || 0), 0)
+      elements.dual = secondValue >= 45
+      return elements
+    }
+
+    function rollElements() {
+      const map = {}
+      for (const element of MAGIC_ELEMENTS) map[element.id] = Math.floor(Math.random() * 19)
+      const primary = MAGIC_ELEMENTS[Math.floor(Math.random() * MAGIC_ELEMENTS.length)]
+      const others = MAGIC_ELEMENTS.filter(element => element.id !== primary.id)
+      const secondary = others[Math.floor(Math.random() * others.length)]
+      map[primary.id] = 62 + Math.floor(Math.random() * 31)
+      if (Math.random() < 0.35) map[secondary.id] = 45 + Math.floor(Math.random() * 26)
+      return refreshElementTop({ map })
+    }
+
+    function elementLine(run) {
+      const elements = run.flags && run.flags.elements
+      if (!elements) return ''
+      const text = elements.topName + ' ' + elements.topValue
+      return elements.secondValue >= 45 ? text + ' / ' + elements.secondName + ' ' + elements.secondValue : text
+    }
+
+    function elementTried(run) {
+      const elements = run.flags && run.flags.elements
+      return Boolean(elements) && elements.topValue >= 60
+    }
+
+    const MAGIC_ELEMENT_EVENTS = [
+      extraEvent('g_element_awaken', 'child', 8, 12, 0.95, true,
+        run => '元素亲和测试那天，水晶球在「' + (run.flags.elements.topName) + '」这一格亮得最久，旁边那一格也泛起一点光。',
+        { int: 1, mood: 4, elements: 2, flags: { elementAwakened: true } },
+        run => Boolean(run.flags.elements) && !run.flags.elementAwakened),
+      extraEvent('g_element_trial', 'youth', 14, 20, 0.9, true,
+        run => '元素试炼的场地上，你抬手时' + (elementTried(run) ? '那一小片空气先动了。' : '只有风在动。'),
+        run => (elementTried(run) ? { int: 2, mood: 5, elements: 4, flags: { elementTrialWin: true } } : { int: 1, mood: -2 })),
+      extraEvent('g_element_dual', 'youth', 16, 26, 0.7, true,
+        run => '两种元素在你掌心同时亮起，像两条河在狭窄处并成一条。',
+        { int: 2, mood: 4, elements: 2, flags: { elementResonance: true } },
+        run => Boolean(run.flags.elements) && run.flags.elements.dual),
+      extraEvent('g_element_school', 'teen', 12, 17, 0.85, true,
+        run => '学院元素课排行贴了出来，你的名字落在' + (run.flags.elements.topValue >= 75 ? '前列' : '中游') + '。',
+        { int: 1, mood: 2 },
+        run => Boolean(run.flags.elements)),
+      extraEvent('g_element_mastery', 'adult', 24, 70, 0.6, true,
+        run => '你在空房间里只动手指，' + (run.flags.elements.topName) + '就沿着指节绕了一圈。',
+        { int: 1, mood: 8, elements: 6, flags: { elementMaster: true } },
+        run => Boolean(run.flags.elements) && run.flags.elements.topValue >= 88 && !run.flags.elementMaster),
+      extraEvent('g_element_burn', 'adult', 30, 80, 0.45, false,
+        run => '元素在你的血里翻了一次身，你扶着窗台站了很久。',
+        { health: -6, mood: -3, elements: -3, flags: { elementBurn: true } },
+        run => Boolean(run.flags.elements) && run.flags.elements.topValue >= 80),
+      extraEvent('g_element_forbidden', 'elder', 60, 160, 0.5, false,
+        run => '禁咒的最后一页用的是「' + (run.flags.elements.topName) + '」的文字，你读懂了不该读懂的部分。',
+        { int: 2, mood: -5, elements: 2, lifespan: -2 },
+        run => Boolean(run.flags.forbiddenMagic)),
+      extraEvent('g_element_body', 'elder', 70, 160, 0.6, true,
+        run => '你不再需要杖了。风、水、光在你走过后才慢慢合拢。',
+        { lifespan: 5, mood: 6, elements: 3, flags: { elementBody: true } },
+        run => Boolean(run.flags.elements) && run.flags.elements.topValue >= 85 && run.age >= 70),
+    ]
+
+    const MAGIC_ELEMENT_ENDINGS = [
+      { id: 'g_element_lord', title: '元素之主', description: '七种元素都认了你，学院把旧的元素课教材整批作废。', tone: 'legend', when: run => Boolean(run.flags.elements) && run.flags.elements.topValue >= 80 && run.flags.elements.secondValue >= 60 },
+      { id: 'g_flame_saint', title: '炎之圣者', description: '你死后火还在烧，人们说那是你留下的最后一课。', tone: 'legend', when: run => Boolean(run.flags.elements) && run.flags.elements.map.fire >= 90 },
+      { id: 'g_tide_saint', title: '深渊之水', description: '海边的人不敢在你面前提「涨潮」两个字。', tone: 'legend', when: run => Boolean(run.flags.elements) && run.flags.elements.map.water >= 90 },
+      { id: 'g_storm_eye', title: '风暴之眼', description: '你站在风里，风绕着你走。', tone: 'legend', when: run => Boolean(run.flags.elements) && run.flags.elements.map.wind >= 90 },
+      { id: 'g_earth_warden', title: '大地之守', description: '你让一座山挪了半步，从此没人再动那座山。', tone: 'legend', when: run => Boolean(run.flags.elements) && run.flags.elements.map.earth >= 90 },
+      { id: 'g_thunder_judge', title: '雷罚', description: '法典里关于死刑的那一条，最后写着你的名字。', tone: 'strange', when: run => Boolean(run.flags.elements) && run.flags.elements.map.lightning >= 90 },
+      { id: 'g_light_pope', title: '光之教皇', description: '教堂的彩窗换了新的，中间那张脸是你年轻时的样子。', tone: 'good', when: run => Boolean(run.flags.elements) && run.flags.elements.map.light >= 90 },
+      { id: 'g_shadow_king', title: '暗之君', description: '禁书区最深处的门开着，里面坐着的人和你一模一样。', tone: 'strange', when: run => Boolean(run.flags.elements) && run.flags.elements.map.dark >= 90 },
+    ]
+
+    const MAGIC_ELEMENT_ACHIEVEMENTS = [
+      { id: 'more_element_awaken', title: '元素亲和', desc: '你测出了自己的元素。', when: run => Boolean(run.flags.elementAwakened) },
+      { id: 'more_element_trial', title: '试炼通过', desc: '元素试炼上，空气先动了。', when: run => Boolean(run.flags.elementTrialWin) },
+      { id: 'more_element_dual', title: '双元素', desc: '两条河在你掌心并成一条。', when: run => Boolean(run.flags.elements && run.flags.elements.dual) },
+      { id: 'more_element_90', title: '元素大师', desc: '任一元素亲和达到 90。', when: run => Boolean(run.flags.elements) && MAGIC_ELEMENTS.some(element => (run.flags.elements.map[element.id] || 0) >= 90) },
+      { id: 'more_element_all', title: '元素总量', desc: '七种元素亲和总和达到 200。', when: run => Boolean(run.flags.elements) && run.flags.elements.score >= 200 },
+      { id: 'more_element_master', title: '掌控', desc: '不动杖也能让元素绕指。', when: run => Boolean(run.flags.elementMaster) },
+      { id: 'more_element_body', title: '元素之躯', desc: '你走过后，风才慢慢合拢。', when: run => Boolean(run.flags.elementBody) },
+      { id: 'more_element_burn', title: '元素暴走', desc: '元素在你血里翻过一次身。', when: run => Boolean(run.flags.elementBurn) },
+    ]
+
+    const MAGIC_ELEMENT_TALENTS = [
+      { id: 'flame_blood', name: '炎之血', rarity: '奇', desc: '火元素亲和 +18，其余元素不受影响。', flags: ['elementBoostFire'] },
+      { id: 'tide_heart', name: '潮汐之心', rarity: '奇', desc: '水元素亲和 +18，心情 +2。', mood: 2, flags: ['elementBoostWater'] },
+      { id: 'element_vein', name: '元素血脉', rarity: '传说', desc: '七种元素亲和各 +12，元素亲和测试时全场安静了一瞬。', flags: ['elementVein'] },
+    ]
+
+    for (const world of WORLDS) {
+      if (world.id !== 'magic') continue
+      world.events = (world.events || []).concat(MAGIC_ELEMENT_EVENTS)
+      world.endings = (world.endings || []).concat(MAGIC_ELEMENT_ENDINGS)
+    }
+    MAGIC_TALENTS.push(...MAGIC_ELEMENT_TALENTS)
+    EXTRA_WORLD_ACHIEVEMENTS.push(...MAGIC_ELEMENT_ACHIEVEMENTS)
+
     const WORLD_BY_ID = Object.fromEntries(WORLDS.map(world => [world.id, world]))
     const TOTAL_ENDINGS = WORLDS.reduce((total, world) => total + world.endings.length, 0)
     const COMEDY_TOTAL = COMEDY_ACHIEVEMENTS.length
@@ -20038,6 +20178,7 @@ function attrCapFor(run) {
         flags.headmaster = false
         flags.dragon = false
         flags.forbiddenMagic = false
+        flags.elements = rollElements()
       } else if (world.id === 'cyber') {
         flags.children = 0
         flags.partner = false
@@ -20109,6 +20250,14 @@ function attrCapFor(run) {
       if (flags.lastPowerAge == null) flags.lastPowerAge = 0
       if (flags._powerSeen == null) flags._powerSeen = {}
       aggregate.flags.forEach(flag => { flags[flag] = true })
+      if (world.id === 'magic' && flags.elements) {
+        if (flags.elementBoostFire) flags.elements.map.fire = clamp(flags.elements.map.fire + 18, 0, 99)
+        if (flags.elementBoostWater) flags.elements.map.water = clamp(flags.elements.map.water + 18, 0, 99)
+        if (flags.elementVein) {
+          for (const key of Object.keys(flags.elements.map)) flags.elements.map[key] = clamp(flags.elements.map[key] + 12, 0, 99)
+        }
+        refreshElementTop(flags.elements)
+      }
       if (flags.psiAffinity && world.id === 'wasteland' && flags.psi && flags.psi.type === 'none' && Math.random() < 0.5) {
         const first = rollPsiPower('后天', Math.floor(Math.random() * 61))
         const second = rollPsiPower('后天', Math.floor(Math.random() * 61))
@@ -20425,6 +20574,14 @@ function attrCapFor(run) {
       if (typeof effects.luck === 'number') {
         run.luck = clamp((run.luck || 0) + effects.luck, -2, 5)
       }
+      if (typeof effects.elements === 'number' && run.flags.elements) {
+        const elements = run.flags.elements
+        elements.map[elements.top] = clamp((elements.map[elements.top] || 0) + effects.elements, 0, 99)
+        if (effects.elements > 0 && elements.secondValue >= 45 && elements.second) {
+          elements.map[elements.second] = clamp((elements.map[elements.second] || 0) + Math.ceil(effects.elements / 2), 0, 99)
+        }
+        refreshElementTop(elements)
+      }
       if (typeof effects.lifespan === 'number') {
         const lifespanCap = worldOf(run).id === 'cultivation' ? 12000 : 160
         run.deathAge = clamp(run.deathAge + effects.lifespan, run.age + 1, lifespanCap)
@@ -20616,8 +20773,13 @@ function attrCapFor(run) {
       }
     }
 
-    // —— 年度重点：把「推进一年」变成一次小选择（v1.48.0）——
+    // —— 年度重点：把「推进一年」变成一次小选择（v1.49.0）——
     const FOCUS_SETS = {
+      magic: [
+        { id: 'fx_mg_train', label: '元素冥想', hint: '主元素 +3 · 智力 +1 · 健康 -1', effects: { elements: 3, int: 1, health: -1 } },
+        { id: 'fx_mg_study', label: '研读元素论', hint: '智力 +2 · 心情 -1', effects: { int: 2, mood: -1 } },
+        { id: 'fx_mg_rest', label: '静养', hint: '心情 +3 · 健康 +2', effects: { mood: 3, health: 2 } },
+      ],
       life: [
         { id: 'fx_fit', label: '健身', hint: '体魄 +1', effects: { body: 1 } },
         { id: 'fx_read', label: '读书', hint: '智力 +1', effects: { int: 1 } },
@@ -20648,7 +20810,7 @@ function attrCapFor(run) {
         if (run.flags.bb) return FOCUS_SETS.basketball
         if (run.flags.es) return FOCUS_SETS.esports
       }
-      return FOCUS_SETS.life
+      return run.worldId === 'magic' ? FOCUS_SETS.magic : FOCUS_SETS.life
     }
 
     function applyFocus(run) {
@@ -21417,6 +21579,13 @@ function attrCapFor(run) {
 
     function determineEnding(run) {
       const world = worldOf(run)
+      if (run.worldId === 'magic' && run.flags.elements) {
+        for (const elementEnding of MAGIC_ELEMENT_ENDINGS) {
+          try {
+            if (elementEnding.when(run)) return elementEnding
+          } catch (err) {}
+        }
+      }
       if (run.flags.fb || run.flags.bb || run.flags.es || run.flags.coach) {
         for (let i = 0; i < CAREER_ENDINGS.length; i += 1) {
           const careerEnding = CAREER_ENDINGS[i]
@@ -22414,7 +22583,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.48.0';
+  const APP_VERSION = '1.49.0';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -22517,7 +22686,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.48.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.49.0 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -23107,9 +23276,11 @@ function aiPortraitFor(run) {
         + '<span class="avatar-stat"><i>气运</i><b>' + (run.luck || 0) + '</b></span>';
       const psiState = run.flags && run.flags.psi
       const rootState = run.flags && run.flags.spiritRoot
+      const magicState = run.flags && run.flags.elements
       const powerTag = psiState && psiState.powers && psiState.powers.length
         ? '异能 ' + psiState.label + ' · ' + psiState.powers[0].grade
-        : rootState ? '灵根 ' + rootState.name : '';
+        : rootState ? '灵根 ' + rootState.name
+        : magicState ? '元素 ' + elementLine(run) : '';
       const aiPortrait = aiPortraitFor(run);
       const aiTag = aiPortrait ? '<span class="avatar-tag">AI 绘</span>' : '';
       const portrait = avatarSvg(run) + (aiPortrait
