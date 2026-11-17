@@ -153,12 +153,10 @@
       cursor: pointer;
     }
     .update-banner {
-      position: fixed;
-      left: 12px;
-      right: 12px;
-      bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-      z-index: 70;
+      position: relative;
+      z-index: 1;
       display: flex;
+      margin: 8px 12px 0;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
@@ -170,6 +168,8 @@
       font-size: 12.5px;
     }
     .update-banner[hidden] { display: none; }
+    .update-banner-actions { display: flex; flex: none; gap: 6px; }
+    .update-banner button.update-banner-ghost { border: 1px solid var(--line); background: transparent; color: var(--muted); }
     .update-banner button {
       flex: none;
       padding: 6px 11px;
@@ -1463,7 +1463,7 @@
     .replay-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
     .replay-controls .btn { flex: 1 1 42%; min-height: 38px; font-size: 10px; }
     .choice-modal { align-items: center; }
-    /* —— 动效（v1.50.1）：只做 CSS，避免每帧跑 JS —— */
+    /* —— 动效（v1.50.2）：只做 CSS，避免每帧跑 JS —— */
     @keyframes fxScreenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     @keyframes fxEntryIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
     @keyframes fxAgePop {
@@ -1495,7 +1495,7 @@
       .entry.is-fresh .entry-delta, .choice-sheet .choice-option, .ending { animation: none !important; }
     }
 
-    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.50.1）—— */
+    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.50.2）—— */
     @keyframes fxCardIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
     @keyframes fxEndingGlow {
       0%, 100% { box-shadow: 0 18px 44px rgba(15, 23, 42, .09); }
@@ -1729,7 +1729,7 @@
   </style>
 </head>
 <body>
-<div class="update-banner" id="update-banner" hidden><span id="update-banner-text">有新版本可用</span><button type="button" id="update-banner-btn">立即更新</button></div>
+<div class="update-banner" id="update-banner" hidden><span id="update-banner-text">有新版本可用</span><span class="update-banner-actions"><button type="button" id="update-banner-close" class="update-banner-ghost">稍后</button><button type="button" id="update-banner-btn">立即更新</button></span></div>
   <div id="app" class="app"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script>
@@ -15453,7 +15453,7 @@ function attrCapFor(run) {
 
     function rollPsi() {
       const roll = Math.random()
-      // 天生 22% / 后天 52% / 不幸者 26%（v1.50.1）
+      // 天生 22% / 后天 52% / 不幸者 26%（v1.50.2）
       const type = roll < 0.22 ? 'innate' : roll < 0.74 ? 'acquired' : 'none'
       if (type === 'none') {
         return { type, label: '不幸者', powers: [], best: '无' }
@@ -20797,7 +20797,7 @@ function attrCapFor(run) {
       }
     }
 
-    // —— 年度重点：把「推进一年」变成一次小选择（v1.50.1）——
+    // —— 年度重点：把「推进一年」变成一次小选择（v1.50.2）——
     const FOCUS_SETS = {
       magic: [
         { id: 'fx_mg_train', label: '元素冥想', hint: '主元素 +3 · 智力 +1 · 健康 -1', effects: { elements: 3, int: 1, health: -1 } },
@@ -22615,11 +22615,42 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.50.0';
+  const APP_VERSION = '1.50.2';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
     location.replace(url);
+  }
+
+  const UPDATE_DISMISS_KEY = 'dsh.life-restart.update-dismissed';
+
+  function versionParts(text) {
+    return String(text || '').replace(/^v/i, '').trim().split('.').map((part) => {
+      const value = parseInt(part, 10);
+      return Number.isFinite(value) ? value : 0;
+    });
+  }
+
+  function versionIsNewer(remote, local) {
+    const left = versionParts(remote);
+    const right = versionParts(local);
+    const size = Math.max(left.length, right.length);
+    for (let i = 0; i < size; i += 1) {
+      const a = left[i] || 0;
+      const b = right[i] || 0;
+      if (a !== b) return a > b;
+    }
+    return false;
+  }
+
+  function dismissedUpdate() {
+    try { return localStorage.getItem(UPDATE_DISMISS_KEY) || ''; } catch (err) { return ''; }
+  }
+
+  function dismissUpdate(version) {
+    try { localStorage.setItem(UPDATE_DISMISS_KEY, version || ''); } catch (err) {}
+    const banner = document.getElementById('update-banner');
+    if (banner) banner.hidden = true;
   }
 
   function checkAppUpdate() {
@@ -22627,18 +22658,20 @@ function attrCapFor(run) {
       fetch('version.json?ts=' + Date.now(), { cache: 'no-store' })
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
-          if (!data || !data.version || data.version === APP_VERSION) return;
+          if (!data || !data.version) return;
+          // 只有远端确实比本地新才提示；相同或本地更新时一律沉默
+          if (!versionIsNewer(data.version, APP_VERSION)) return;
+          if (dismissedUpdate() === data.version) return;
           const banner = document.getElementById('update-banner');
           const text = document.getElementById('update-banner-text');
           if (!banner) return;
-          if (text) text.textContent = '新版本 v' + data.version + ' 已发布 · 你正在跑 v' + APP_VERSION;
+          if (text) text.textContent = '发现新版本 v' + data.version + '（当前 v' + APP_VERSION + '）';
           banner.hidden = false;
           banner.dataset.version = data.version;
         })
         .catch(() => {});
     } catch (err) {}
   }
-
   function render() {
     const entering = state.__lastView !== state.view;
     state.__lastView = state.view;
@@ -22718,7 +22751,7 @@ function attrCapFor(run) {
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART / MOBILE</div>' + musicControls() + '</div>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.50.1 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.50.2 · 2026-11-15</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
       + legacyHtml
       + '<div class="hero-actions">'
@@ -24225,6 +24258,13 @@ function aiPortraitFor(run) {
 
   const updateBtn = document.getElementById('update-banner-btn');
   if (updateBtn) updateBtn.addEventListener('click', forceReload);
+  const updateClose = document.getElementById('update-banner-close');
+  if (updateClose) {
+    updateClose.addEventListener('click', () => {
+      const banner = document.getElementById('update-banner');
+      dismissUpdate(banner && banner.dataset ? banner.dataset.version : '');
+    });
+  }
 
   render();
   checkAppUpdate();
