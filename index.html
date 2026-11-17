@@ -1582,7 +1582,7 @@
     .replay-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
     .replay-controls .btn { flex: 1 1 42%; min-height: 38px; font-size: 10px; }
     .choice-modal { align-items: center; }
-    /* —— 动效（v1.53.1）：只做 CSS，避免每帧跑 JS —— */
+    /* —— 动效（v1.53.2）：只做 CSS，避免每帧跑 JS —— */
     @keyframes fxScreenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     @keyframes fxEntryIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
     @keyframes fxAgePop {
@@ -1614,7 +1614,7 @@
       .entry.is-fresh .entry-delta, .choice-sheet .choice-option, .ending { animation: none !important; }
     }
 
-    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.53.1）—— */
+    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.53.2）—— */
     @keyframes fxCardIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
     @keyframes fxEndingGlow {
       0%, 100% { box-shadow: 0 18px 44px rgba(15, 23, 42, .09); }
@@ -15554,7 +15554,7 @@ function attrCapFor(run) {
 
     function rollPsi() {
       const roll = Math.random()
-      // 天生 22% / 后天 52% / 不幸者 26%（v1.53.1）
+      // 天生 22% / 后天 52% / 不幸者 26%（v1.53.2）
       const type = roll < 0.22 ? 'innate' : roll < 0.74 ? 'acquired' : 'none'
       if (type === 'none') {
         return { type, label: '不幸者', powers: [], best: '无' }
@@ -20912,7 +20912,7 @@ function attrCapFor(run) {
       }
     }
 
-    // —— 年度重点：把「推进一年」变成一次小选择（v1.53.1）——
+    // —— 年度重点：把「推进一年」变成一次小选择（v1.53.2）——
     const FOCUS_SETS = {
       magic: [
         { id: 'fx_mg_train', label: '元素冥想', hint: '主元素 +3 · 智力 +1 · 健康 -1', effects: { elements: 3, int: 1, health: -1 } },
@@ -22731,7 +22731,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.53.1';
+  const APP_VERSION = '1.53.2';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -22947,7 +22947,7 @@ function attrCapFor(run) {
     const bucket = modeRecord(state.record, state.playMode);
     const replay = bucket.replay;
     const legacyHtml = state.legacy
-      ? '<div class="legacy-note">继承待用 · ' + esc(state.legacy.label || '上一世的天赋') + ' +' + (state.legacy.amount || 2) + ' · 初始资源 +' + (state.legacy.wealth || 10) + '</div>'
+      ? '<div class="legacy-note">继承待用 · ' + esc(state.legacy.label || '上一世的天赋') + ' +' + (state.legacy.amount || 2) + ' · 初始资源 +' + (state.legacy.wealth || 10) + ' <button type="button" class="legacy-clear" data-action="clear-legacy">改成从零</button></div>'
       : '';
 
     return '<div class="screen no-bottom">'
@@ -22956,13 +22956,16 @@ function attrCapFor(run) {
       + '<div class="hero-copy">'
       + '<p class="hero-kicker">云墨入卷 · 重开一世</p>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.53.1 · 2026-11-18</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.53.2 · 2026-11-18</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界 · ' + TOTAL_ENDINGS + ' 个结局 · ' + ACHIEVEMENT_TOTAL + ' 个成就</p>'
       + legacyHtml
       + '</div>'
       + '<div class="hero-seal" aria-hidden="true"><span>重</span><span>开</span></div>'
       + '<div class="hero-actions">'
-      + '<button class="btn btn-primary" data-action="start-setup">开始新的一生 <span aria-hidden="true">→</span></button>'
+      + (state.legacy
+        ? '<button class="btn btn-primary" data-action="start-setup">带着余荫重开 <span aria-hidden="true">→</span></button>'
+          + '<button class="btn btn-ghost" data-action="start-over">从零重开</button>'
+        : '<button class="btn btn-primary" data-action="start-setup">开始新的一生 <span aria-hidden="true">→</span></button>')
       + '</div>'
       + '</header>'
       + homeMenuHtml(bucket)
@@ -24099,6 +24102,7 @@ function aiPortraitFor(run) {
   function finalizeRecord() {
     const run = state.run;
     if (!run || !run.ending || run._recorded) return;
+    if (!state.legacy) state.legacy = legacyFromRun(run);
     const ending = run.ending;
     const mode = run.playMode === 'text' ? 'text' : 'interactive';
     const bucket = modeRecord(state.record, mode);
@@ -24206,28 +24210,32 @@ function aiPortraitFor(run) {
     render();
   }
 
-  function inheritLife() {
-    const run = state.run;
-    if (!run || !run.ending) return;
+  function legacyFromRun(run) {
     const world = worldOf(run);
     const bestAttr = world.attrs.slice().sort((a, b) => (run.attrs[b.key] || 0) - (run.attrs[a.key] || 0))[0];
-    state.legacy = {
+    const psi = run.flags && run.flags.psi;
+    const root = run.flags && run.flags.spiritRoot;
+    return {
       attr: bestAttr.key,
       label: bestAttr.name,
       amount: 2,
       wealth: 10,
       sourceWorld: world.name,
-      sourceTitle: run.ending.title,
+      sourceTitle: run.ending ? run.ending.title : '一段人生',
       sourceAge: run.age,
-      sourceGrade: run.ending.grade.grade,
+      sourceGrade: run.ending && run.ending.grade ? run.ending.grade.grade : '',
       lineage: (() => {
-        const psi = run.flags && run.flags.psi
-        const root = run.flags && run.flags.spiritRoot
-        if (psi && psi.powers && psi.powers.length && ['SSS', 'SS', 'S'].includes(psi.best)) return { kind: 'psi', grade: psi.best, name: psi.powers[0].name }
-        if (root && ['天灵根', '单灵根'].includes(root.name)) return { kind: 'root', grade: root.name }
-        return null
+        if (psi && psi.powers && psi.powers.length && ['SSS', 'SS', 'S'].includes(psi.best)) return { kind: 'psi', grade: psi.best, name: psi.powers[0].name };
+        if (root && ['天灵根', '单灵根'].includes(root.name)) return { kind: 'root', grade: root.name };
+        return null;
       })(),
     };
+  }
+
+  function inheritLife() {
+    const run = state.run;
+    if (!run || !run.ending) return;
+    state.legacy = legacyFromRun(run);
     state.run = null;
     state.view = 'setup';
     state.draft = newDraft(world.id);
@@ -24375,6 +24383,7 @@ function aiPortraitFor(run) {
         }
         break;
       case 'inherit': inheritLife(); break;
+      case 'start-over': state.legacy = null; startSetup(); break;
       case 'check-update': forceReload(); break;
       case 'restart': restartLife(); break;
       case 'clear-legacy': state.legacy = null; render(); break;
