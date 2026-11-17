@@ -258,6 +258,19 @@
       z-index: 2;
       margin-top: 74px;
     }
+    .hero-copy::before {
+      content: "";
+      position: absolute;
+      inset: -22px -18px -18px -18px;
+      z-index: -1;
+      background: linear-gradient(96deg,
+        color-mix(in srgb, var(--bg) 93%, transparent) 0%,
+        color-mix(in srgb, var(--bg) 88%, transparent) 54%,
+        color-mix(in srgb, var(--bg) 58%, transparent) 78%,
+        transparent 100%);
+      filter: blur(3px);
+      pointer-events: none;
+    }
     .hero-kicker {
       display: flex;
       align-items: center;
@@ -390,7 +403,7 @@
     .hero .sub {
       max-width: 420px;
       margin-top: 10px;
-      color: color-mix(in srgb, var(--ink) 74%, var(--muted));
+      color: color-mix(in srgb, var(--ink) 86%, var(--muted));
       font-size: 13px;
       line-height: 1.86;
     }
