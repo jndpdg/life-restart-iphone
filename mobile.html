@@ -407,6 +407,20 @@
       font-size: 13px;
       line-height: 1.86;
     }
+
+    .home-menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 14px 16px 0; }
+    .menu-btn { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: transform .16s ease, border-color .16s ease; }
+    .menu-btn b { font-size: 13px; font-weight: 600; letter-spacing: .04em; }
+    .menu-btn span { font-size: 10.5px; opacity: .55; font-variant-numeric: tabular-nums; }
+    .menu-btn:active { transform: scale(.985); }
+    .home-modal { align-items: center; }
+    .home-sheet { width: min(560px, calc(100vw - 22px)); max-height: 86vh; overflow-y: auto; padding: 16px 16px 22px; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); }
+    .home-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .home-sheet-head h2 { margin: 2px 0 0; font-size: 19px; font-weight: 600; letter-spacing: .02em; }
+    .ending-world { margin: 14px 0 6px; font-size: 11px; letter-spacing: .1em; opacity: .6; }
+    .ending-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ending-chip { font-size: 11px; line-height: 1.35; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--line); }
+    .ending-chip[data-locked="true"] { opacity: .32; letter-spacing: .14em; }
     .home-deck {
       display: flex;
       flex-direction: column;
@@ -1571,7 +1585,7 @@
     .replay-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
     .replay-controls .btn { flex: 1 1 42%; min-height: 38px; font-size: 10px; }
     .choice-modal { align-items: center; }
-    /* —— 动效（v1.52.0）：只做 CSS，避免每帧跑 JS —— */
+    /* —— 动效（v1.53.0）：只做 CSS，避免每帧跑 JS —— */
     @keyframes fxScreenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     @keyframes fxEntryIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
     @keyframes fxAgePop {
@@ -1603,7 +1617,7 @@
       .entry.is-fresh .entry-delta, .choice-sheet .choice-option, .ending { animation: none !important; }
     }
 
-    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.52.0）—— */
+    /* —— 年度重点按钮 + 卡片错峰 + 结局光晕（v1.53.0）—— */
     @keyframes fxCardIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
     @keyframes fxEndingGlow {
       0%, 100% { box-shadow: 0 18px 44px rgba(15, 23, 42, .09); }
@@ -15561,7 +15575,7 @@ function attrCapFor(run) {
 
     function rollPsi() {
       const roll = Math.random()
-      // 天生 22% / 后天 52% / 不幸者 26%（v1.52.0）
+      // 天生 22% / 后天 52% / 不幸者 26%（v1.53.0）
       const type = roll < 0.22 ? 'innate' : roll < 0.74 ? 'acquired' : 'none'
       if (type === 'none') {
         return { type, label: '不幸者', powers: [], best: '无' }
@@ -20919,7 +20933,7 @@ function attrCapFor(run) {
       }
     }
 
-    // —— 年度重点：把「推进一年」变成一次小选择（v1.52.0）——
+    // —— 年度重点：把「推进一年」变成一次小选择（v1.53.0）——
     const FOCUS_SETS = {
       magic: [
         { id: 'fx_mg_train', label: '元素冥想', hint: '主元素 +3 · 智力 +1 · 健康 -1', effects: { elements: 3, int: 1, health: -1 } },
@@ -21874,6 +21888,7 @@ function attrCapFor(run) {
     track: storedTrack(),
     showTracks: false,
     showKits: false,
+    homePanel: null,
     kitLeague: null,
     playMode: storedPlayMode(),
     storyMode: storedStoryMode(),
@@ -22737,7 +22752,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.52.0';
+  const APP_VERSION = '1.53.0';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -22803,13 +22818,14 @@ function attrCapFor(run) {
         ? setupHtml()
         : gameHtml();
     let overlay = ''
-    if (state.showKits) overlay = kitsHtml()
+    if (state.homePanel) overlay = homePanelHtml()
+    else if (state.showKits) overlay = kitsHtml()
     else if (state.showTracks) overlay = tracksHtml()
     else if (state.replay) overlay = replayHtml()
     else if (state.run && state.run.pendingScene) overlay = sceneHtml()
     else if (state.run && state.run.pendingChoice) overlay = choiceHtml()
     app.innerHTML = (entering ? html.replace('<div class="screen', '<div data-enter="1" class="screen') : html) + overlay
-    document.body.classList.toggle('modal-open', Boolean(state.showKits || state.showTracks || state.replay || (state.run && (state.run.pendingScene || state.run.pendingChoice))))
+    document.body.classList.toggle('modal-open', Boolean(state.homePanel || state.showKits || state.showTracks || state.replay || (state.run && (state.run.pendingScene || state.run.pendingChoice))))
     updateMusicMood(state.run)
     scrollAfterRender();
   }
@@ -22843,31 +22859,117 @@ function attrCapFor(run) {
     showToast(mode === 'power' ? '爽文模式：金手指已就位。' : '正常模式：这一世按自己的命走。');
   }
 
-  function homeHtml() {
-    const bucket = modeRecord(state.record, state.playMode);
+
+  function endingGalleryHtml(bucket) {
+    const unlocked = new Set(Array.isArray(bucket.unlocked) ? bucket.unlocked : []);
+    let total = 0;
+    let got = 0;
+    const blocks = WORLDS.map(world => {
+      const list = (world.endings || []);
+      total += list.length;
+      const chips = list.map(ending => {
+        const has = unlocked.has(ending.id);
+        if (has) got += 1;
+        return '<span class="ending-chip" data-locked="' + (has ? 'false' : 'true') + '">'
+          + (has ? esc(ending.title) : '？？？') + '</span>';
+      }).join('');
+      const mine = list.filter(ending => unlocked.has(ending.id)).length;
+      return '<p class="ending-world">' + esc(world.name) + ' · ' + mine + ' / ' + list.length + '</p>'
+        + '<div class="ending-grid">' + chips + '</div>';
+    }).join('');
+    return '<p class="panel-note">已收集 ' + got + ' / ' + total + ' 个结局。灰色的是还没走到的路。</p>' + blocks;
+  }
+
+  function achievementsPanelHtml(bucket) {
     const unlockedAch = new Set(bucket.unlockedAchievements || []);
     const achCount = ALL_ACHIEVEMENTS.filter(item => unlockedAch.has(item.id)).length;
     const achPct = Math.round((achCount / Math.max(1, ACHIEVEMENT_TOTAL)) * 100);
-    const endingCount = Array.isArray(bucket.unlocked) ? bucket.unlocked.length : 0;
-    const replay = bucket.replay;
-    const achPageSize = 60
-    const achPageCount = Math.max(1, Math.ceil(ACHIEVEMENT_TOTAL / achPageSize))
-    const achPage = Math.min(Math.max(0, state.achPage || 0), achPageCount - 1)
+    const pageSize = 60;
+    const pageCount = Math.max(1, Math.ceil(ACHIEVEMENT_TOTAL / pageSize));
+    const page = Math.min(Math.max(0, state.achPage || 0), pageCount - 1);
     const list = state.showAllAchievements
-      ? ALL_ACHIEVEMENTS.slice(achPage * achPageSize, (achPage + 1) * achPageSize)
-      : ALL_ACHIEVEMENTS.slice(0, 8)
-    const achHtml = list.map(item => achievementCard(item, unlockedAch.has(item.id))).join('')
-    const legacyHtml = state.legacy
-      ? '<div class="legacy-note">继承待用 · ' + esc(state.legacy.label || '上一世的天赋') + ' +' + (state.legacy.amount || 2) + ' · 初始资源 +' + (state.legacy.wealth || 10) + '</div>'
-      : '';
-    const replayHtml = replay
+      ? ALL_ACHIEVEMENTS.slice(page * pageSize, (page + 1) * pageSize)
+      : ALL_ACHIEVEMENTS.slice(0, 10);
+    const cards = list.map(item => achievementCard(item, unlockedAch.has(item.id))).join('');
+    return '<div class="panel-progress"><i style="width:' + achPct + '%"></i></div>'
+      + '<p class="panel-note">' + achCount + ' / ' + ACHIEVEMENT_TOTAL + '</p>'
+      + '<div class="ach-list' + (state.showAllAchievements ? ' scroll' : '') + '">' + cards + '</div>'
+      + (state.showAllAchievements
+        ? '<div class="ach-pager"><button class="btn btn-ghost btn-small" data-action="ach-prev"' + (page <= 0 ? ' disabled' : '') + '>上一页</button><span>第 ' + (page + 1) + ' / ' + pageCount + ' 页</span><button class="btn btn-ghost btn-small" data-action="ach-next"' + (page >= pageCount - 1 ? ' disabled' : '') + '>下一页</button></div>'
+        : '')
+      + '<div class="ach-actions"><button class="btn btn-ghost btn-small btn-block" data-action="toggle-ach">'
+      + (state.showAllAchievements ? '收起' : '查看全部 ' + ACHIEVEMENT_TOTAL + ' 个成就') + '</button></div>';
+  }
+
+  function replayPanelHtml(bucket) {
+    const replay = bucket.replay;
+    const body = replay
       ? '<div class="replay-card">'
         + '<div class="replay-grade">' + esc(replay.grade || 'D') + '</div>'
         + '<div class="replay-copy"><strong>' + esc(replay.title || '一段已经写完的人生') + '</strong>'
         + '<p>' + esc((replay.worldName || '某个世界') + ' · ' + (replay.age || 0) + ' 岁 · ' + (replay.score || 0) + ' 分') + '</p></div>'
-        + '<button class="btn btn-ghost btn-small" data-action="open-last-replay">回放</button>'
         + '</div>'
+        + '<div class="ach-actions"><button class="btn btn-primary btn-block" data-action="open-last-replay">回放这一世</button></div>'
       : '<div class="replay-empty">还没有可以回放的人生。<br>完成第一段人生后，这里会留下最后一世的记录。</div>';
+    return body + '<p class="panel-note">回放只读取本机记录，不会改变已经发生的结局。</p>';
+  }
+
+  function settingsPanelHtml() {
+    return '<div class="play-mode-switch" role="group" aria-label="游戏模式">'
+      + '<button data-action="set-mode" data-mode="interactive" data-active="' + (state.playMode === 'interactive' ? 'true' : 'false') + '"><b>互动模式</b><span>在命运岔路停下来，自己选</span></button>'
+      + '<button data-action="set-mode" data-mode="text" data-active="' + (state.playMode === 'text' ? 'true' : 'false') + '"><b>纯文本模式</b><span>自动替你选，只负责读故事</span></button>'
+      + '</div>'
+      + '<div class="play-mode-switch story-mode-switch" role="group" aria-label="人生难度">'
+      + '<button data-action="set-story" data-story="normal" data-active="' + (state.storyMode === 'normal' ? 'true' : 'false') + '"><b>正常模式</b><span>有起有落，挫折会真的落到身上</span></button>'
+      + '<button data-action="set-story" data-story="power" data-active="' + (state.storyMode === 'power' ? 'true' : 'false') + '"><b>爽文模式</b><span>自带金手指，机缘更多，挫折减半</span></button>'
+      + '</div>'
+      + '<p class="panel-note">结局、成就与回放按模式独立记录。</p>'
+      + '<p class="panel-note">记录只存在这台设备的浏览器里（换端口、清缓存、无痕模式都会丢）。长按复制下面的文本可留底，换设备后粘回来点「导入」。</p>'
+      + '<textarea class="save-box" id="save-box" spellcheck="false" autocomplete="off" placeholder="点「导出」在这里生成存档文本；或粘贴存档文本后点「导入」"></textarea>'
+      + '<div class="save-actions"><button class="btn btn-ghost btn-small" data-action="export-save">导出</button><button class="btn btn-ghost btn-small" data-action="import-save">导入</button></div>';
+  }
+
+  function homePanelHtml() {
+    const panel = state.homePanel;
+    if (!panel) return '';
+    const bucket = modeRecord(state.record, state.playMode);
+    const titles = { ach: '成就收藏', endings: '结局图鉴', replay: '上一世回放', save: '设置与存档' };
+    const kicks = { ach: 'ACHIEVEMENTS', endings: 'ENDINGS', replay: 'LAST LIFE', save: 'SAVE & SETTINGS' };
+    let body = '';
+    if (panel === 'ach') body = achievementsPanelHtml(bucket);
+    else if (panel === 'endings') body = endingGalleryHtml(bucket);
+    else if (panel === 'replay') body = replayPanelHtml(bucket);
+    else if (panel === 'save') body = settingsPanelHtml();
+    return '<div class="modal home-modal" role="dialog" aria-modal="true" aria-label="' + titles[panel] + '">'
+      + '<section class="home-sheet">'
+      + '<div class="home-sheet-head"><div><span class="modal-kicker">' + kicks[panel] + '</span><h2>' + titles[panel] + '</h2></div>'
+      + '<button class="btn btn-ghost btn-small" data-action="close-home-panel">关闭</button></div>'
+      + '<div class="home-sheet-body">' + body + '</div>'
+      + '</section></div>';
+  }
+
+  function homeMenuHtml(bucket) {
+    const unlockedAch = new Set(bucket.unlockedAchievements || []);
+    const achCount = ALL_ACHIEVEMENTS.filter(item => unlockedAch.has(item.id)).length;
+    const endingCount = Array.isArray(bucket.unlocked) ? bucket.unlocked.length : 0;
+    const hasReplay = Boolean(bucket.replay);
+    const items = [
+      ['ach', '成就', achCount + ' / ' + ACHIEVEMENT_TOTAL],
+      ['endings', '结局图鉴', endingCount + ' / ' + TOTAL_ENDINGS],
+      ['replay', '回放', hasReplay ? (bucket.replay.age || 0) + ' 岁' : '还没有'],
+      ['save', '设置与存档', state.playMode === 'text' ? '纯文本' : '互动'],
+    ];
+    return '<div class="home-menu">' + items.map(item =>
+      '<button class="menu-btn" data-action="home-panel" data-panel="' + item[0] + '"><b>' + item[1] + '</b><span>' + item[2] + '</span></button>'
+    ).join('') + '</div>';
+  }
+
+  function homeHtml() {
+    const bucket = modeRecord(state.record, state.playMode);
+    const replay = bucket.replay;
+    const legacyHtml = state.legacy
+      ? '<div class="legacy-note">继承待用 · ' + esc(state.legacy.label || '上一世的天赋') + ' +' + (state.legacy.amount || 2) + ' · 初始资源 +' + (state.legacy.wealth || 10) + '</div>'
+      : '';
 
     return '<div class="screen no-bottom">'
       + '<header class="hero">'
@@ -22875,54 +22977,16 @@ function attrCapFor(run) {
       + '<div class="hero-copy">'
       + '<p class="hero-kicker">云墨入卷 · 重开一世</p>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.52.0 · 2026-11-18</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
-      + '<p class="sub">' + WORLDS.length + ' 个世界，' + TOTAL_ENDINGS + ' 个结局，' + ACHIEVEMENT_TOTAL + ' 个成就。先看看你留下过什么，再决定这一次从哪里开始。</p>'
+      + '<p class="ver-line"><span>v1.53.0 · 2026-11-18</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="sub">' + WORLDS.length + ' 个世界 · ' + TOTAL_ENDINGS + ' 个结局 · ' + ACHIEVEMENT_TOTAL + ' 个成就</p>'
       + legacyHtml
       + '</div>'
       + '<div class="hero-seal" aria-hidden="true"><span>重</span><span>开</span></div>'
       + '<div class="hero-actions">'
       + '<button class="btn btn-primary" data-action="start-setup">开始新的一生 <span aria-hidden="true">→</span></button>'
-      + (replay ? '<button class="btn btn-ghost" data-action="open-last-replay">回放上一生</button>' : '')
       + '</div>'
       + '</header>'
-      + '<section class="home-deck">'
-      + '<div class="stat-grid">'
-      + '<div class="stat"><b>' + (bucket.runs || 0) + '</b><span>活过</span></div>'
-      + '<div class="stat"><b>' + (bucket.best || 0) + '</b><span>最高评分</span></div>'
-      + '<div class="stat"><b>' + endingCount + ' / ' + TOTAL_ENDINGS + '</b><span>结局图鉴</span></div>'
-      + '<div class="stat"><b>' + achCount + ' / ' + ACHIEVEMENT_TOTAL + '</b><span>成就</span></div>'
-      + '</div>'
-      + '<div class="world-pills">' + worldPills() + '</div>'
-      + '<div class="play-mode-switch" role="group" aria-label="游戏模式">'
-      + '<button data-action="set-mode" data-mode="interactive" data-active="' + (state.playMode === 'interactive' ? 'true' : 'false') + '"><b>互动模式</b><span>在命运岔路停下来，自己选</span></button>'
-      + '<button data-action="set-mode" data-mode="text" data-active="' + (state.playMode === 'text' ? 'true' : 'false') + '"><b>纯文本模式</b><span>自动替你选，只负责读故事</span></button>'
-      + '</div>'
-      + '<p class="play-mode-hint">' + (state.playMode === 'text' ? '纯文本模式：不再弹出选择框，命运会替你掷骰。' : '互动模式：遇到岔路会停下来，选项由你的属性决定。') + ' 结局、成就与回放按模式独立记录。' + '</p>'
-      + '<div class="play-mode-switch story-mode-switch" role="group" aria-label="人生难度">'
-      + '<button data-action="set-story" data-story="normal" data-active="' + (state.storyMode === 'normal' ? 'true' : 'false') + '"><b>正常模式</b><span>有起有落，挫折会真的落到身上</span></button>'
-      + '<button data-action="set-story" data-story="power" data-active="' + (state.storyMode === 'power' ? 'true' : 'false') + '"><b>爽文模式</b><span>自带金手指，机缘更多，挫折减半</span></button>'
-      + '</div>'
-      + '<p class="play-mode-hint story-mode-hint">' + (state.storyMode === 'power' ? '爽文模式：开局随机获得一件金手指，任务与奇遇更容易成功。' : '正常模式：属性、选择与运气决定这一世。') + '</p>'
-      + '<details class="save-panel"><summary>存档备份 / 迁移</summary>'
-      + '<p class="panel-note">记录只存在这台设备的浏览器里（换端口、清缓存、无痕模式都会丢）。点「导出」把文本复制走，换设备后粘回来点「导入」。</p>'
-      + '<textarea class="save-box" id="save-box" spellcheck="false" autocomplete="off" placeholder="点「导出」在这里生成存档文本；或粘贴存档文本后点「导入」"></textarea>'
-      + '<div class="save-actions"><button class="btn btn-ghost btn-small" data-action="export-save">导出</button><button class="btn btn-ghost btn-small" data-action="import-save">导入</button></div>'
-      + '</details>'
-      + '</section>'
-      + '<section class="panel">'
-      + '<div class="panel-head"><div><span class="kicker">ACHIEVEMENTS</span><h2>成就收藏</h2></div><em>' + achCount + ' / ' + ACHIEVEMENT_TOTAL + '</em></div>'
-      + '<div class="panel-progress"><i style="width:' + achPct + '%"></i></div>'
-      + '<div class="ach-list' + (state.showAllAchievements ? ' scroll' : '') + '">' + achHtml + '</div>'
-      + (state.showAllAchievements
-        ? '<div class="ach-pager"><button class="btn btn-ghost btn-small" data-action="ach-prev"' + (achPage <= 0 ? ' disabled' : '') + '>上一页</button><span>第 ' + (achPage + 1) + ' / ' + achPageCount + ' 页</span><button class="btn btn-ghost btn-small" data-action="ach-next"' + (achPage >= achPageCount - 1 ? ' disabled' : '') + '>下一页</button></div>'
-        : '')
-      + '<div class="ach-actions"><button class="btn btn-ghost btn-small btn-block" data-action="toggle-ach">' + (state.showAllAchievements ? '收起成就' : '查看全部 ' + ACHIEVEMENT_TOTAL + ' 个成就') + '</button></div>'
-      + '</section>'
-      + '<section class="panel">'
-      + '<div class="panel-head"><div><span class="kicker">LAST LIFE</span><h2>上一世回放</h2></div>' + (replay ? '<em>' + replay.age + ' 岁</em>' : '') + '</div>'
-      + replayHtml
-      + '<p class="panel-note">回放只读取本机记录，不会改变已经发生的结局。</p>'
-      + '</section>'
+      + homeMenuHtml(bucket)
       + '<footer class="footnote"><span>记录保存在本机浏览器</span><span>' + TOTAL_ENDINGS + ' ENDINGS · ' + ACHIEVEMENT_TOTAL + ' ACHIEVEMENTS</span></footer>'
       + '</div>';
   }
@@ -24265,6 +24329,8 @@ function aiPortraitFor(run) {
       case 'toggle-music': toggleMusic(); break;
       case 'open-tracks': state.showTracks = true; render(); break;
       case 'close-tracks': state.showTracks = false; render(); break;
+      case 'home-panel': state.homePanel = target.dataset.panel || null; state.showAllAchievements = false; state.achPage = 0; render(); break;
+      case 'close-home-panel': state.homePanel = null; render(); break;
       case 'open-kits': state.showKits = true; state.kitLeague = state.run && state.run.flags.fb ? state.run.flags.fb.leagueId : (FB_LEAGUES[0] && FB_LEAGUES[0].id); render(); break;
       case 'close-kits': state.showKits = false; render(); break;
       case 'kit-league': state.kitLeague = target.dataset.id || 'nations'; render(); break;
