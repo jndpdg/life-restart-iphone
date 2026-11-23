@@ -15780,6 +15780,194 @@ function attrCapFor(run) {
     ]
     // END STELLARIS_LAYER
 
+    // BEGIN EVENT_EXPAND
+    // v1.55.0 · 每世界 6 条新事件（含 1 条稀有事件）
+    const EVENT_EXPAND = {
+      modern: [
+      {
+        id: 'ev_mo_x1', stage: 'child', minAge: 5, maxAge: 9, weight: 2.2,
+        resolve() { return { tone: 'good', text: '妈妈把最后一块排骨夹进你碗里，说自己不爱吃。你很早就知道这句话不是真的。', effects: { mood: 4, family: 2 } } },
+      },
+      {
+        id: 'ev_mo_x2', stage: 'teen', minAge: 13, maxAge: 17, weight: 2.0,
+        resolve() { return { tone: 'strange', text: '你在课桌底下刷到一条视频：十年前的自己站在同一个教室。你算了算，那时候你才七岁。', effects: { int: 1, mood: 2 } } },
+      },
+      {
+        id: 'ev_mo_x3', stage: 'youth', minAge: 18, maxAge: 26, weight: 2.1,
+        resolve() { return { tone: 'good', text: '同学聚会，混得最好的那个一直给大家倒酒。散场时你看见他一个人蹲在路边抽烟。', effects: { mood: 3, looks: 1, family: 1 } } },
+      },
+      {
+        id: 'ev_mo_x4', stage: 'adult', minAge: 30, maxAge: 45, weight: 1.9,
+        resolve() { return { tone: 'bad', text: '体检报告说你有一项指标异常，复查了三次才确认是虚惊。你在医院楼下坐了很久。', effects: { health: -3, mood: -4, wealth: -5 } } },
+      },
+      {
+        id: 'ev_mo_x5', stage: 'middle', minAge: 46, maxAge: 60, weight: 1.6,
+        resolve() { return { tone: 'good', text: '你在旧货市场翻到一台还能用的随身听，里面卡着半盘磁带。回家一听，是你二十岁那年录的。', effects: { mood: 8, int: 1 } } },
+      },
+      {
+        id: 'ev_mo_x6', stage: 'middle', minAge: 44, maxAge: 62, weight: 0.5, rare: true,
+        resolve() { return { tone: 'legend', text: '你在抽屉最深处摸到一张彩票，是去年随手塞进去的。号码对上了二等奖。你反复看了三遍，手一直在抖。', effects: { wealth: 260, mood: 12, luck: 1, flags: { 'lotteryWin': true } } } },
+      },
+      ],
+      cultivation: [
+      {
+        id: 'ev_cu_x1', stage: 'child', minAge: 5, maxAge: 12, weight: 2.0,
+        resolve() { return { tone: 'good', text: '你在后山捡到一枚断了的玉簪。埋它的地方长着一株你从没见过的草。', effects: { int: 1, luck: 1 } } },
+      },
+      {
+        id: 'ev_cu_x2', stage: 'teen', minAge: 13, maxAge: 19, weight: 2.0,
+        resolve() { return { tone: 'normal', text: '同门师兄成亲，山门难得放了一天假。你喝了半杯酒，第一次觉得修仙也不全是冷的。', effects: { mood: 5, family: 1 } } },
+      },
+      {
+        id: 'ev_cu_x3', stage: 'youth', minAge: 20, maxAge: 40, weight: 1.8,
+        resolve() { return { tone: 'good', text: '一个挑着担子的老人拦下你，说你的气色不对，塞给你一枚丹药就走了。你回头看时，山道上没有人。', effects: { health: 8, int: 1, mood: 3, flags: { 'immortalGift': true } } } },
+      },
+      {
+        id: 'ev_cu_x4', stage: 'adult', minAge: 28, maxAge: 60, weight: 1.7,
+        resolve() { return { tone: 'bad', text: '山下起了瘟疫。宗门封了山门，你在门里听着远处的哭声，一夜没睡。', effects: { mood: -6, family: 1 } } },
+      },
+      {
+        id: 'ev_cu_x5', stage: 'adult', minAge: 30, maxAge: 70, weight: 1.6,
+        resolve() { return { tone: 'strange', text: '雷雨夜你忽然想通了卡了十几年的那一步。窗外的雨还没停，你已经能感觉到经脉在涨。', effects: { int: 3, health: -4, mood: 6 } } },
+      },
+      {
+        id: 'ev_cu_x6', stage: 'middle', minAge: 45, maxAge: 90, weight: 0.5, rare: true,
+        resolve() { return { tone: 'legend', text: '地脉在你脚下翻了一个身。洞府里的灵石一夜之间全亮了，你知道自己遇上了一次百年不遇的灵潮。', effects: { int: 4, wealth: 120, mood: 10, flags: { 'spiritSurge': true } } } },
+      },
+      ],
+      wasteland: [
+      {
+        id: 'ev_wa_x1', stage: 'child', minAge: 5, maxAge: 12, weight: 2.1,
+        resolve() { return { tone: 'strange', text: '你捡到一颗还会亮的灯泡，把它藏在床底。每晚熄灯后，你都要看它一会儿才睡得着。', effects: { mood: 4, int: 1 } } },
+      },
+      {
+        id: 'ev_wa_x2', stage: 'teen', minAge: 13, maxAge: 19, weight: 1.9,
+        resolve() { return { tone: 'bad', text: '你掉了一颗牙，没人觉得这是大事。你自己把它埋在沙里，做了个记号。', effects: { health: -2, mood: -2 } } },
+      },
+      {
+        id: 'ev_wa_x3', stage: 'youth', minAge: 18, maxAge: 30, weight: 1.8,
+        resolve() { return { tone: 'good', text: '雨季提前来了三天。所有人跑到空地上淋雨，有人哭，有人在笑，你只是站着。', effects: { health: 3, mood: 8 } } },
+      },
+      {
+        id: 'ev_wa_x4', stage: 'youth', minAge: 20, maxAge: 34, weight: 1.7,
+        resolve() { return { tone: 'bad', text: '隔壁的孩子发起高烧，队里没有退烧药。你把最后半瓶净水煮开了给他擦身。', effects: { mood: 3, health: -3, wealth: -4 } } },
+      },
+      {
+        id: 'ev_wa_x5', stage: 'adult', minAge: 30, maxAge: 48, weight: 1.6,
+        resolve() { return { tone: 'good', text: '收音机里断断续续传来一个女人的声音，念着一串名字。你听了很久，没有一个是认识的。', effects: { mood: 4, int: 1 } } },
+      },
+      {
+        id: 'ev_wa_x6', stage: 'adult', minAge: 26, maxAge: 50, weight: 0.5, rare: true,
+        resolve() { return { tone: 'legend', text: '你在塌掉的高速路上找到一节完整的货车厢：里面是两百罐没过期的午餐肉，还有一箱子弹。', effects: { wealth: 160, health: 6, mood: 10, flags: { 'meatTruck': true } } } },
+      },
+      ],
+      magic: [
+      {
+        id: 'ev_ma_x1', stage: 'child', minAge: 6, maxAge: 12, weight: 2.0,
+        resolve() { return { tone: 'good', text: '家里的老猫在你念错咒语时变成了一团毛球。它花了半个时辰才变回来，从此见你就跑。', effects: { int: 1, mood: 4 } } },
+      },
+      {
+        id: 'ev_ma_x2', stage: 'teen', minAge: 13, maxAge: 19, weight: 2.1,
+        resolve() { return { tone: 'bad', text: '同级的同学在实验课上去世了。学院只发了一张很短的公告，第二天照常上课。', effects: { mood: -8, int: 1 } } },
+      },
+      {
+        id: 'ev_ma_x3', stage: 'youth', minAge: 18, maxAge: 30, weight: 1.9,
+        resolve() { return { tone: 'good', text: '夏夜的操场上飞满了萤火虫。你伸手接住一只，它在掌心里亮了三下就暗了。', effects: { mood: 7, looks: 1 } } },
+      },
+      {
+        id: 'ev_ma_x4', stage: 'youth', minAge: 19, maxAge: 32, weight: 1.7,
+        resolve() { return { tone: 'bad', text: '学院的催缴单送到了宿舍：下学期的学费涨了三成。你把那张纸折了又折。', effects: { mood: -5, wealth: -10 } } },
+      },
+      {
+        id: 'ev_ma_x5', stage: 'adult', minAge: 30, maxAge: 55, weight: 1.7,
+        resolve() { return { tone: 'good', text: '你在图书馆的地板上捡到一张便签，上面写着“别用第三种解法”。字迹和你的很像。', effects: { int: 2, mood: 3 } } },
+      },
+      {
+        id: 'ev_ma_x6', stage: 'adult', minAge: 28, maxAge: 60, weight: 0.45, rare: true,
+        resolve() { return { tone: 'legend', text: '你在集市上买下一颗“装饰用”的石蛋。它在你怀里裂开，里面是活的。那是一条龙的幼崽。', effects: { looks: 3, mood: 12, wealth: -20, flags: { 'dragonEgg': true } } } },
+      },
+      ],
+      cyber: [
+      {
+        id: 'ev_cy_x1', stage: 'child', minAge: 6, maxAge: 12, weight: 2.1,
+        resolve() { return { tone: 'strange', text: '你发现自己在撒谎时会下意识看向右上角——那是系统提示的位置。你开始练习不往上看。', effects: { int: 1, mood: -1 } } },
+      },
+      {
+        id: 'ev_cy_x2', stage: 'teen', minAge: 13, maxAge: 19, weight: 2.0,
+        resolve() { return { tone: 'good', text: '街头球场打到半夜。你投进最后一个球，围观的人散了，灯也灭了，你一个人坐了很久。', effects: { body: 1, mood: 7 } } },
+      },
+      {
+        id: 'ev_cy_x3', stage: 'youth', minAge: 18, maxAge: 30, weight: 1.8,
+        resolve() { return { tone: 'bad', text: '义体保修到期了。维修站开出三倍报价，你算了算存款，决定先让它再响一阵。', effects: { wealth: -12, health: -4, mood: -3 } } },
+      },
+      {
+        id: 'ev_cy_x4', stage: 'youth', minAge: 20, maxAge: 34, weight: 1.9,
+        resolve() { return { tone: 'good', text: '公司发了中秋礼盒，里面是两块真奶油的月饼。同事舍不得吃，都在拍照。', effects: { mood: 5, wealth: 6 } } },
+      },
+      {
+        id: 'ev_cy_x5', stage: 'adult', minAge: 28, maxAge: 50, weight: 1.7,
+        resolve() { return { tone: 'strange', text: '你的 AI 助手替你写完了一封情书，写得比你自己好。你删掉了，又照着它重写了一遍。', effects: { mood: 3, looks: 1 } } },
+      },
+      {
+        id: 'ev_cy_x6', stage: 'adult', minAge: 26, maxAge: 52, weight: 0.45, rare: true,
+        resolve() { return { tone: 'legend', text: '街区改造，你那间破店面被划进了征收范围。补偿款到账那天，你在银行站了很久没说话。', effects: { wealth: 240, mood: 10, flags: { 'demolition': true } } } },
+      },
+      ],
+      starship: [
+      {
+        id: 'ev_st_x1', stage: 'child', minAge: 5, maxAge: 12, weight: 2.1,
+        resolve() { return { tone: 'good', text: '舰上唯一一只猫生了一窝小猫。全船排队去看，护士长规定每次只能进去三个人。', effects: { mood: 6 } } },
+      },
+      {
+        id: 'ev_st_x2', stage: 'teen', minAge: 13, maxAge: 18, weight: 1.9,
+        resolve() { return { tone: 'bad', text: '三号舱的氧气管老化，跑了一整夜的警报。你跟着大人们戴了一夜面罩。', effects: { health: -4, mood: -3 } } },
+      },
+      {
+        id: 'ev_st_x3', stage: 'youth', minAge: 18, maxAge: 30, weight: 1.9,
+        resolve() { return { tone: 'good', text: '你在舰上参加了第一场婚礼。新人的戒指是用舱板碎片磨的，所有人挤在食堂里鼓掌。', effects: { mood: 7, family: 1 } } },
+      },
+      {
+        id: 'ev_st_x4', stage: 'youth', minAge: 20, maxAge: 34, weight: 1.8,
+        resolve() { return { tone: 'normal', text: '新补进来一批船员，年纪都很小。你带其中一个熟悉舱道，他问的问题和你当年一模一样。', effects: { family: 2, mood: 4 } } },
+      },
+      {
+        id: 'ev_st_x5', stage: 'adult', minAge: 30, maxAge: 55, weight: 1.7,
+        resolve() { return { tone: 'strange', text: '资料库里存着一段地球的雨声。你戴上耳机听了十分钟，觉得胸口有点闷。', effects: { mood: 3, int: 1 } } },
+      },
+      {
+        id: 'ev_st_x6', stage: 'adult', minAge: 28, maxAge: 58, weight: 0.45, rare: true,
+        resolve() { return { tone: 'legend', text: '你们在一颗死星的轨道上捡到一艘完整的旧世代船。船里的人全都睡着，生命维持系统还在工作。', effects: { int: 3, wealth: 120, mood: 8, flags: { 'lostArk': true } } } },
+      },
+      ],
+      jianghu: [
+      {
+        id: 'ev_ji_x1', stage: 'child', minAge: 6, maxAge: 13, weight: 2.1,
+        resolve() { return { tone: 'good', text: '山下集市来了个耍猴的老人。猴子抢了你的糖，老人赔了你一颗更小的。你舍不得吃。', effects: { mood: 5 } } },
+      },
+      {
+        id: 'ev_ji_x2', stage: 'teen', minAge: 14, maxAge: 20, weight: 1.9,
+        resolve() { return { tone: 'bad', text: '镖车在路上遇了大雨，货湿了一半。镖头没骂人，一个人蹲在雨里抽了半夜的烟。', effects: { wealth: -8, health: -3, family: 1 } } },
+      },
+      {
+        id: 'ev_ji_x3', stage: 'youth', minAge: 18, maxAge: 32, weight: 2.0,
+        resolve() { return { tone: 'good', text: '客栈老板娘给你多添了一勺肉，说看你像她弟弟。你后来每次路过都去那家吃饭。', effects: { mood: 6, health: 2 } } },
+      },
+      {
+        id: 'ev_ji_x4', stage: 'youth', minAge: 20, maxAge: 36, weight: 1.7,
+        resolve() { return { tone: 'bad', text: '一个旧识死了，死在一间没有人的客栈里。你去收尸，发现他怀里还揣着你们年轻时的酒钱。', effects: { mood: -7, family: 1 } } },
+      },
+      {
+        id: 'ev_ji_x5', stage: 'adult', minAge: 30, maxAge: 52, weight: 1.6,
+        resolve() { return { tone: 'strange', text: '你醉了一场，醒来时剑在桌上，剑鞘被人擦得很亮。你不知道是谁做的。', effects: { mood: 4, int: 1 } } },
+      },
+      {
+        id: 'ev_ji_x6', stage: 'adult', minAge: 28, maxAge: 55, weight: 0.45, rare: true,
+        resolve() { return { tone: 'legend', text: '夜半剑冢里所有的剑同时鸣了一声。你走进去，最中间那把无人拔起的剑，自己出鞘了半寸。', effects: { body: 3, mood: 10, luck: 1, flags: { 'swordChosen': true } } } },
+      },
+      ],
+    }
+    // END EVENT_EXPAND
+
     const WORLDS = [
       {
         id: 'modern',
@@ -15807,7 +15995,7 @@ function attrCapFor(run) {
         },
         dossier: ['学历', '职业', '家庭'],
         talents: TALENTS,
-        events: ALL_EVENTS,
+        events: ALL_EVENTS.concat(EVENT_EXPAND.modern),
         milestones: ALL_MILESTONES,
         quiet: QUIET_YEARS,
         twists: MODERN_TWISTS,
@@ -15837,7 +16025,7 @@ function attrCapFor(run) {
         vitals: CULTIVATION_VITALS,
         dossier: ['宗门', '境界', '道侣'],
         talents: CULTIVATION_TALENTS,
-        events: CULTIVATION_EVENTS,
+        events: CULTIVATION_EVENTS.concat(EVENT_EXPAND.cultivation),
         milestones: CULTIVATION_MILESTONES,
         quiet: CULTIVATION_QUIET,
         twists: CULTIVATION_TWISTS,
@@ -15866,7 +16054,7 @@ function attrCapFor(run) {
         vitals: WASTELAND_VITALS,
         dossier: ['身份', '技能', '同伴'],
         talents: WASTELAND_TALENTS,
-        events: WASTELAND_EVENTS,
+        events: WASTELAND_EVENTS.concat(EVENT_EXPAND.wasteland),
         milestones: WASTELAND_MILESTONES,
         quiet: WASTELAND_QUIET,
         twists: WASTELAND_TWISTS,
@@ -15895,7 +16083,7 @@ function attrCapFor(run) {
         vitals: MAGIC_VITALS,
         dossier: ['学院', '职业', '伙伴'],
         talents: MAGIC_TALENTS,
-        events: MAGIC_EVENTS,
+        events: MAGIC_EVENTS.concat(EVENT_EXPAND.magic),
         milestones: MAGIC_MILESTONES,
         quiet: MAGIC_QUIET,
         twists: MAGIC_TWISTS,
@@ -15924,7 +16112,7 @@ function attrCapFor(run) {
         vitals: CYBER_VITALS,
         dossier: ['义体', '职业', '关系'],
         talents: CYBER_TALENTS,
-        events: CYBER_EVENTS,
+        events: CYBER_EVENTS.concat(EVENT_EXPAND.cyber),
         milestones: CYBER_MILESTONES,
         quiet: CYBER_QUIET,
         twists: CYBER_TWISTS,
@@ -15956,7 +16144,7 @@ function attrCapFor(run) {
         vitals: STARSHIP_VITALS,
         dossier: ['舰职', '专长', '同伴'],
         talents: STARSHIP_TALENTS,
-        events: STARSHIP_EVENTS.concat(STELLARIS_EVENTS),
+        events: STARSHIP_EVENTS.concat(STELLARIS_EVENTS, EVENT_EXPAND.starship),
         milestones: STARSHIP_MILESTONES,
         quiet: STARSHIP_QUIET,
         twists: STARSHIP_TWISTS,
@@ -15980,7 +16168,7 @@ function attrCapFor(run) {
         vitals: JIANGHU_VITALS,
         dossier: ['门派', '武功', '关系'],
         talents: JIANGHU_TALENTS,
-        events: JIANGHU_EVENTS,
+        events: JIANGHU_EVENTS.concat(EVENT_EXPAND.jianghu),
         milestones: JIANGHU_MILESTONES,
         quiet: JIANGHU_QUIET,
         twists: JIANGHU_TWISTS,
@@ -16469,6 +16657,14 @@ function attrCapFor(run) {
     const ALL_ACHIEVEMENTS = BASE_ACHIEVEMENTS.concat(MILESTONE_ACHIEVEMENTS, CAREER_ACHIEVEMENTS, ENDING_ACHIEVEMENTS)
     ALL_ACHIEVEMENTS.push(...EXTRA_WORLD_ACHIEVEMENTS)
     ALL_ACHIEVEMENTS.push(...STELLARIS_ACHIEVEMENTS)
+    // v1.55.0：节奏与运气系统的收集项
+    ALL_ACHIEVEMENTS.push(
+      { id: 'ach_streak_good', title: '顺风三连', desc: '连续三次抉择都走运。', when: run => Boolean((run.flags.luckyRun || 0) >= 1) },
+      { id: 'ach_streak_bad', title: '否极泰来', desc: '连续三次倒霉之后，等到了转运。', when: run => Boolean((run.flags.turnAround || 0) >= 1) },
+      { id: 'ach_streak_master', title: '福星高照', desc: '一条命里撞上五次顺风。', when: run => Boolean((run.flags.luckyRun || 0) >= 5) },
+      { id: 'ach_rare_lucky', title: '欧皇', desc: '在同一条命里遇上稀有事件。', when: run => Boolean(run.flags.lotteryWin || run.flags.meatTruck || run.flags.spiritSurge || run.flags.dragonEgg || run.flags.demolition || run.flags.lostArk || run.flags.swordChosen) },
+      { id: 'ach_choice_dense', title: '一直在做选择', desc: '一生中做出 16 次以上抉择。', when: run => Boolean((run.flags.choicesMade || 0) >= 16) }
+    )
     const ACHIEVEMENT_TOTAL = ALL_ACHIEVEMENTS.length
 
     const CHOICE_NODES = {
@@ -18507,6 +18703,105 @@ function attrCapFor(run) {
         },
         ],
       },
+      {
+        id: 'x_mo_26',
+        at: 28,
+        chance: 0.82,
+        title: '走，还是留',
+        prompt: '一个外地的工作机会摆在桌上，薪水高四成。爸妈没说反对，只问你什么时候回来。',
+        options: [
+        {
+          id: 'go',
+          label: '走',
+          desc: '想看看别处',
+          resolve() { return { tone: 'good', text: '你收拾了两个箱子就走了。头三个月很难，第四个月你在新城市的阳台上第一次觉得这里也算家。', effects: { wealth: 20, mood: 6, family: -2, flags: { 'movedCity': true } } } },
+        },
+        {
+          id: 'stay',
+          label: '留下',
+          desc: '父母年纪大了',
+          resolve() { return { tone: 'normal', text: '你留下了。工资涨得慢，但每周能回家吃一次饭，父亲的血压你都知道。', effects: { family: 3, mood: 3, wealth: 4 } } },
+        },
+        {
+          id: 'remote',
+          label: '争取远程',
+          desc: '两边都要',
+          resolve() { return { tone: 'strange', text: '你跟对方谈了一个月，最后拿到了远程。你搬回了家，工资一分没少，只是每天要多开两个会。', effects: { wealth: 16, family: 2, health: -3, flags: { 'movedCity': true } } } },
+        },
+        {
+          id: 'ask',
+          label: '先问家里到底怎么想',
+          desc: '别猜',
+          resolve() { return { tone: 'good', text: '那晚你们三个聊到十二点。母亲最后说：“你去吧，我们又没拦你。”你听出她声音里有点别的。', effects: { mood: 5, family: 1 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_mo_27',
+        at: 32,
+        chance: 0.78,
+        title: '还处不处',
+        prompt: '你们在一起五年，最近半年说话越来越少。她/他问你：是不是该想想以后了。',
+        options: [
+        {
+          id: 'marry',
+          label: '结婚',
+          desc: '处久了就该这样',
+          resolve() { return { tone: 'good', text: '婚礼办得不大。那天你看着她/他，忽然明白有些感情不是热闹，是每天都在。', effects: { mood: 8, wealth: -14, flags: { 'married': true } } } },
+        },
+        {
+          id: 'split',
+          label: '分开',
+          desc: '不想拖',
+          resolve() { return { tone: 'tragic', text: '你们把东西分完，谁都没哭。她/他走的时候把钥匙放在鞋柜上，你听见门关上的声音。', effects: { mood: -12, wealth: -6, flags: { 'brokeUp': true } } } },
+        },
+        {
+          id: 'pause',
+          label: '先各自冷静一段',
+          desc: '都不想草率',
+          resolve() { return { tone: 'normal', text: '你们分开了三个月。再见面时，两个人都平静了很多，也终于说了实话。', effects: { mood: 2, int: 1 } } },
+        },
+        {
+          id: 'counsel',
+          label: '一起去做咨询',
+          desc: '试着修',
+          resolve() { return { tone: 'good', text: '咨询师让你们各自说十分钟不被打断。第一次你们都没做到，第三次做到了。', effects: { mood: 6, wealth: -4, family: 1 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_mo_28',
+        at: 36,
+        chance: 0.78,
+        title: '那份创业计划书',
+        prompt: '同事拉你出来单干，说现在不做以后就没机会了。你手里有房贷。',
+        options: [
+        {
+          id: 'join',
+          label: '干',
+          desc: '赌一把',
+          resolve() { return { tone: 'normal', text: '你们租了间很小的办公室。第一年发不出年终奖，第二年客户开始排队。', effects: { wealth: 40, health: -8, mood: 8, flags: { 'startup': true } } } },
+        },
+        {
+          id: 'stay',
+          label: '不干',
+          desc: '稳一点',
+          resolve() { return { tone: 'normal', text: '你留在了原公司。三年后那家小公司被收购了，你在新闻里看到了老朋友的名字。', effects: { wealth: 6, mood: -3 } } },
+        },
+        {
+          id: 'angel',
+          label: '投点钱，不辞职',
+          desc: '两头都押',
+          resolve() { return { tone: 'strange', text: '你投了一笔不多不少的钱。它后来没赚多少，但你因此学会看报表，也不怕裁员了。', effects: { wealth: 14, int: 2 } } },
+        },
+        {
+          id: 'learn',
+          label: '先去帮忙三个月',
+          desc: '看清楚再决定',
+          resolve() { return { tone: 'good', text: '你周末去帮了三个月，最后没跳。但你知道了自己真正想要什么。', effects: { int: 2, mood: 4 } } },
+        },
+        ],
+      },
       ],
       cultivation: [
       {
@@ -19331,6 +19626,105 @@ function attrCapFor(run) {
           label: '把机会留给别人',
           desc: '让弟子去',
           resolve() { return { tone: 'good', text: '你退到一旁，让身后的年轻人先走。他回头看你，你摆了摆手。', effects: { family: 3, mood: 7, flags: { 'passedTorch': true } } } },
+        },
+        ],
+      },
+      {
+        id: 'x_cu_26',
+        at: 30,
+        chance: 0.75, until: 45,
+        title: '下山做一个凡人',
+        prompt: '你在山上待了二十年，忽然想不起自己为什么上山。山下有个小镇，缺一个教书先生。',
+        options: [
+        {
+          id: 'leave',
+          label: '散功下山',
+          desc: '想活得像个人',
+          resolve() { return { tone: 'good', text: '你自散了三成修为，去了那个镇子。孩子们叫你先生，你在夜里偶尔会摸一摸空掉的丹田。', effects: { int: -2, mood: 10, health: 4, flags: { 'leftSect': true, 'mortalLife': true } } } },
+        },
+        {
+          id: 'part',
+          label: '只教三年书',
+          desc: '给自己留条路',
+          resolve() { return { tone: 'normal', text: '你教了三年，又回了山。那三年里你睡了二十年来最好的觉。', effects: { mood: 6, int: 1 } } },
+        },
+        {
+          id: 'stay',
+          label: '留在山上',
+          desc: '道心不能断',
+          resolve() { return { tone: 'normal', text: '你把那份心思压下去，继续闭关。修为涨了一点，梦里却总有读书声。', effects: { int: 2, mood: -4 } } },
+        },
+        {
+          id: 'both',
+          label: '在山上开一间学堂',
+          desc: '不必二选一',
+          resolve() { return { tone: 'good', text: '你在后山收了几个凡人孩子。宗门说你胡闹，长老却来看过一次，站了很久。', effects: { mood: 7, family: 2, flags: { 'mortalLife': true } } } },
+        },
+        ],
+      },
+      {
+        id: 'x_cu_27',
+        at: 44,
+        chance: 0.72, until: 59, when(run) { return Boolean((run.flags.realmIndex || 0) >= 2) },
+        title: '用寿元换那一件东西',
+        prompt: '秘境最深处的东西在叫你。它说，能给你一步登天，但要你十年阳寿。',
+        options: [
+        {
+          id: 'trade',
+          label: '换',
+          desc: '十年而已',
+          resolve() { return { tone: 'strange', text: '你把十年推了出去。修为涨得很快，只是从那以后你的头发白得比同门快。', effects: { int: 3, lifespan: -10, mood: 3, flags: { 'soldYears': true } } } },
+        },
+        {
+          id: 'refuse',
+          label: '不换',
+          desc: '命是自己的',
+          resolve() { return { tone: 'good', text: '你转身走了。它在身后笑了很久，说你迟早会回来。你没有回头。', effects: { mood: 4, lifespan: 5 } } },
+        },
+        {
+          id: 'seal',
+          label: '把它封起来，谁都别拿',
+          desc: '这东西不该存在',
+          resolve() { return { tone: 'good', text: '你花了三年把它封进石壁。封完那天，你在洞口坐了一整天。', effects: { int: 2, mood: 5, flags: { 'sealedThing': true } } } },
+        },
+        {
+          id: 'sell',
+          label: '把位置卖给别的门派',
+          desc: '换个实在的',
+          resolve() { return { tone: 'bad', text: '你换了一大笔灵石。三年后听说那边死了很多人，你什么都没说。', effects: { wealth: 60, mood: -4 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_cu_28',
+        at: 60,
+        chance: 0.72, until: 75,
+        title: '山下的洪水',
+        prompt: '凡间发了大水，几万人困在城墙上。你飞过去只要半炷香，但今天正是你冲关的日子。',
+        options: [
+        {
+          id: 'save',
+          label: '去救人',
+          desc: '关可以再冲',
+          resolve() { return { tone: 'legend', text: '你放弃了冲关，用灵力托住了半座城墙。人救下来了，你的境界退了一小截。', effects: { int: -2, mood: 14, family: 3, flags: { 'savedFlood': true } } } },
+        },
+        {
+          id: 'break',
+          label: '先冲关',
+          desc: '百年一遇的时机',
+          resolve() { return { tone: 'bad', text: '你冲过了。出关时洪水已经退了，死了很多人。你在山上看了很久的水痕。', effects: { int: 2, mood: -12 } } },
+        },
+        {
+          id: 'send',
+          label: '派弟子去',
+          desc: '我抽不开身',
+          resolve() { return { tone: 'normal', text: '你派了七个弟子。回来六个，救了两千多人。你替那个没回来的立了碑。', effects: { family: 2, mood: 3, int: 1 } } },
+        },
+        {
+          id: 'partial',
+          label: '冲一半，再走',
+          desc: '两边都想要',
+          resolve() { return { tone: 'strange', text: '你强行中断冲关赶了过去，救下一半人。经脉从此留了暗伤。', effects: { health: -10, mood: 6, int: 1, flags: { 'savedFlood': true } } } },
         },
         ],
       },
@@ -20161,6 +20555,105 @@ function attrCapFor(run) {
         },
         ],
       },
+      {
+        id: 'x_wa_26',
+        at: 24,
+        chance: 0.78,
+        title: '锅里那锅肉',
+        prompt: '雪封了半个月，队里已经断粮。有人在废楼里发现了一具还没冻硬的尸体。',
+        options: [
+        {
+          id: 'eat',
+          label: '煮了',
+          desc: '活着的人更重',
+          resolve() { return { tone: 'tragic', text: '没人问那是什么肉。你吃了一口就放下了，但那一口让你活到了开春。', effects: { health: 8, mood: -14, flags: { 'ateHuman': true } } } },
+        },
+        {
+          id: 'refuse',
+          label: '不吃',
+          desc: '过不去这道心',
+          resolve() { return { tone: 'good', text: '你把锅掀了。那一夜很难熬，开春时队里少了两个人，但你记得自己是谁。', effects: { health: -10, mood: 6, family: -1 } } },
+        },
+        {
+          id: 'bury',
+          label: '先把他埋了',
+          desc: '至少给个体面',
+          resolve() { return { tone: 'good', text: '你们挖了半天的坑，冻土硬得像铁。埋完的时候，有人说了句“对不住”。', effects: { mood: 4, health: -6, family: 1 } } },
+        },
+        {
+          id: 'leave',
+          label: '装作没看见，先睡',
+          desc: '明天再说',
+          resolve() { return { tone: 'bad', text: '第二天锅是空的。你不知道是谁做的，也没问。', effects: { health: 3, mood: -6 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_wa_27',
+        at: 30,
+        chance: 0.76,
+        title: '把他们交出去',
+        prompt: '军阀的人围了营地，说交出三个“逃兵”就撤。那三个人是去年救了整个营地的。',
+        options: [
+        {
+          id: 'give',
+          label: '交出去',
+          desc: '保大多数人',
+          resolve() { return { tone: 'bad', text: '他们被带走了。营地保住了，此后没人再跟你提那三个人的名字。', effects: { family: 1, mood: -14, flags: { 'betrayed': true } } } },
+        },
+        {
+          id: 'refuse',
+          label: '不交',
+          desc: '一起扛',
+          resolve() { return { tone: 'good', text: '你说没有逃兵，只有我们。那天打到天黑，营地毁了一半，人一个没少。', effects: { health: -12, mood: 10, family: 3, flags: { 'stoodGround': true } } } },
+        },
+        {
+          id: 'hide',
+          label: '把人藏进地道',
+          desc: '两边都不想输',
+          resolve() { return { tone: 'strange', text: '你在外面谈了一整天，把他们藏在废弃的排水管里。军阀搜了一遍就走了。', effects: { int: 2, mood: 5, family: 2 } } },
+        },
+        {
+          id: 'deal',
+          label: '用物资换他们',
+          desc: '能换就换',
+          resolve() { return { tone: 'normal', text: '你交出了半年的存水。军阀的人嫌少，但最后还是走了。', effects: { wealth: -20, mood: 4, family: 1 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_wa_28',
+        at: 38,
+        chance: 0.74,
+        title: '在这里盖房',
+        prompt: '这片废墟下有水，有废钢，也没有人。有人提议别走了，就在这建个地方。',
+        options: [
+        {
+          id: 'build',
+          label: '建',
+          desc: '不想再漂了',
+          resolve() { return { tone: 'good', text: '你们盖了七间房，围了一圈铁皮。第一年冬天很难，但没有人想走。', effects: { mood: 9, wealth: -14, health: -4, flags: { 'foundedTown': true } } } },
+        },
+        {
+          id: 'small',
+          label: '先搭个棚子过冬',
+          desc: '别把话说死',
+          resolve() { return { tone: 'normal', text: '你们搭了三间棚子。开春时有两家留下了，其余的人继续往南走。', effects: { mood: 4, wealth: -6 } } },
+        },
+        {
+          id: 'move',
+          label: '继续走',
+          desc: '这里太偏',
+          resolve() { return { tone: 'normal', text: '你们又走了两个月，最后在一处旧电站旁停下。回头看，那片废墟已经不在了。', effects: { health: -5, int: 1, mood: 1 } } },
+        },
+        {
+          id: 'scout',
+          label: '先派两个人探一圈',
+          desc: '不进则退',
+          resolve() { return { tone: 'good', text: '探路的人带回了一个好消息：往东十里有能耕的土。你们把营地迁了过去。', effects: { int: 2, mood: 5, wealth: -4 } } },
+        },
+        ],
+      },
       ],
       magic: [
       {
@@ -20985,6 +21478,105 @@ function attrCapFor(run) {
           label: '用它走到海边',
           desc: '想再看一次水',
           resolve() { return { tone: 'good', text: '你一步一步走到了海边。风很大，你在石头上坐了很久，然后自己走了回来。', effects: { mood: 7, health: -3, body: 1 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_ma_26',
+        at: 26,
+        chance: 0.76,
+        title: '禁咒能不能用来救人',
+        prompt: '你的朋友中了没有解药的咒。唯一能救他的是学院明令禁止的那一种。',
+        options: [
+        {
+          id: 'cast',
+          label: '用禁咒',
+          desc: '人比规矩重',
+          resolve() { return { tone: 'strange', text: '你念完了那三句。他活了过来，你的左眼从此看东西隔着一层灰。', effects: { health: -8, mood: 4, family: 3, flags: { 'usedForbidden': true } } } },
+        },
+        {
+          id: 'ask',
+          label: '先去找教授',
+          desc: '也许有别的办法',
+          resolve() { return { tone: 'good', text: '教授翻了一夜的书，找到一种慢得多的解法。人救回来了，只是躺了半年。', effects: { int: 2, family: 2, mood: 3 } } },
+        },
+        {
+          id: 'letgo',
+          label: '不做',
+          desc: '我不能毁掉自己',
+          resolve() { return { tone: 'bad', text: '他死在了第三天。你后来一直记得他最后问你的那句“有没有办法”。', effects: { mood: -14, int: 1 } } },
+        },
+        {
+          id: 'research',
+          label: '去研究替代方案',
+          desc: '为下一个人',
+          resolve() { return { tone: 'good', text: '你花了四年做出了一种温和的解咒。它救不了他，但它救过后来十二个人。', effects: { int: 3, mood: 5, family: 2 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_ma_27',
+        at: 34,
+        chance: 0.75,
+        title: '离开学院',
+        prompt: '学院要你把研究交出去，署名改成院长的。你可以留下，也可以走。',
+        options: [
+        {
+          id: 'leave',
+          label: '带着稿子走',
+          desc: '这是我的',
+          resolve() { return { tone: 'strange', text: '你连夜离开了学院。三年后在另一座城开了间小工坊，生意一般，东西都是自己的。', effects: { wealth: -10, mood: 8, int: 2, flags: { 'leftAcademy': true } } } },
+        },
+        {
+          id: 'stay',
+          label: '留下，认了',
+          desc: '资源更重要',
+          resolve() { return { tone: 'normal', text: '你签了字。实验室大了三倍，只是每次开会你都坐在最后一排。', effects: { wealth: 18, mood: -6, int: 1 } } },
+        },
+        {
+          id: 'fight',
+          label: '公开闹一场',
+          desc: '不能这么算了',
+          resolve() { return { tone: 'normal', text: '你在评议会上讲了两个小时。没人支持你，但那份署名最后改回了两个名字。', effects: { mood: 3, family: -1, int: 1 } } },
+        },
+        {
+          id: 'publish',
+          label: '直接把论文投出去',
+          desc: '抢在前面',
+          resolve() { return { tone: 'good', text: '论文比学院的动作快了十天。院长很生气，但引用数一直很漂亮。', effects: { int: 2, mood: 6, family: -2 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_ma_28',
+        at: 50,
+        chance: 0.72,
+        title: '写一套自己的体系',
+        prompt: '你用了半辈子的那套理论，越来越解释不了你见过的东西。',
+        options: [
+        {
+          id: 'write',
+          label: '推倒重写',
+          desc: '哪怕没人接受',
+          resolve() { return { tone: 'good', text: '你写了七年，第一版被骂得很难听。第二版开始有人引用，第三版进了教材。', effects: { int: 4, mood: 9, health: -5, flags: { 'newTheory': true } } } },
+        },
+        {
+          id: 'patch',
+          label: '打补丁',
+          desc: '别把根基动了',
+          resolve() { return { tone: 'normal', text: '你加了七条注释，把矛盾之处绕过去。学生们后来都说那一章最难懂。', effects: { int: 2, mood: 2 } } },
+        },
+        {
+          id: 'teach',
+          label: '只教给学生',
+          desc: '让下一代去改',
+          resolve() { return { tone: 'good', text: '你在课上把疑问都说了出来。十年后，一个学生把它写成了一本书。', effects: { family: 3, mood: 7 } } },
+        },
+        {
+          id: 'stop',
+          label: '不写了',
+          desc: '累了',
+          resolve() { return { tone: 'normal', text: '你把草稿收进箱子。它后来被虫蛀了一半。', effects: { mood: -2, health: 2 } } },
         },
         ],
       },
@@ -21815,6 +22407,105 @@ function attrCapFor(run) {
         },
         ],
       },
+      {
+        id: 'x_cy_26',
+        at: 26,
+        chance: 0.76,
+        title: '硬盘里的那份数据',
+        prompt: '你在公司服务器里发现了他们瞒着的东西。有人愿意出很高的价，也有人会因此坐牢。',
+        options: [
+        {
+          id: 'sell',
+          label: '卖掉',
+          desc: '这钱该我拿',
+          resolve() { return { tone: 'bad', text: '你换了一笔钱，搬去了更好的街区。半年后新闻里那几个人被带走了，你关掉了电视。', effects: { wealth: 60, mood: -8, flags: { 'soldData': true } } } },
+        },
+        {
+          id: 'leak',
+          label: '匿名公开',
+          desc: '让所有人看见',
+          resolve() { return { tone: 'good', text: '你把它拆成三十份发了出去。公司股价跌了，你也被列进了调查名单。', effects: { mood: 8, family: 2, wealth: -10, flags: { 'whistleblower': true } } } },
+        },
+        {
+          id: 'keep',
+          label: '存着，不动',
+          desc: '以后也许有用',
+          resolve() { return { tone: 'strange', text: '你把它加密存进了离线芯片。此后每次开会，你都会摸一下口袋。', effects: { int: 2, mood: -2 } } },
+        },
+        {
+          id: 'destroy',
+          label: '删掉',
+          desc: '不想被这东西牵着',
+          resolve() { return { tone: 'good', text: '你格式化了两遍。走出公司那天，你觉得轻了一点。', effects: { mood: 5, int: 1 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_cy_27',
+        at: 32,
+        chance: 0.76,
+        title: '卖掉一部分自己',
+        prompt: '账单压得你喘不过气。中介说，有一颗肾，还有人愿意出一大笔。',
+        options: [
+        {
+          id: 'sell',
+          label: '卖了',
+          desc: '命还在就行',
+          resolve() { return { tone: 'normal', text: '手术在城郊的地下诊所做的，醒来时你有一笔钱和一道很长的疤。', effects: { wealth: 80, health: -14, mood: -4, flags: { 'soldOrgan': true } } } },
+        },
+        {
+          id: 'refuse',
+          label: '不卖',
+          desc: '身体不能拆',
+          resolve() { return { tone: 'good', text: '你拒绝了，去接了两份夜班。还得慢，但每次洗澡你都能看见完整的自己。', effects: { wealth: -6, health: -4, mood: 4 } } },
+        },
+        {
+          id: 'borrow',
+          label: '去借高利贷',
+          desc: '先过了这个月',
+          resolve() { return { tone: 'bad', text: '钱到账很快，催收也很快。三个月后你开始不敢接陌生号码。', effects: { wealth: 30, mood: -8, flags: { 'debt': true } } } },
+        },
+        {
+          id: 'cut',
+          label: '先把生活砍一半',
+          desc: '能省就省',
+          resolve() { return { tone: 'good', text: '你搬进了更小的房子，退了所有订阅。日子紧了点，但账终于平了。', effects: { wealth: 10, mood: -2, health: -2 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_cy_28',
+        at: 44,
+        chance: 0.74,
+        title: '离开这座城',
+        prompt: '你在这座城待了一辈子。有人劝你去外环，那里天是蓝的，网速慢十倍。',
+        options: [
+        {
+          id: 'go',
+          label: '走',
+          desc: '想看看蓝天',
+          resolve() { return { tone: 'good', text: '你在外环买了间带院子的小屋。第一个清晨你被鸟叫醒，愣了很久才想起那是什么。', effects: { health: 8, mood: 10, wealth: -20, flags: { 'leftCity': true } } } },
+        },
+        {
+          id: 'stay',
+          label: '留下',
+          desc: '这里才是我的地方',
+          resolve() { return { tone: 'normal', text: '你留下了。城市照样喧闹，你也照样在凌晨三点听见警报。', effects: { wealth: 8, mood: 1 } } },
+        },
+        {
+          id: 'half',
+          label: '两边住',
+          desc: '先试试水',
+          resolve() { return { tone: 'normal', text: '你租了个小院，周末过去。半年后你发现自己在数还有几天能出城。', effects: { wealth: -10, mood: 6, health: 3 } } },
+        },
+        {
+          id: 'send',
+          label: '先送家人走',
+          desc: '让他们先过好',
+          resolve() { return { tone: 'good', text: '家人搬去了外环，你留在城里赚钱。视频里孩子的皮肤终于不再是灰的。', effects: { family: 3, mood: 5, wealth: -14 } } },
+        },
+        ],
+      },
       ],
       starship: [
       {
@@ -22639,6 +23330,105 @@ function attrCapFor(run) {
           label: '回去睡一觉',
           desc: '累了一辈子',
           resolve() { return { tone: 'normal', text: '你睡着了。醒来时船已经落地，窗外是土。', effects: { health: 3, mood: 5 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_st_26',
+        at: 34,
+        chance: 0.74,
+        title: '跟著他们把船开走',
+        prompt: '一群人受够了按计划飞。他们想改航向，去那颗有信号的星，问你要不要一起。',
+        options: [
+        {
+          id: 'join',
+          label: '一起',
+          desc: '想知道那是什么',
+          resolve() { return { tone: 'strange', text: '你们改了三段航线。舰长把自己关在舰桥里，只发了一条消息：“别撞上东西。”', effects: { mood: 8, family: -2, flags: { 'mutiny': true } } } },
+        },
+        {
+          id: 'stop',
+          label: '拦住他们',
+          desc: '一船人的命',
+          resolve() { return { tone: 'normal', text: '你封了引擎舱，带着人守了三天。事情平了，但船上从此分成了两拨人。', effects: { family: 2, mood: -5 } } },
+        },
+        {
+          id: 'deal',
+          label: '折中：派一艘小艇去',
+          desc: '两边都留',
+          resolve() { return { tone: 'good', text: '你提了这个方案，双方都勉强接受了。小艇去了四十天，带回一段没法解释的录音。', effects: { int: 2, mood: 5, family: 1, flags: { 'smallBoat': true } } } },
+        },
+        {
+          id: 'leave',
+          label: '申请调去别的船',
+          desc: '不想选边',
+          resolve() { return { tone: 'normal', text: '你走了。后来那艘船发生了什么，你只在档案里看过两行字。', effects: { mood: 1, int: 1 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_st_27',
+        at: 46,
+        chance: 0.72,
+        title: '独立宣言',
+        prompt: '殖民地的人不想再听船上的命令。他们请你在宣言上签名。',
+        options: [
+        {
+          id: 'sign',
+          label: '签',
+          desc: '他们该自己管自己',
+          resolve() { return { tone: 'good', text: '你签了名。船上的老人骂了你很久，殖民地的人把你的名字刻在了广场上。', effects: { family: 3, mood: 8, wealth: -8, flags: { 'independence': true } } } },
+        },
+        {
+          id: 'refuse',
+          label: '不签',
+          desc: '船和殖民地是一家',
+          resolve() { return { tone: 'normal', text: '你没签。宣言还是通过了，只是通过得没那么好看。', effects: { family: 1, mood: -2 } } },
+        },
+        {
+          id: 'mediate',
+          label: '去两边跑',
+          desc: '别打起来',
+          resolve() { return { tone: 'good', text: '你来回了半年，最后定了个自治条款。两边都不满意，但都没开枪。', effects: { looks: 2, family: 2, mood: 6 } } },
+        },
+        {
+          id: 'leave',
+          label: '两边都不掺和',
+          desc: '看他们自己',
+          resolve() { return { tone: 'normal', text: '你回到岗位上继续值班。两年后殖民地独立了，你既没失去什么，也没得到什么。', effects: { mood: 1, int: 1 } } },
+        },
+        ],
+      },
+      {
+        id: 'x_st_28',
+        at: 58,
+        chance: 0.7,
+        title: '睡到终点站',
+        prompt: '船要飞两百年才到。冷冻舱还有一个位置，醒来时你已经是个老人，但能亲眼看见登陆。',
+        options: [
+        {
+          id: 'sleep',
+          label: '睡进去',
+          desc: '想看见那颗星球',
+          resolve() { return { tone: 'strange', text: '入舱前你把想说的话录了一遍。最后一次睁眼，是护士在给你盖被子。', effects: { health: -4, mood: 6, lifespan: 40, flags: { 'cryo': true } } } },
+        },
+        {
+          id: 'wake',
+          label: '留在醒着的人里',
+          desc: '船上也要有人',
+          resolve() { return { tone: 'good', text: '你留下了。两百年里你换了很多岗位，也送走了很多同事。', effects: { family: 2, mood: 4, health: -6 } } },
+        },
+        {
+          id: 'give',
+          label: '把位置让给年轻人',
+          desc: '他更该去看',
+          resolve() { return { tone: 'good', text: '那个年轻人哭了。两百年后，他的孙子给你发来一张地表的照片。', effects: { family: 3, mood: 9, flags: { 'gaveCryo': true } } } },
+        },
+        {
+          id: 'ask',
+          label: '先问清楚醒不过来怎么办',
+          desc: '把风险弄明白',
+          resolve() { return { tone: 'normal', text: '你问了三个小时，最后决定不睡。你不想把最后一眼交给一个概率。', effects: { int: 2, mood: 3, health: 2 } } },
         },
         ],
       },
@@ -23469,6 +24259,105 @@ function attrCapFor(run) {
         },
         ],
       },
+      {
+        id: 'x_ji_26',
+        at: 26,
+        chance: 0.76,
+        title: '杀，还是不杀',
+        prompt: '那个人跪在你面前，手上沾着你朋友的血。他说他当时没有选择。',
+        options: [
+        {
+          id: 'kill',
+          label: '杀了',
+          desc: '欠的命要还',
+          resolve() { return { tone: 'tragic', text: '你一剑下去，很快。回去的路上你一直在想他最后那句话，是不是真的。', effects: { body: 1, mood: -10, flags: { 'bloodOnHands': true } } } },
+        },
+        {
+          id: 'spare',
+          label: '放了他',
+          desc: '杀不出什么结果',
+          resolve() { return { tone: 'good', text: '你收了剑。他磕了三个头走了，后来听说他去了边关，再没回过中原。', effects: { mood: 6, looks: 1, flags: { 'sparedEnemy': true } } } },
+        },
+        {
+          id: 'law',
+          label: '把他交给官府',
+          desc: '按规矩来',
+          resolve() { return { tone: 'normal', text: '官府收了他，判了流放。你觉得这不像江湖的做法，但也没错。', effects: { family: 1, mood: 2 } } },
+        },
+        {
+          id: 'ask',
+          label: '先问他为什么',
+          desc: '想弄明白',
+          resolve() { return { tone: 'strange', text: '他讲了半个时辰。你听完，把剑收回鞘里，说：“你走吧，别再让我看见。”', effects: { int: 2, mood: 3, flags: { 'sparedEnemy': true } } } },
+        },
+        ],
+      },
+      {
+        id: 'x_ji_27',
+        at: 40,
+        chance: 0.74,
+        title: '把剑挂起来',
+        prompt: '你打赢了太多场，也开始记不清为什么打。有人劝你退隐，也有人说你正是最好的时候。',
+        options: [
+        {
+          id: 'retire',
+          label: '退隐',
+          desc: '够了',
+          resolve() { return { tone: 'good', text: '你把剑挂在了墙上，去了一个没人认识你的镇子。三个月后你开始睡整夜觉。', effects: { mood: 9, health: 6, wealth: -6, flags: { 'retired': true } } } },
+        },
+        {
+          id: 'stay',
+          label: '继续',
+          desc: '还能打',
+          resolve() { return { tone: 'normal', text: '你继续接活。名声更大了，伤口也更多了。', effects: { body: 2, health: -6, wealth: 10 } } },
+        },
+        {
+          id: 'teach',
+          label: '开个武馆',
+          desc: '把东西传下去',
+          resolve() { return { tone: 'good', text: '你收了七个徒弟。教他们的时候，你发现自己其实很会讲。', effects: { family: 3, mood: 6, wealth: 4, flags: { 'taught': true } } } },
+        },
+        {
+          id: 'last',
+          label: '打完最后一场就退',
+          desc: '给自己一个交代',
+          resolve() { return { tone: 'strange', text: '你在擂台上赢了最后一场，当众宣布封剑。台下有人叫好，也有人说你装。', effects: { looks: 2, mood: 7, health: -4, flags: { 'retired': true } } } },
+        },
+        ],
+      },
+      {
+        id: 'x_ji_28',
+        at: 55,
+        chance: 0.72,
+        title: '这本剑谱传给谁',
+        prompt: '你把自己的一身功夫写成了册子。徒弟有三个，一个心正但笨，一个聪明但滑，一个是你亲生的。',
+        options: [
+        {
+          id: 'honest',
+          label: '给心正的那个',
+          desc: '笨点没关系',
+          resolve() { return { tone: 'good', text: '他学得慢，但每一招都练到了骨头里。十年后他的名声比你干净。', effects: { family: 3, mood: 8, flags: { 'chosenHeir': true } } } },
+        },
+        {
+          id: 'smart',
+          label: '给聪明的那个',
+          desc: '他能发扬',
+          resolve() { return { tone: 'strange', text: '他两年就学会了全部。后来这门功夫出现在了很多不该出现的地方。', effects: { mood: -4, int: 2, family: 1 } } },
+        },
+        {
+          id: 'child',
+          label: '留给自己的孩子',
+          desc: '总得留点东西',
+          resolve() { return { tone: 'normal', text: '孩子接了册子，练得不算刻苦。你有点后悔，但没再改。', effects: { children: 0, family: 2, mood: 1 } } },
+        },
+        {
+          id: 'public',
+          label: '抄几份，谁想学给谁',
+          desc: '不想带进棺材',
+          resolve() { return { tone: 'legend', text: '你抄了二十份，散给了各处武馆。多年后有人上门说，他是靠那本册子活下来的。', effects: { mood: 10, family: 3, flags: { 'spreadArt': true } } } },
+        },
+        ],
+      },
       ],
     }
     // END CHOICE_EXPAND
@@ -24080,6 +24969,16 @@ function attrCapFor(run) {
       }
     }
 
+    // 抉择节奏：开局不设冷却（前 3 分钟就要有决定），成长期密，后期收一收避免疲劳
+    function choiceGapFor(run) {
+      const made = run.flags.choicesMade || 0
+      if (made < 2) return 1
+      if (made >= 16) return 6
+      if (run.age < 30) return 3
+      if (run.age < 50) return 4
+      return 5
+    }
+
     function maybeOfferChoice(run) {
       if (!run || !run.alive || run.pendingChoice) return null
       const transferChoice = buildTransferChoice(run)
@@ -24093,7 +24992,8 @@ function attrCapFor(run) {
         return run.pendingChoice
       }
       const lastChoiceAge = Number(run.flags.lastChoiceAge)
-      if (Number.isFinite(lastChoiceAge) && run.age - lastChoiceAge < 2) return null
+      const sinceLastChoice = Number.isFinite(lastChoiceAge) ? run.age - lastChoiceAge : 99
+      if (sinceLastChoice < choiceGapFor(run)) return null
       const nodes = (CHOICE_NODES[run.worldId] || [])
         .concat(
           WORLD_CHOICE_EXTRA[run.worldId] || [],
@@ -24130,7 +25030,7 @@ function attrCapFor(run) {
       const forcedRole = eligible.find(item => item.id === 'career_football_role' || item.id === 'career_basketball_role' || item.id === 'career_esports_role')
       const node = forcedRole || pick(careerPool.length && Math.random() < 0.62 ? careerPool : eligible)
       const giftChoice = run.powerGift && run.powerGift.choice ? run.powerGift.choice : 0
-      const choiceChance = clamp((node.chance == null ? 0.85 : node.chance) + giftChoice + (run.power ? 0.03 : 0), 0.1, 0.97)
+      const choiceChance = clamp((node.chance == null ? 0.85 : node.chance) + giftChoice + (run.power ? 0.03 : 0) + ((run.flags.choicesMade || 0) < 4 ? 0.1 : 0), 0.1, 0.97)
       if (Math.random() > choiceChance) return null
       run.pendingChoice = {
         id: node.id,
@@ -24189,6 +25089,27 @@ function attrCapFor(run) {
         }
       }
       applyEffects(next, result.effects)
+      // 连击：连着三次好/坏结果，给一次看得见的运势反馈（可变奖励与损失厌恶）
+      const toneKey = result.tone || 'normal'
+      const goodTone = toneKey === 'good' || toneKey === 'great' || toneKey === 'legend'
+      const badTone = toneKey === 'bad' || toneKey === 'tragic'
+      let goodStreak = Number(next.flags.goodStreak) || 0
+      let badStreak = Number(next.flags.badStreak) || 0
+      if (goodTone) { goodStreak += 1; badStreak = 0 } else if (badTone) { badStreak += 1; goodStreak = 0 } else { goodStreak = 0; badStreak = 0 }
+      let streakText = ''
+      if (goodStreak >= 5) {
+        goodStreak = 0
+        next.flags.luckyRun = (next.flags.luckyRun || 0) + 1
+        applyEffects(next, { mood: 4, luck: 1 })
+        streakText = ' 这一阵你做什么都顺，连风都像在帮你。'
+      } else if (badStreak >= 3) {
+        badStreak = 0
+        next.flags.turnAround = (next.flags.turnAround || 0) + 1
+        applyEffects(next, { mood: 3, health: 2 })
+        streakText = ' 你已经很久没遇上好事了。可人不会一直背下去。'
+      }
+      next.flags.goodStreak = goodStreak
+      next.flags.badStreak = badStreak
       const deltas = numberDeltas(before, next)
       next.flags._choiceSeen = { ...(next.flags._choiceSeen || {}), [pending.id]: option.id }
       next.flags._choiceTitleSeen = (next.flags._choiceTitleSeen || []).concat(pending.title || '').slice(-80)
@@ -24199,7 +25120,7 @@ function attrCapFor(run) {
       pushEntry(next, {
         kind: 'event',
         age: next.age,
-        text: result.text,
+        text: result.text + streakText,
         tone: result.tone || 'normal',
         deltas,
         isChoice: true,
@@ -26986,7 +27907,14 @@ function attrCapFor(run) {
 
     function chooseEvent(run) {
       const world = worldOf(run)
-      let pool = world.events.filter(event => matchesEvent(event, run))
+      const all = world.events
+      const eligible = all.filter(event => matchesEvent(event, run))
+      // 稀有事件不混在普通池里：每年只有 1% 的机会单独抽一次
+      const rarePool = eligible.filter(event => event.rare)
+      if (rarePool.length && Math.random() < 0.03) {
+        return chooseWeighted(rarePool, run)
+      }
+      let pool = eligible.filter(event => !event.rare)
       if (pool.length > 1) {
         const recent = run.recentEventIds || []
         const recentTexts = run.recentTexts || []
@@ -26994,7 +27922,7 @@ function attrCapFor(run) {
         if (fresh.length > 0) pool = fresh
       }
       if (pool.length === 0) {
-        pool = world.events.filter(event => event.repeatable && event.stage === run.stage)
+        pool = all.filter(event => event.repeatable && event.stage === run.stage)
       }
       return chooseWeighted(pool, run)
     }
@@ -29073,7 +30001,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.54.0';
+  const APP_VERSION = '1.55.0';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -29298,7 +30226,7 @@ function attrCapFor(run) {
       + '<div class="hero-copy">'
       + '<p class="hero-kicker">云墨入卷 · 重开一世</p>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.54.0 · 2026-11-23</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.55.0 · 2026-11-24</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界 · ' + TOTAL_ENDINGS + ' 个结局 · ' + ACHIEVEMENT_TOTAL + ' 个成就</p>'
       + legacyHtml
       + '</div>'
