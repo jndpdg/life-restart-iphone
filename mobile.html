@@ -414,7 +414,8 @@
     .menu-btn span { font-size: 10.5px; opacity: .55; font-variant-numeric: tabular-nums; }
     .menu-btn:active { transform: scale(.985); }
     .home-modal { align-items: center; }
-    .home-sheet { width: min(560px, calc(100vw - 22px)); max-height: 86vh; overflow-y: auto; padding: 16px 16px 22px; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); }
+    .review-row { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.home-sheet { width: min(560px, calc(100vw - 22px)); max-height: 86vh; overflow-y: auto; padding: 16px 16px 22px; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); }
     .home-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
     .home-sheet-head h2 { margin: 2px 0 0; font-size: 19px; font-weight: 600; letter-spacing: .02em; }
     .ending-world { margin: 14px 0 6px; font-size: 11px; letter-spacing: .1em; opacity: .6; }
@@ -4835,6 +4836,14 @@ function attrCapFor(run) {
       {
         age: 6,
         resolve(s) {
+          const chosenPrimary = s.flags.ms && s.flags.ms.school && s.flags.ms.school.primary
+          if (chosenPrimary) {
+            return {
+              tone: 'milestone',
+              text: '开学那天，你背着新书包进了' + chosenPrimary.name + '。校门口的评分牌上写着 ' + chosenPrimary.score + ' 分，家长们在门口讨论这一年的学费。',
+              effects: { mood: 3, flags: { edu: '小学' } },
+            }
+          }
           if (s.attrs.family >= 8) {
             return {
               tone: 'milestone',
@@ -4859,6 +4868,17 @@ function attrCapFor(run) {
       {
         age: 15,
         resolve(s) {
+          const chosenHigh = s.flags.ms && s.flags.ms.school && s.flags.ms.school.high
+          if (chosenHigh) {
+            const vocational = chosenHigh.id === 'vocational'
+            return {
+              tone: 'milestone',
+              text: vocational
+                ? '中考结束，你进了' + chosenHigh.name + '。报到那天，实训楼的机床声一直响到傍晚。'
+                : '中考结束，你进了' + chosenHigh.name + '（评分 ' + chosenHigh.score + '）。分班名单贴在公告栏上，你在第二张纸上找到自己的名字。',
+              effects: { mood: vocational ? -1 : 4, flags: { path: vocational ? 'vocational' : 'academic', edu: vocational ? '职业学校' : '高中' } },
+            }
+          }
           const score = s.attrs.int * 0.55 + s.attrs.family * 0.12 + Math.random() * 2.8
             + (s.flags.school === 'elite' ? 1.2 : s.flags.school === 'public' ? 0.4 : 0)
             + (s.flags.scholar ? 1.2 : 0) + (s.luck || 0) * 0.3
@@ -4901,6 +4921,14 @@ function attrCapFor(run) {
       {
         age: 18,
         resolve(s) {
+          const msState = s.flags.ms
+          if (msState && msState.majorName) {
+            return {
+              tone: 'milestone',
+              text: '录取通知书到了：' + msState.majorName + '。高考 ' + (msState.gaokao || 0) + ' 分，学制 ' + (msState.gradAge - s.age) + ' 年。你把那张纸摊在桌上看了很久。',
+              effects: { mood: 8, flags: { edu: msState.degree } },
+            }
+          }
           if (s.flags.path === 'academic') {
             const score = s.attrs.int * 0.5 + Math.random() * 2.6
               + (s.flags.high === 'key' ? 1.4 : 0)
@@ -15988,6 +16016,110 @@ function attrCapFor(run) {
       ],
     }
     // END EVENT_EXPAND
+
+    // BEGIN MODERN_SYSTEMS
+    // ── 现代人生 · 学业 / 职业 / 家族（v1.57.0）───────────────────
+    const SCHOOL_TIERS = {
+      kindergarten: [
+        { id: 'bilingual', name: '双语实验幼儿园', score: 92, fee: 12, learn: 1.2, minWealth: 24 },
+        { id: 'public', name: '区示范幼儿园', score: 78, fee: 4, learn: 0.9, minWealth: 0 },
+        { id: 'street', name: '街道幼儿园', score: 60, fee: 1, learn: 0.6, minWealth: 0 },
+        { id: 'home', name: '在家带到六岁', score: 50, fee: 0, learn: 0.5, minWealth: 0 },
+      ],
+      primary: [
+        { id: 'top', name: '师大附小', score: 95, fee: 14, learn: 1.3, minWealth: 30 },
+        { id: 'key', name: '重点公立小学', score: 84, fee: 5, learn: 1.0, minWealth: 8 },
+        { id: 'plain', name: '普通公立小学', score: 68, fee: 1, learn: 0.7, minWealth: 0 },
+        { id: 'private', name: '民办小学', score: 76, fee: 9, learn: 0.9, minWealth: 18 },
+      ],
+      middle: [
+        { id: 'top', name: '市实验中学', score: 96, fee: 16, learn: 1.35, minWealth: 36 },
+        { id: 'key', name: '区重点中学', score: 85, fee: 6, learn: 1.05, minWealth: 12 },
+        { id: 'plain', name: '普通初中', score: 70, fee: 2, learn: 0.75, minWealth: 0 },
+        { id: 'private', name: '民办初中', score: 78, fee: 12, learn: 0.95, minWealth: 24 },
+      ],
+      high: [
+        { id: 'province', name: '省重点高中', score: 97, fee: 22, learn: 1.4, minWealth: 40, minScore: 78 },
+        { id: 'city', name: '市重点高中', score: 88, fee: 10, learn: 1.15, minWealth: 16, minScore: 66 },
+        { id: 'normal', name: '普通高中', score: 72, fee: 4, learn: 0.85, minWealth: 0, minScore: 45 },
+        { id: 'private', name: '民办高中', score: 80, fee: 16, learn: 0.95, minWealth: 28, minScore: 40 },
+        { id: 'vocational', name: '职业高中', score: 55, fee: 3, learn: 0.6, minWealth: 0, minScore: 0 },
+      ],
+    }
+    const SCHOOL_STAGE_LABEL = { kindergarten: '幼儿园', primary: '小学', middle: '初中', high: '高中' }
+
+    const SUBJECT_COMBOS = [
+      { id: 'wl_huasheng', primary: '物理', secondary: ['化学', '生物'], label: '物化生', note: '理工医的主干，选择面最宽' },
+      { id: 'wl_huadi', primary: '物理', secondary: ['化学', '地理'], label: '物化地', note: '理工加规划、地质方向' },
+      { id: 'wl_shengdi', primary: '物理', secondary: ['生物', '地理'], label: '物生地', note: '偏环境、医学辅助与测绘' },
+      { id: 'ls_zhengdi', primary: '历史', secondary: ['政治', '地理'], label: '史政地', note: '文科正统，法学与公务员友好' },
+      { id: 'ls_zhengsheng', primary: '历史', secondary: ['政治', '生物'], label: '史政生', note: '文理交叉，可走心理与护理' },
+      { id: 'ls_di_sheng', primary: '历史', secondary: ['地理', '生物'], label: '史地生', note: '偏人文地理与生态方向' },
+    ]
+
+    const MAJORS = [
+      { id: 'clinical', name: '临床医学', primary: '物理', secondary: ['化学'], min: 640, degree: '本科', years: 5, salary: [12, 40], health: -8, mood: -3 },
+      { id: 'stomatology', name: '口腔医学', primary: '物理', secondary: ['化学'], min: 650, degree: '本科', years: 5, salary: [15, 50], health: -5, mood: 0 },
+      { id: 'cs', name: '计算机科学与技术', primary: '物理', secondary: [], min: 580, degree: '本科', years: 4, salary: [14, 45], health: -6, mood: 1 },
+      { id: 'software', name: '软件工程', primary: '物理', secondary: [], min: 560, degree: '本科', years: 4, salary: [13, 42], health: -6, mood: 1 },
+      { id: 'ee', name: '电子工程', primary: '物理', secondary: [], min: 550, degree: '本科', years: 4, salary: [11, 34], health: -4, mood: 1 },
+      { id: 'me', name: '机械设计制造', primary: '物理', secondary: [], min: 520, degree: '本科', years: 4, salary: [9, 26], health: -3, mood: 1 },
+      { id: 'civil', name: '土木工程', primary: '物理', secondary: [], min: 500, degree: '本科', years: 4, salary: [8, 24], health: -6, mood: -2 },
+      { id: 'arch', name: '建筑学', primary: '物理', secondary: [], min: 560, degree: '本科', years: 5, salary: [10, 32], health: -5, mood: 0 },
+      { id: 'math', name: '数学与应用数学', primary: '物理', secondary: [], min: 540, degree: '本科', years: 4, salary: [10, 30], health: -2, mood: 2 },
+      { id: 'physics', name: '物理学', primary: '物理', secondary: [], min: 550, degree: '本科', years: 4, salary: [8, 26], health: -2, mood: 2 },
+      { id: 'chem', name: '化学', primary: '物理', secondary: ['化学'], min: 520, degree: '本科', years: 4, salary: [8, 22], health: -3, mood: 1 },
+      { id: 'bio', name: '生物科学', primary: '物理', secondary: ['化学'], min: 530, degree: '本科', years: 4, salary: [7, 22], health: -2, mood: 2 },
+      { id: 'pharmacy', name: '药学', primary: '物理', secondary: ['化学'], min: 510, degree: '本科', years: 4, salary: [8, 22], health: -2, mood: 1 },
+      { id: 'nursing', name: '护理学', primary: null, secondary: ['化学', '生物'], min: 450, degree: '专科', years: 3, salary: [6, 16], health: -5, mood: 0 },
+      { id: 'econ', name: '经济学', primary: null, secondary: [], min: 550, degree: '本科', years: 4, salary: [10, 40], health: -2, mood: 1 },
+      { id: 'finance', name: '金融学', primary: null, secondary: [], min: 570, degree: '本科', years: 4, salary: [12, 55], health: -4, mood: 0 },
+      { id: 'accounting', name: '会计学', primary: null, secondary: [], min: 520, degree: '本科', years: 4, salary: [8, 26], health: -3, mood: 0 },
+      { id: 'law', name: '法学', primary: null, secondary: [], min: 560, degree: '本科', years: 4, salary: [9, 38], health: -3, mood: 1 },
+      { id: 'chinese', name: '汉语言文学', primary: null, secondary: [], min: 500, degree: '本科', years: 4, salary: [7, 20], health: -1, mood: 2 },
+      { id: 'journalism', name: '新闻传播', primary: null, secondary: [], min: 510, degree: '本科', years: 4, salary: [7, 24], health: -3, mood: 0 },
+      { id: 'english', name: '英语', primary: null, secondary: [], min: 520, degree: '本科', years: 4, salary: [7, 22], health: -1, mood: 1 },
+      { id: 'history', name: '历史学', primary: '历史', secondary: [], min: 480, degree: '本科', years: 4, salary: [6, 17], health: -1, mood: 2 },
+      { id: 'philosophy', name: '哲学', primary: null, secondary: [], min: 470, degree: '本科', years: 4, salary: [6, 16], health: -1, mood: 3 },
+      { id: 'psych', name: '心理学', primary: null, secondary: ['生物'], min: 530, degree: '本科', years: 4, salary: [8, 26], health: -1, mood: 2 },
+      { id: 'edu', name: '教育学', primary: null, secondary: [], min: 490, degree: '本科', years: 4, salary: [7, 18], health: -1, mood: 2 },
+      { id: 'tcm', name: '中医学', primary: '物理', secondary: ['化学', '生物'], min: 560, degree: '本科', years: 5, salary: [9, 30], health: -4, mood: 1 },
+      { id: 'env', name: '环境工程', primary: '物理', secondary: ['化学'], min: 500, degree: '本科', years: 4, salary: [7, 20], health: -3, mood: 1 },
+      { id: 'agri', name: '农学', primary: null, secondary: ['化学', '生物'], min: 450, degree: '本科', years: 4, salary: [6, 18], health: -2, mood: 2 },
+      { id: 'design', name: '视觉传达设计', primary: null, secondary: [], min: 430, degree: '专科', years: 3, salary: [6, 24], health: -3, mood: 1 },
+      { id: 'sport', name: '体育教育', primary: null, secondary: [], min: 420, degree: '专科', years: 3, salary: [6, 18], health: 3, mood: 2 },
+      { id: 'tourism', name: '旅游管理', primary: null, secondary: [], min: 430, degree: '专科', years: 3, salary: [5, 16], health: -1, mood: 2 },
+      { id: 'voc_elec', name: '电气自动化（职）', primary: null, secondary: [], min: 0, degree: '专科', years: 3, salary: [6, 20], health: -3, mood: 1, vocational: true },
+    ]
+
+    const JOBS = [
+      { id: 'doctor', name: '医生', degree: '本科', majors: ['clinical', 'stomatology', 'tcm'], salary: [12, 45], health: -6, mood: 0, gain: 3 },
+      { id: 'nurse', name: '护士', degree: '专科', majors: ['nursing'], salary: [7, 18], health: -5, mood: 0, gain: 2 },
+      { id: 'swe', name: '软件工程师', degree: '本科', majors: ['cs', 'software'], salary: [14, 48], health: -6, mood: 1, gain: 4 },
+      { id: 'ee', name: '电子工程师', degree: '本科', majors: ['ee'], salary: [11, 34], health: -3, mood: 1, gain: 3 },
+      { id: 'mech', name: '机械工程师', degree: '本科', majors: ['me'], salary: [9, 28], health: -3, mood: 1, gain: 3 },
+      { id: 'civil', name: '土木工程师', degree: '本科', majors: ['civil'], salary: [9, 26], health: -6, mood: -1, gain: 3 },
+      { id: 'architect', name: '建筑师', degree: '本科', majors: ['arch'], salary: [10, 34], health: -5, mood: 0, gain: 3 },
+      { id: 'analyst', name: '金融分析师', degree: '本科', majors: ['finance', 'econ'], salary: [12, 55], health: -5, mood: 0, gain: 4 },
+      { id: 'accountant', name: '会计', degree: '本科', majors: ['accounting'], salary: [8, 26], health: -3, mood: 0, gain: 2 },
+      { id: 'lawyer', name: '律师', degree: '本科', majors: ['law'], salary: [9, 45], health: -4, mood: 1, gain: 3 },
+      { id: 'judge', name: '公务员', degree: '本科', majors: ['law', 'chinese', 'econ', 'edu'], salary: [8, 22], health: -1, mood: 2, gain: 2 },
+      { id: 'teacher', name: '教师', degree: '本科', majors: ['edu', 'chinese', 'math', 'english', 'physics', 'history'], salary: [7, 20], health: -2, mood: 3, gain: 2 },
+      { id: 'editor', name: '编辑', degree: '本科', majors: ['chinese', 'journalism'], salary: [7, 22], health: -2, mood: 2, gain: 2 },
+      { id: 'reporter', name: '记者', degree: '本科', majors: ['journalism'], salary: [7, 26], health: -4, mood: 1, gain: 2 },
+      { id: 'translator', name: '翻译', degree: '本科', majors: ['english'], salary: [7, 24], health: -1, mood: 2, gain: 2 },
+      { id: 'psychologist', name: '心理咨询师', degree: '本科', majors: ['psych'], salary: [8, 28], health: -1, mood: 3, gain: 2 },
+      { id: 'scientist', name: '科研人员', degree: '硕士', majors: ['math', 'physics', 'chem', 'bio', 'env'], salary: [9, 30], health: -2, mood: 2, gain: 4 },
+      { id: 'pharmacist', name: '药剂师', degree: '本科', majors: ['pharmacy'], salary: [8, 22], health: -2, mood: 1, gain: 2 },
+      { id: 'designer', name: '设计师', degree: '专科', majors: ['design', 'arch'], salary: [6, 26], health: -3, mood: 2, gain: 2 },
+      { id: 'vet', name: '兽医', degree: '本科', majors: ['agri', 'bio'], salary: [7, 22], health: -2, mood: 3, gain: 2 },
+      { id: 'engineer_voc', name: '技术工人', degree: '专科', majors: ['voc_elec', 'me'], salary: [7, 20], health: -4, mood: 1, gain: 2 },
+      { id: 'coach', name: '体育教练', degree: '专科', majors: ['sport'], salary: [6, 18], health: 4, mood: 3, gain: 2 },
+      { id: 'tour_guide', name: '旅游从业者', degree: '专科', majors: ['tourism'], salary: [5, 16], health: -1, mood: 3, gain: 1 },
+      { id: 'freelance', name: '自由职业', degree: '专科', majors: null, salary: [5, 40], health: -2, mood: 2, gain: 3 },
+      { id: 'startup', name: '创业者', degree: '本科', majors: null, salary: [-20, 90], health: -8, mood: 3, gain: 5 },
+    ]
+    // END MODERN_SYSTEMS
 
     const WORLDS = [
       {
@@ -33328,6 +33460,11 @@ function attrCapFor(run) {
         run.pendingChoice = pendingFromNode(stxNode)
         return run.pendingChoice
       }
+      const modernNext = msNext(run)
+      if (modernNext) {
+        run.pendingChoice = pendingFromNode(modernNext)
+        return run.pendingChoice
+      }
       const lastChoiceAge = Number(run.flags.lastChoiceAge)
       const sinceLastChoice = Number.isFinite(lastChoiceAge) ? run.age - lastChoiceAge : 99
       if (sinceLastChoice < choiceGapFor(run)) return null
@@ -36064,6 +36201,15 @@ function attrCapFor(run) {
       }
       if (legacy) startWealth = Math.max(0, startWealth + (legacy.wealth || 0))
       if (legacy) {
+        flags.familyGen = Math.max(1, Number(legacy.familyGen) || 1) + (legacy.childMode ? 1 : 0)
+      }
+      if (legacy && legacy.heir) {
+        attrs.int = clamp(attrs.int + Math.min(2, Math.round((legacy.heir.int || 0) / 4)), 0, ATTR_CAP_BY_STAGE.child)
+        attrs.body = clamp(attrs.body + Math.min(2, Math.round((legacy.heir.body || 0) / 4)), 0, ATTR_CAP_BY_STAGE.child)
+        mood = clamp(mood + Math.min(4, Math.round((legacy.heir.mood || 0) / 2)), 0, 100)
+        flags.heirName = legacy.heir.name
+      }
+      if (legacy) {
         health = clamp(health + (legacy.health || 0), 0, 100)
         mood = clamp(mood + (legacy.mood || 0), 0, 100)
       }
@@ -36200,6 +36346,7 @@ function attrCapFor(run) {
           ...(run.flags._questSeen ? { _questSeen: { ...run.flags._questSeen } } : {}),
           ...(run.flags._scenes ? { _scenes: { ...run.flags._scenes } } : {}),
           ...(run.flags._powerSeen ? { _powerSeen: { ...run.flags._powerSeen } } : {}),
+          ...(run.flags.ms ? { ms: JSON.parse(JSON.stringify(run.flags.ms)) } : {}),
         },
         achievements: run.achievements ? run.achievements.slice() : [],
         ending: run.ending ? { ...run.ending, achievements: run.ending.achievements.slice() } : null,
@@ -36631,6 +36778,7 @@ function attrCapFor(run) {
         pushEntry(run, { kind: 'chapter', age: run.age, text: world.stages[stage].chapter })
       }
 
+      if (run.worldId === 'modern') modernYearlyTick(run)
       const milestone = chooseMilestone(run)
       let source = 'event'
       let current = milestone
@@ -37420,6 +37568,368 @@ function attrCapFor(run) {
       run.achievements = finalAchievements
       run.ending.achievements = finalAchievements
     }
+
+            // BEGIN MODERN_LOGIC
+    function msEnsure(run) {
+      if (!run.flags.ms || typeof run.flags.ms !== 'object') {
+        run.flags.ms = { school: {}, edu: 0, children: [], family: { gen: 1, surname: '', history: [] }, done: {} }
+      }
+      const ms = run.flags.ms
+      if (!ms.school) ms.school = {}
+      if (!Array.isArray(ms.children)) ms.children = []
+      if (!ms.family) ms.family = { gen: 1, surname: '', history: [] }
+      if (!ms.done) ms.done = {}
+      return ms
+    }
+
+    function msSchoolAt(ms, stage) {
+      return (ms.school && ms.school[stage]) || null
+    }
+
+    function msFeeTotal(ms) {
+      let fee = 0
+      Object.keys(ms.school || {}).forEach(key => {
+        const item = ms.school[key]
+        if (item && item.active) fee += item.fee || 0
+      })
+      return fee
+    }
+
+    function msPickSchool(stage, tier) {
+      return {
+        id: tier.id,
+        name: tier.name,
+        score: tier.score,
+        fee: tier.fee,
+        learn: tier.learn,
+        active: true,
+      }
+    }
+
+    function msSchoolOptions(run, stage) {
+      const tiers = SCHOOL_TIERS[stage] || []
+      const ms = msEnsure(run)
+      const current = msSchoolAt(ms, stage)
+      return tiers.map(tier => ({
+        id: 'sch_' + stage + '_' + tier.id,
+        label: tier.name,
+        desc: '评分 ' + tier.score + ' · 学费 ' + tier.fee + '/年' + (tier.minWealth && run.wealth < tier.minWealth ? ' · 积蓄不足' : ''),
+        requires: tier.minWealth ? { wealth: tier.minWealth } : null,
+        resolve(next) {
+          const m = msEnsure(next)
+          m.school[stage] = msPickSchool(stage, tier)
+          if (current && current.id !== tier.id) m.done['transfer_' + stage] = true
+          return {
+            tone: tier.score >= 85 ? 'good' : tier.score >= 70 ? 'normal' : 'strange',
+            text: '你去了' + tier.name + '。校门口的牌子写着评分 ' + tier.score + '，学费一年 ' + tier.fee + '。'
+              + (current && current.id !== tier.id ? '转学手续办了两周，旧同学的联系方式你一直留着。' : ''),
+            effects: { mood: tier.score >= 85 ? 6 : tier.score >= 70 ? 3 : -1, wealth: -Math.min(tier.fee, 20) },
+          }
+        },
+      }))
+    }
+
+    function msLevelFor(stage, age) {
+      if (stage === 'kindergarten') return age >= 3 && age < 6
+      if (stage === 'primary') return age >= 6 && age < 12
+      if (stage === 'middle') return age >= 12 && age < 15
+      if (stage === 'high') return age >= 15 && age < 18
+      return false
+    }
+
+    function msEduScore(run) {
+      const ms = msEnsure(run)
+      return Math.round((ms.edu || 0) * 10) / 10
+    }
+
+    function msProjectZhongkao(run) {
+      const ms = msEnsure(run)
+      const primary = msSchoolAt(ms, 'primary')
+      const middle = msSchoolAt(ms, 'middle')
+      const base = (ms.edu || 0) * 0.55 + (run.attrs.int || 0) * 2.6
+      const bonus = ((primary ? primary.score : 60) - 60) * 0.08 + ((middle ? middle.score : 60) - 60) * 0.12
+      return clamp(Math.round(base + bonus + (run.luck || 0) * 3), 0, 100)
+    }
+
+    function msGaokaoScore(run) {
+      const ms = msEnsure(run)
+      const high = msSchoolAt(ms, 'high')
+      const base = 300 + (ms.edu || 0) * 3.2 + (run.attrs.int || 0) * 7 + ((high ? high.score : 60) - 60) * 1.4 + (run.luck || 0) * 8
+      return clamp(Math.round(base + (Math.random() * 80 - 40)), 180, 750)
+    }
+
+    function msMajorEligible(major, subjects, score) {
+      if (!major) return false
+      if (score < (major.min || 0)) return false
+      if (major.primary && subjects && subjects.primary && subjects.primary !== major.primary) return false
+      const need = major.secondary || []
+      if (need.length && subjects) {
+        const have = subjects.secondary || []
+        for (const item of need) if (!have.includes(item)) return false
+      }
+      return true
+    }
+
+    function msDegreeYears(degree) {
+      return degree === '专科' ? 3 : degree === '硕士' ? 2 : degree === '博士' ? 3 : 4
+    }
+
+    function msJobEligible(job, run) {
+      const ms = msEnsure(run)
+      if (!job) return false
+      const order = { 无: 0, 专科: 1, 本科: 2, 硕士: 3, 博士: 4 }
+      const have = order[ms.degree || '无'] || 0
+      const need = order[job.degree || '无'] || 0
+      if (have < need) return false
+      if (job.majors && ms.major && !job.majors.includes(ms.major)) return false
+      return true
+    }
+
+    function msSalaryOf(job) {
+      if (!job || !job.salary) return 0
+      const lo = job.salary[0]
+      const hi = job.salary[1]
+      return Math.round((lo + hi) / 2)
+    }
+
+    // ── 年度结算：学费、学业积累、学校评分浮动、孩子成长、工资 ──────────
+    function modernYearlyTick(run) {
+      if (!run || run.worldId !== 'modern' || !run.alive) return
+      const ms = msEnsure(run)
+      const age = run.age
+      let fee = 0
+      ;['kindergarten', 'primary', 'middle', 'high'].forEach(stage => {
+        const item = msSchoolAt(ms, stage)
+        if (!item) return
+        if (!msLevelFor(stage, age)) { item.active = false; return }
+        item.active = true
+        fee += item.fee || 0
+      })
+      // 学业积累
+      ;['kindergarten', 'primary', 'middle', 'high'].forEach(stage => {
+        const item = msSchoolAt(ms, stage)
+        if (!item || !msLevelFor(stage, age)) return
+        const gain = (item.score / 100) * (item.learn || 1) * 4.2 + (run.attrs.int || 0) * 0.25
+        ms.edu = Math.min(100, (ms.edu || 0) + gain)
+        // 评分每年浮动
+        if (Math.random() < 0.55) {
+          const swing = Math.random() < 0.12 ? (Math.random() * 12 - 6) : (Math.random() * 5 - 2)
+          item.score = clamp(Math.round(item.score + swing), 30, 100)
+        }
+      })
+      if (fee > 0) {
+        run.wealth = Math.max(-50, run.wealth - fee)
+        if (run.wealth < 0 && !ms.done.feeWarn) {
+          ms.done.feeWarn = true
+          pushEntry(run, { kind: 'event', age, tone: 'bad', text: '学费把家里的存款掏空了。你听见父母在客厅里算账，声音压得很低。' })
+          run.mood = clamp(run.mood - 4, 0, 100)
+        }
+      }
+      // 工作收入
+      const job = JOBS.find(item => item.id === ms.job)
+      if (job && age >= 22 && age < 62) {
+        const seniority = Math.min(1.6, 1 + Math.max(0, age - 22) * 0.012)
+        const income = Math.round(msSalaryOf(job) * seniority * 0.9)
+        run.wealth = Math.max(-50, run.wealth + income)
+        if (run.wealth > run.peakWealth) { run.peakWealth = run.wealth; run.peakWealthAge = age }
+        if (job.health && age % 3 === 0) run.health = clamp(run.health + Math.round(job.health / 3), 0, 100)
+        if (job.mood && age % 4 === 0) run.mood = clamp(run.mood + Math.round(job.mood / 2), 0, 100)
+      }
+      // 孩子长大
+      ms.children.forEach(child => { child.age = (child.age || 0) + 1 })
+      if (ms.done.seedChildren === undefined && (run.flags.children || 0) > 0) {
+        ms.done.seedChildren = true
+        const count = run.flags.children || 0
+        for (let i = 0; i < count; i += 1) {
+          ms.children.push({ name: msChildName(run, i), age: 0, int: 3 + Math.round(Math.random() * 4), body: 3 + Math.round(Math.random() * 4), mood: 6 })
+        }
+      }
+    }
+
+    const MS_SURNAMES = ['林', '陈', '周', '沈', '顾', '许', '江', '叶', '苏', '陆', '程', '温']
+    const MS_GIVEN = ['一诺', '知远', '予安', '清和', '星野', '望舒', '思齐', '念初', '朝雨', '南乔', '子墨', '若谷']
+
+    function msChildName(run, index) {
+      const ms = msEnsure(run)
+      if (!ms.family.surname) {
+        ms.family.surname = MS_SURNAMES[Math.floor(Math.random() * MS_SURNAMES.length)]
+      }
+      const given = MS_GIVEN[(index + Math.floor(Math.random() * MS_GIVEN.length)) % MS_GIVEN.length]
+      return ms.family.surname + given
+    }
+
+    // ── 关键节点抉择 ────────────────────────────────────────────────────
+    function msChoice(id, title, prompt, options) {
+      return { id, title, prompt, options }
+    }
+
+    function msNext(run) {
+      if (!run || run.worldId !== 'modern' || !run.alive) return null
+      const ms = msEnsure(run)
+      const age = run.age
+
+      if (age >= 3 && age < 6 && !msSchoolAt(ms, 'kindergarten')) {
+        return msChoice('ms_kindergarten', '幼儿园：去哪儿', '三岁了。家门口的幼儿园、区里的示范园、还有一家双语园，价钱差得很远。', msSchoolOptions(run, 'kindergarten'))
+      }
+      if (age >= 5 && age < 7 && !msSchoolAt(ms, 'primary')) {
+        return msChoice('ms_primary', '小学：选哪一所', '报名表交上去之前，你还有一次选择的机会。', msSchoolOptions(run, 'primary'))
+      }
+      if (age >= 11 && age < 13 && !msSchoolAt(ms, 'middle')) {
+        return msChoice('ms_middle', '初中：学区还是择校', '小学的成绩单出来了，附近的初中和市里的实验中学都能去，后者要交钱。', msSchoolOptions(run, 'middle'))
+      }
+      if (age >= 14 && age < 15 && !msSchoolAt(ms, 'high')) {
+        const zk = msProjectZhongkao(run)
+        const tiers = SCHOOL_TIERS.high.filter(tier => zk >= (tier.minScore || 0))
+        const options = tiers.map(tier => ({
+          id: 'sch_high_' + tier.id,
+          label: tier.name,
+          desc: '评分 ' + tier.score + ' · 学费 ' + tier.fee + '/年 · 你的中考估分 ' + zk,
+          resolve(next) {
+            const m = msEnsure(next)
+            m.school.high = msPickSchool('high', tier)
+            m.zhongkao = zk
+            const vocational = tier.id === 'vocational'
+            return {
+              tone: vocational ? 'normal' : 'good',
+              text: vocational
+                ? '你去了职业高中，选了电气自动化。开学第一天，实训楼里全是机床的味道。'
+                : '中考估分 ' + zk + '，你进了' + tier.name + '。学费一年 ' + tier.fee + '，家里为此讨论了一整晚。',
+              effects: { mood: vocational ? -2 : 6, wealth: -Math.min(tier.fee, 20), flags: { path: vocational ? 'vocational' : 'academic', high: tier.id, edu: vocational ? '职业学校' : '高中' } },
+            }
+          },
+        }))
+        return msChoice('ms_high', '中考志愿：三加一加二的门槛', '估分 ' + zk + '。分数决定了你能进哪一档高中，也决定了后面的路。', options)
+      }
+      if (age >= 15 && age < 16 && !ms.done.orientation) {
+        return msChoice('ms_orientation', '你开始知道自己喜欢什么样的人', '这件事没人教你，但你早晚要自己回答。', [
+          { id: 'or_hetero', label: '喜欢异性', desc: '以后会找异性伴侣', resolve(next) { const m = msEnsure(next); m.done.orientation = true; m.orientation = 'hetero'; return { tone: 'normal', text: '你发现自己会多看异性一眼。那种感觉说不清，但很确定。', effects: { mood: 4, flags: { orientation: '异性' } } } } },
+          { id: 'or_homo', label: '喜欢同性', desc: '以后会找同性伴侣', resolve(next) { const m = msEnsure(next); m.done.orientation = true; m.orientation = 'homo'; return { tone: 'normal', text: '你发现自己会多看同性一眼。你花了一段时间才承认这件事，承认之后反而轻松了。', effects: { mood: 3, int: 1, flags: { orientation: '同性' } } } } },
+          { id: 'or_bi', label: '都可以', desc: '喜欢的是人，不是性别', resolve(next) { const m = msEnsure(next); m.done.orientation = true; m.orientation = 'bi'; return { tone: 'good', text: '你觉得自己喜欢的是具体的人，性别只是那个人身上很小的一部分。', effects: { mood: 5, looks: 1, flags: { orientation: '都可以' } } } } },
+        ])
+      }
+      if (age >= 16 && age < 17 && !ms.done.subjects && (run.flags.path === 'academic')) {
+        const options = SUBJECT_COMBOS.map(combo => ({
+          id: 'sub_' + combo.id,
+          label: combo.label,
+          desc: combo.note,
+          resolve(next) {
+            const m = msEnsure(next)
+            m.subjects = { primary: combo.primary, secondary: combo.secondary.slice(), label: combo.label }
+            m.done.subjects = true
+            return {
+              tone: 'normal',
+              text: '你选了' + combo.label + '（' + combo.primary + ' + ' + combo.secondary.join('、') + '）。班主任说，这一选，两年后的专业方向就窄了一半。',
+              effects: { int: 1, mood: 3, flags: { subjects: combo.label } },
+            }
+          },
+        }))
+        return msChoice('ms_subjects', '高中选科：三加一加二', '语数外必考；先在物理和历史里选一门，再从化学、生物、政治、地理里选两门。', options)
+      }
+      if (age >= 17 && age < 18 && !ms.done.major) {
+        const subjects = ms.subjects || { primary: '物理', secondary: [] }
+        const gaokao = msGaokaoScore(run)
+        const eligible = MAJORS.filter(item => msMajorEligible(item, subjects, gaokao))
+        const picked = eligible.slice().sort((a, b) => b.min - a.min).slice(0, 6)
+        const options = picked.map(major => ({
+          id: 'major_' + major.id,
+          label: major.name,
+          desc: major.degree + ' · ' + (major.years || 4) + ' 年 · 分数线 ' + major.min + ' · 你考了 ' + gaokao,
+          resolve(next) {
+            const m = msEnsure(next)
+            m.major = major.id
+            m.majorName = major.name
+            m.degree = major.degree
+            m.gradAge = run.age + (major.years || 4)
+            m.gaokao = gaokao
+            m.done.major = true
+            return {
+              tone: gaokao >= major.min + 40 ? 'good' : 'normal',
+              text: '你被' + major.name + '录取了。高考 ' + gaokao + ' 分，专业线 ' + major.min + '。报到那天你在校门口站了一会儿，才走进去。',
+              effects: { mood: 10, int: 2, wealth: -(major.degree === '专科' ? 6 : 10), flags: { uni: major.degree === '专科' ? 'college' : 'bachelor', edu: major.degree, major: major.name } },
+            }
+          },
+        }))
+        if (!options.length) {
+          options.push({
+            id: 'major_none', label: '没够线，去读专科', desc: '分数不够任何本科专业',
+            resolve(next) {
+              const m = msEnsure(next)
+              m.major = 'tourism'; m.majorName = '旅游管理'; m.degree = '专科'; m.gradAge = run.age + 3; m.gaokao = gaokao; m.done.major = true
+              return { tone: 'normal', text: '你的分数没有够上任何本科专业。最后填了一所专科的旅游管理，通知书到得比同学都晚。', effects: { mood: -4, wealth: -4, flags: { uni: 'college', edu: '专科' } } }
+            },
+          })
+        }
+        options.push({
+          id: 'major_retake', label: '复读一年', desc: '明年再考一次',
+          resolve(next) {
+            const m = msEnsure(next)
+            m.done.major = true
+            m.done.retake = true
+            return { tone: 'normal', text: '你决定复读。教室里坐满了和你一样的人，墙上贴着倒计时。', effects: { mood: -6, int: 2, wealth: -6 } }
+          },
+        })
+        return msChoice('ms_major', '高考志愿：能报什么', '高考 ' + gaokao + ' 分，选科 ' + (subjects.label || subjects.primary) + '。下面这些专业是够线且选科对得上的。', options)
+      }
+      if (age >= 19 && age < 22 && !ms.done.workStudy && ms.major && run.age < (ms.gradAge || 22)) {
+        return msChoice('ms_workstudy', '勤工俭学', '这个学期的生活费还差一点。', [
+          { id: 'ws_tutor', label: '做家教', desc: '钱稳，费脑子', resolve(next) { const m = msEnsure(next); m.done.workStudy = true; return { tone: 'good', text: '你每周给两个孩子补课，一小时八十。钱不算多，但够一个月饭钱。', effects: { wealth: 10, int: 1, health: -2 } } } },
+          { id: 'ws_shop', label: '去便利店上夜班', desc: '钱多，伤身体', resolve(next) { const m = msEnsure(next); m.done.workStudy = true; return { tone: 'normal', text: '夜班一小时二十，你连着做了一个学期。期末那门课差点挂。', effects: { wealth: 16, health: -6, int: -1 } } } },
+          { id: 'ws_lab', label: '跟老师做项目', desc: '钱少，但对以后有用', resolve(next) { const m = msEnsure(next); m.done.workStudy = true; return { tone: 'good', text: '项目一个月六百，你学会了查资料、写报告、把话说明白。', effects: { wealth: 4, int: 2, mood: 3 } } } },
+          { id: 'ws_none', label: '不打工，专心念书', desc: '把时间留给成绩', resolve(next) { const m = msEnsure(next); m.done.workStudy = true; return { tone: 'normal', text: '你没去打工，靠奖学金和家里接济过完了这个学期。', effects: { int: 2, mood: 1 } } } },
+        ])
+      }
+      if (ms.major && age >= (ms.gradAge || 22) - 1 && !ms.done.degree) {
+        const options = []
+        options.push({ id: 'deg_work', label: '直接工作', desc: '去投简历', resolve(next) { const m = msEnsure(next); m.done.degree = true; m.done.degreeType = 'work'; return { tone: 'normal', text: '你把简历投了三十家，回信的有七家。毕业照拍完，第二天就去面试了。', effects: { mood: 4, wealth: 4 } } } })
+        options.push({ id: 'deg_postgrad', label: '考研', desc: '再读两三年', resolve(next) { const m = msEnsure(next); m.done.degree = true; m.done.degreeType = 'postgrad'; m.degree = '硕士'; m.gradAge = run.age + 3; return { tone: 'good', text: '你考上了研究生。复试那天导师问你为什么读研，你说想再弄清楚一点。', effects: { int: 2, mood: 5, wealth: -6 } } } })
+        options.push({ id: 'deg_civil', label: '考公', desc: '找个稳的', resolve(next) { const m = msEnsure(next); m.done.degree = true; m.done.degreeType = 'civil'; m.job = 'judge'; m.jobName = '公务员'; return { tone: 'good', text: '你考上了公务员。家里人比你还高兴，摆了两桌。', effects: { mood: 8, wealth: 6, flags: { civilServant: true } } } } })
+        return msChoice('ms_degree', '毕业：往哪走', '毕业照拍完了。接下来这几年怎么走，是你自己的事。', options)
+      }
+      if (ms.done.degreeType === 'postgrad' && age >= (ms.gradAge || 25) - 1 && !ms.done.job) {
+        const options = [
+          { id: 'job_academic', label: '留校做研究', desc: '继续读博', resolve(next) { const m = msEnsure(next); m.degree = '博士'; m.gradAge = run.age + 3; m.done.degreeType = 'phd'; return { tone: 'good', text: '你转博了。实验室的灯经常亮到凌晨。', effects: { int: 3, health: -4, mood: 3 } } } },
+          { id: 'job_industry', label: '去企业', desc: '把学历换成钱', resolve(next) { const m = msEnsure(next); m.done.job = true; m.done.degreeType = 'work'; return { tone: 'good', text: '你进了一家大公司，起薪比本科同学高一点。', effects: { wealth: 20, mood: 4 } } } },
+        ]
+        return msChoice('ms_postgrad', '硕士毕业：读博还是工作', '导师问你要不要继续，公司的 offer 也到了。', options)
+      }
+      if (!ms.done.job && (ms.done.degreeType === 'work' || ms.done.degreeType === 'phd' || ms.done.degreeType === 'civil') && age >= 21) {
+        if (ms.done.degreeType === 'civil') { ms.done.job = true; return null }
+        const pool = JOBS.filter(job => msJobEligible(job, run))
+        if (pool.length) {
+          const picked = pool.slice(0, 6)
+          const options = picked.map(job => ({
+            id: 'job_' + job.id,
+            label: job.name,
+            desc: '年薪 ' + job.salary[0] + '–' + job.salary[1] + ' 万 · ' + (job.health < 0 ? '辛苦' : '轻松'),
+            resolve(next) {
+              const m = msEnsure(next)
+              m.job = job.id
+              m.jobName = job.name
+              m.done.job = true
+              return {
+                tone: 'good',
+                text: '你成了' + job.name + '。入职第一天，工位、工牌、电脑，一样不少。你在心里算了一下，这份工资够租什么样的房子。',
+                effects: { wealth: job.salary[0], mood: 5, health: job.health, int: 1, flags: { job: job.name } },
+              }
+            },
+          }))
+          options.push({ id: 'job_none', label: '先不工作', desc: 'gap 一年', resolve(next) { const m = msEnsure(next); m.done.job = true; return { tone: 'normal', text: '你没找工作，先空了一年。那一年你去了很多地方，也想清楚了一些事。', effects: { mood: 8, wealth: -8 } } } })
+          return msChoice('ms_job', '第一份工作', '你的学历和专业能投的岗位如下。', options)
+        }
+      }
+      // 孩子培养
+      const child = ms.children && ms.children[0]
+      if (child && [3, 6, 12, 15].includes(child.age) && !ms.done['kid_' + child.age]) {
+        const ageKey = 'kid_' + child.age
+        return msChoice('ms_kid_' + child.age, '孩子 ' + child.age + ' 岁', '你在他/她这个年纪时，父母是怎么做的？', [
+          { id: 'kid_company', label: '多陪着', desc: '花时间，不花钱', resolve(next) { const m = msEnsure(next); m.done[ageKey] = true; const c = m.children[0]; if (c) { c.mood += 3; c.int += 1 } return { tone: 'good', text: '你每周留出两个晚上陪他/她。有一次你们在客厅搭了一个很丑的城堡。', effects: { mood: 4 } } } },
+          { id: 'kid_class', label: '报班', desc: '花钱换成绩', resolve(next) { const m = msEnsure(next); m.done[ageKey] = true; const c = m.children[0]; if (c) { c.int += 3; c.mood -= 1 } return { tone: 'normal', text: '你给他/她报了班。周末的日程排得很满，孩子在车上睡着过好几次。', effects: { wealth: -10, mood: -2 } } } },
+          { id: 'kid_free', label: '放养', desc: '让他/她自己长', resolve(next) { const m = msEnsure(next); m.done[ageKey] = true; const c = m.children[0]; if (c) { c.body += 2; c.mood += 2 } return { tone: 'good', text: '你什么都不报。他/她在楼下玩到天黑才回来，晒得很黑。', effects: { mood: 3 } } } },
+        ])
+      }
+      return null
+    }
+    // END MODERN_LOGIC
 
     // __LOGIC_END__
 (function () {
@@ -38338,7 +38848,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.56.0';
+  const APP_VERSION = '1.57.0';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -38395,6 +38905,41 @@ function attrCapFor(run) {
         .catch(() => {});
     } catch (err) {}
   }
+  // 人生回望：把这一世的关键节点挑出来（抉择 / 里程碑 / 转折 / 死亡）
+  function reviewEntries(run) {
+    if (!run || !Array.isArray(run.log)) return []
+    const keys = run.log.filter(entry => {
+      if (!entry) return false
+      if (entry.kind === 'death' || entry.kind === 'chapter') return true
+      if (entry.milestone) return true
+      if (entry.isChoice && !entry.isQuest) return true
+      const big = Array.isArray(entry.deltas) && entry.deltas.some(d => Math.abs(d.value) >= 8)
+      return big && (entry.kind === 'event')
+    })
+    const tail = keys.slice(-24)
+    return tail
+  }
+
+  function reviewHtml() {
+    const source = state.reviewRun || state.run || null
+    const entries = source ? reviewEntries(source) : []
+    const family = source && source.flags && source.flags.ms && source.flags.ms.family ? source.flags.ms.family : null
+    const head = '<div class="modal home-modal" role="dialog" aria-modal="true" aria-label="人生回望"><section class="home-sheet">'
+      + '<div class="home-sheet-head"><div><span class="modal-kicker">LIFE REVIEW</span><h2>人生回望</h2>'
+      + '<p>' + (source ? esc(worldOf(source).name + ' · ' + (source.age || 0) + ' 岁') : '还没有这一世') + (family && family.gen > 1 ? ' · 第 ' + family.gen + ' 代' : '') + '</p></div>'
+      + '<button class="btn btn-ghost btn-small" data-action="close-review">关闭</button></div>'
+    const body = entries.length
+      ? entries.map(entry => {
+        const deltas = (entry.deltas || []).map(d => '<span class="delta" data-kind="' + d.kind + '">' + esc(d.label) + ' ' + (d.value > 0 ? '+' : '') + d.value + '</span>').join('')
+        return '<div class="review-row" data-kind="' + esc(entry.kind || 'event') + '">'
+          + '<div class="review-age">' + esc(String(entry.age || 0)) + ' 岁</div>'
+          + '<div class="review-body"><p>' + esc(entry.text || '') + '</p>'
+          + '<div class="review-deltas">' + deltas + '</div></div></div>'
+      }).join('')
+      : '<p class="panel-note">还没有可以回望的节点。</p>'
+    return head + '<div class="home-sheet-body">' + body + '</div></section></div>'
+  }
+
   function render() {
     const entering = state.__lastView !== state.view;
     state.__lastView = state.view;
@@ -38408,10 +38953,11 @@ function attrCapFor(run) {
     else if (state.showKits) overlay = kitsHtml()
     else if (state.showTracks) overlay = tracksHtml()
     else if (state.replay) overlay = replayHtml()
+    else if (state.reviewOpen) overlay = reviewHtml()
     else if (state.run && state.run.pendingScene) overlay = sceneHtml()
     else if (state.run && state.run.pendingChoice) overlay = choiceHtml()
     app.innerHTML = (entering ? html.replace('<div class="screen', '<div data-enter="1" class="screen') : html) + overlay
-    document.body.classList.toggle('modal-open', Boolean(state.homePanel || state.showKits || state.showTracks || state.replay || (state.run && (state.run.pendingScene || state.run.pendingChoice))))
+    document.body.classList.toggle('modal-open', Boolean(state.reviewOpen || state.homePanel || state.showKits || state.showTracks || state.replay || (state.run && (state.run.pendingScene || state.run.pendingChoice))))
     updateMusicMood(state.run)
     scrollAfterRender();
   }
@@ -38563,7 +39109,7 @@ function attrCapFor(run) {
       + '<div class="hero-copy">'
       + '<p class="hero-kicker">云墨入卷 · 重开一世</p>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.56.0 · 2026-11-27</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.57.0 · 2026-11-27</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界 · ' + TOTAL_ENDINGS + ' 个结局 · ' + ACHIEVEMENT_TOTAL + ' 个成就</p>'
       + legacyHtml
       + '</div>'
@@ -39521,12 +40067,18 @@ function aiPortraitFor(run) {
       + '<div class="ending-stats">' + stats + '</div>'
       + '<div class="ending-ach">' + achievements + '</div>'
       + '<div class="ending-actions">'
+      + (run.flags && run.flags.ms && Array.isArray(run.flags.ms.children) && run.flags.ms.children.some(k => (k.age || 0) >= 6)
+        ? '<button class="btn btn-primary" data-action="inherit-child">继承 ' + esc((run.flags.ms.children.find(k => (k.age || 0) >= 6) || {}).name || '孩子') + '</button>'
+        : '')
       + '<button class="btn btn-primary" data-action="inherit">继承模式</button>'
       + '<button class="btn btn-ghost" data-action="restart">重开模式</button>'
       + '<button class="btn btn-ghost" data-action="open-replay">回放这一生</button>'
       + '<button class="btn btn-ghost" data-action="home">开始界面</button>'
       + '</div>'
       + '<p class="ending-note">继承模式会把这些带进下一世：' + esc(legacySummary(legacyFromRun(run))) + '</p>'
+      + (run.flags && run.flags.ms && Array.isArray(run.flags.ms.children) && run.flags.ms.children.length
+        ? '<p class="ending-note">家族：第 ' + (run.flags.ms.family.gen || 1) + ' 代 · 子女 ' + run.flags.ms.children.length + ' 人 · ' + run.flags.ms.children.map(k => esc(k.name) + '（' + k.age + ' 岁）').join('、') + '</p>'
+        : '')
       + '<div class="system-actions"><button class="btn btn-ghost btn-small" data-action="refresh-system">刷新系统</button><button class="btn btn-ghost btn-small" data-action="open-replay">回放系统</button></div>'
       + '</section>';
   }
@@ -39541,7 +40093,7 @@ function aiPortraitFor(run) {
     return '<div class="screen game' + (death ? ' no-advance' : '') + '">'
       + '<header class="game-head"><div class="game-head-row">'
       + '<div class="game-head-left"><span class="topbar-brand" data-world="' + esc(run.worldId) + '">' + esc(world.name.slice(0, 1)) + '</span><div class="game-head-title"><b>' + esc(world.name) + '</b><span>' + esc(stage.label) + ' · RUN ' + String(run.no).padStart(2, '0') + '</span></div>' + (run.legacy ? '<span class="mode-chip">继承</span>' : '') + '</div>'
-      + '<div class="topbar-actions">' + musicControls() + '<button class="icon-btn" data-action="home" aria-label="返回开始界面">⌂</button></div>'
+      + '<div class="topbar-actions"><button class="icon-btn" data-action="review" aria-label="人生回望">回望</button>' + musicControls() + '<button class="icon-btn" data-action="home" aria-label="返回开始界面">⌂</button></div>'
       + '</div>'
       + statsHtml(run)
       + '<div class="age-line"><b>' + run.age + '</b><span>岁 · ' + esc(stage.label) + '</span></div>'
@@ -39843,6 +40395,14 @@ function aiPortraitFor(run) {
     // 余荫可以一代代叠：上一世若本身带着余荫，这一代的加成再抬一档（最多叠到第 4 代）
     const gen = Math.min(4, ((run.flags && Number(run.flags.legacyGen)) || 0) + 1);
     return {
+      heir: (() => {
+        const ms = run.flags && run.flags.ms;
+        if (!ms || !Array.isArray(ms.children) || !ms.children.length) return null;
+        const kid = ms.children.find(item => (item.age || 0) >= 6) || null;
+        if (!kid) return null;
+        return { name: kid.name, int: kid.int || 0, body: kid.body || 0, mood: kid.mood || 0, age: kid.age || 0 };
+      })(),
+      familyGen: (run.flags && run.flags.ms && run.flags.ms.family ? run.flags.ms.family.gen : 1) || 1,
       attr: bestAttr.key,
       label: bestAttr.name,
       amount: 4 + (heroic ? 1 : 0) + Math.min(2, gen - 1),
@@ -39865,6 +40425,20 @@ function aiPortraitFor(run) {
         return null;
       })(),
     };
+  }
+
+  function inheritChild() {
+    const run = state.run;
+    if (!run || !run.ending) return;
+    const legacy = legacyFromRun(run);
+    if (!legacy.heir) return;
+    legacy.childMode = true;
+    state.legacy = legacy;
+    state.run = null;
+    state.view = 'setup';
+    state.draft = newDraft(run.worldId || state.draft.worldId, state.legacy);
+    state.pendingScroll = 'top';
+    render();
   }
 
   function inheritLife() {
@@ -40018,6 +40592,9 @@ function aiPortraitFor(run) {
         }
         break;
       case 'inherit': inheritLife(); break;
+    case 'inherit-child': inheritChild(); break;
+    case 'review': state.reviewRun = state.run; state.reviewOpen = true; render(); break;
+    case 'close-review': state.reviewOpen = false; render(); break;
       case 'start-over': state.legacy = null; startSetup(); break;
       case 'check-update': forceReload(); break;
       case 'restart': restartLife(); break;
