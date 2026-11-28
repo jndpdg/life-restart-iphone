@@ -33807,6 +33807,22 @@ function attrCapFor(run) {
       return 5
     }
 
+    // 接力模式：30 岁的共同决策（两个人必须选同一个才生效）
+    function coopJointChoice(run) {
+      if (!run || !run.flags || !run.flags.coop) return null
+      if (run.age < 30 || run.age > 32 || run.flags.jointDone) return null
+      return {
+        id: 'coop_joint',
+        title: '30 岁 · 共同决策',
+        prompt: '这一年的决定要两个人一起做：两个人点同一个选项才会生效，点不一样就按保守的那个来。',
+        options: [
+          { id: 'joint_bold', label: '一起冒险', desc: '搏一次大的', resolve(next) { next.flags.jointDone = true; return { tone: 'good', text: '你们两个都选了冒险。事后回想，那一步确实走对了。', effects: { wealth: 30, mood: 8, health: -4 } } } },
+          { id: 'joint_steady', label: '一起求稳', desc: '把日子过稳', resolve(next) { next.flags.jointDone = true; return { tone: 'normal', text: '你们两个都选了求稳。这一年过得平淡，但没有翻车。', effects: { wealth: 10, mood: 3 } } } },
+          { id: 'joint_other', label: '各让一步', desc: '折中的方案', resolve(next) { next.flags.jointDone = true; return { tone: 'normal', text: '两个人意见不一致，最后各让一步，选了个谁都不太满意但都能接受的方案。', effects: { mood: 1, int: 1, wealth: 6 } } } },
+        ],
+      }
+    }
+
     function maybeOfferChoice(run) {
       if (!run || !run.alive || run.pendingChoice) return null
       const transferChoice = buildTransferChoice(run)
@@ -33814,6 +33830,8 @@ function attrCapFor(run) {
         run.pendingChoice = transferChoice
         return run.pendingChoice
       }
+      const joint = coopJointChoice(run)
+      if (joint) { run.pendingChoice = pendingFromNode(joint); return run.pendingChoice }
       const stxNode = nextStellarisNode(run)
       if (stxNode) {
         run.pendingChoice = pendingFromNode(stxNode)
@@ -37314,7 +37332,7 @@ function attrCapFor(run) {
         run.causeThisYear = aging.riskCause
       }
 
-      if (run.age >= run.deathAge || run.health <= 0) {
+      if (run.age >= run.deathAge || run.health <= 0 || (run.flags.coopCap && run.age >= run.flags.coopCap)) {
         finishLife(run)
       }
       if (run.alive && !run.pendingChoice && !run.pendingScene) maybeTriggerScene(run, source)
@@ -39431,7 +39449,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.60.0';
+  const APP_VERSION = '1.61.0';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -39488,6 +39506,32 @@ function attrCapFor(run) {
         .catch(() => {});
     } catch (err) {}
   }
+  function leaderboardAdd(run) {
+    if (!run || !run.ending) return
+    if (!Array.isArray(state.record.leaderboard)) state.record.leaderboard = []
+    const mode = state.mode === 'coop' ? '接力' : state.mode === 'duel' ? '挑战' : '单机'
+    state.record.leaderboard.push({
+      mode,
+      name: (state.players && state.players[0]) || '我',
+      world: worldOf(run).name,
+      ending: run.ending.title,
+      score: run.ending.score || 0,
+      age: run.age,
+      at: Date.now(),
+    })
+    state.record.leaderboard.sort((a, b) => b.score - a.score)
+    state.record.leaderboard = state.record.leaderboard.slice(0, 10)
+  }
+
+  function leaderboardHtml() {
+    const list = Array.isArray(state.record.leaderboard) ? state.record.leaderboard : []
+    if (!list.length) return '<p class="panel-note">还没有成绩。走完一生就会进榜。</p>'
+    return '<p class="panel-note">本机前 10 名（按评分）</p>' + list.map((item, i) => '<div class="review-row">'
+      + '<div class="review-age">' + (i + 1) + '</div>'
+      + '<div class="review-body"><p><b>' + esc(String(item.score)) + '</b> · ' + esc(item.ending) + '</p>'
+      + '<p class="panel-note">' + esc(item.mode) + ' · ' + esc(item.world) + ' · ' + esc(item.name) + ' · ' + esc(String(item.age)) + ' 岁</p></div></div>').join('')
+  }
+
   function copyFamilyCard() {
     const text = familyCardText(state.run, state.record)
     const ok = () => { if (typeof showToast === 'function') showToast('家族卡已复制') }
@@ -39868,14 +39912,15 @@ function attrCapFor(run) {
     const panel = state.homePanel;
     if (!panel) return '';
     const bucket = modeRecord(state.record, state.playMode);
-    const titles = { ach: '成就收藏', endings: '结局图鉴', replay: '上一世回放', save: '设置与存档', dynasty: '家族编年史' };
-    const kicks = { ach: 'ACHIEVEMENTS', endings: 'ENDINGS', replay: 'LAST LIFE', save: 'SAVE & SETTINGS', dynasty: 'DYNASTY' };
+    const titles = { ach: '成就收藏', endings: '结局图鉴', replay: '上一世回放', save: '设置与存档', dynasty: '家族编年史', rank: '本机排行榜' };
+    const kicks = { ach: 'ACHIEVEMENTS', endings: 'ENDINGS', replay: 'LAST LIFE', save: 'SAVE & SETTINGS', dynasty: 'DYNASTY', rank: 'RANKING' };
     let body = '';
     if (panel === 'ach') body = achievementsPanelHtml(bucket);
     else if (panel === 'endings') body = endingGalleryHtml(bucket);
     else if (panel === 'replay') body = replayPanelHtml(bucket);
     else if (panel === 'save') body = settingsPanelHtml();
     else if (panel === 'dynasty') body = dynastyHtml(state.record);
+    else if (panel === 'rank') body = leaderboardHtml();
     return '<div class="modal home-modal" role="dialog" aria-modal="true" aria-label="' + titles[panel] + '">'
       + '<section class="home-sheet">'
       + '<div class="home-sheet-head"><div><span class="modal-kicker">' + kicks[panel] + '</span><h2>' + titles[panel] + '</h2></div>'
@@ -39895,6 +39940,7 @@ function attrCapFor(run) {
       ['endings', '结局图鉴', endingCount + ' / ' + TOTAL_ENDINGS],
       ['replay', '回放', hasReplay ? (bucket.replay.age || 0) + ' 岁' : '还没有'],
       ['dynasty', '家族编年史', (state.record.dynasty && state.record.dynasty.gen ? '第 ' + state.record.dynasty.gen + ' 代' : '还没有')],
+      ['rank', '本机排行榜', (state.record.leaderboard && state.record.leaderboard.length ? '最高 ' + state.record.leaderboard[0].score + ' 分' : '还没有')],
       ['save', '设置与存档', state.playMode === 'text' ? '纯文本' : '互动'],
     ];
     return '<div class="home-menu">' + items.map(item =>
@@ -39928,7 +39974,7 @@ function attrCapFor(run) {
       + '<div class="hero-copy">'
       + '<p class="hero-kicker">云墨入卷 · 重开一世</p>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.60.0 · 2026-11-28</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.61.0 · 2026-11-28</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界 · ' + TOTAL_ENDINGS + ' 个结局 · ' + ACHIEVEMENT_TOTAL + ' 个成就</p>'
       + legacyHtml
       + '</div>'
@@ -40996,7 +41042,7 @@ function aiPortraitFor(run) {
     const pending = run && run.pendingChoice;
     if (!pending) return '';
     const isQuest = pending.kind === 'quest';
-    const turnNote = state.mode === 'coop' ? '<p class="turn-note">轮到 <b>' + esc(multiTurnName()) + '</b> 决定</p>' : '';
+    const turnNote = state.mode === 'coop' ? '<p class="turn-note">' + (state.jointPick ? '上一位已经选了，请 <b>' + esc(multiTurnName()) + '</b> 点同一个选项确认' : '轮到 <b>' + esc(multiTurnName()) + '</b> 决定') + '</p>' : '';
     const options = pending.options.map(option => {
       const requirements = choiceRequirementEntries(run, option);
       const available = canChooseOption(run, option);
@@ -41145,6 +41191,18 @@ function aiPortraitFor(run) {
   function chooseOption(optionId) {
     if (!state.run || !state.run.pendingChoice) return;
     stopAuto();
+    const currentName = state.mode === 'coop' ? multiTurnName() : '';
+    if (state.mode === 'coop' && state.run.pendingChoice.id === 'coop_joint') {
+      if (!state.jointPick) {
+        state.jointPick = { id: optionId, by: currentName };
+        if (typeof showToast === 'function') showToast(currentName + ' 已经选了，等另一个人点同一个');
+        render();
+        return;
+      }
+      const first = state.jointPick.id;
+      state.jointPick = null;
+      if (first !== optionId) optionId = 'joint_other';
+    }
     if (state.mode === 'coop') multiAdvanceTurn();
     state.run = resolveChoice(state.run, optionId);
     if (!state.run.alive) finalizeRecord();
@@ -41185,6 +41243,7 @@ function aiPortraitFor(run) {
     };
     state.record = withModeRecord(state.record, mode, nextBucket);
     dynastyAppend(run, state.record);
+    leaderboardAdd(run);
     writeRecord(state.record);
     run._recorded = true;
   }
@@ -41257,7 +41316,7 @@ function aiPortraitFor(run) {
     const legacy = state.legacy;
     state.run = createRun(state.draft.alloc, selectedTalents(), state.draft.worldId, nextNumber, legacy, state.draft.gender, state.storyMode);
     state.run.playMode = mode;
-    if (state.mode === 'coop') multiStartPlayers(state.coopCount || 2)
+    if (state.mode === 'coop') { multiStartPlayers(state.coopCount || 2); state.run.flags.coop = true; state.run.flags.coopCap = 40 }
     {
       const bonus = eraAtBirthBonus(state.run)
       state.run.wealth = Math.max(0, state.run.wealth + bonus.wealth)
