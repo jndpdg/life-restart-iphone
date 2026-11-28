@@ -411,7 +411,11 @@
     .menu-btn span { font-size: 10.5px; opacity: .55; font-variant-numeric: tabular-nums; }
     .menu-btn:active { transform: scale(.985); }
     .home-modal { align-items: center; }
-    .review-row { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+    .minimal-metrics .avatar-stats > *:nth-child(n+5) { display: none; }
+  .minimal-metrics .avatar-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .minimal-metrics .deltas { display: none; }
+  .era-chip { opacity: .82; }
+  .review-row { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
 .home-sheet { width: min(560px, calc(100vw - 22px)); max-height: 86vh; overflow-y: auto; padding: 16px 16px 22px; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); }
     .home-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
     .home-sheet-head h2 { margin: 2px 0 0; font-size: 19px; font-weight: 600; letter-spacing: .02em; }
@@ -33908,6 +33912,7 @@ function attrCapFor(run) {
       next.flags.lastChoiceAge = next.age
       if (/^ms_/.test(String(pending.id || ''))) next.flags.lastChoiceAge = next.age - 2
       next.flags.choicesMade = (next.flags.choicesMade || 0) + 1
+      echoSchedule(next, option, result)
       next.pendingChoice = null
       pushEntry(next, {
         kind: 'event',
@@ -36220,7 +36225,8 @@ function attrCapFor(run) {
 
     function crisisChance(run) {
       const state = worldStateOf(run)
-      const base = 0.09 + (run.challenge || 3) * 0.022 + (state.crisis || 0) - (run.power ? 0.04 : 0)
+      let base = 0.09 + (run.challenge || 3) * 0.022 + (state.crisis || 0) - (run.power ? 0.04 : 0)
+      if (cozyOn()) base *= 0.6
       return clamp(base, 0.04, 0.46)
     }
 
@@ -37107,6 +37113,7 @@ function attrCapFor(run) {
       const years = world.id === 'cultivation' ? cultivationYears(run) : 1
       run.age += years
       run.lastYears = years
+      echoFire(run)
       run.causeThisYear = null
       const stage = stageForRun(run)
       if (stage !== previousStage) {
@@ -38039,8 +38046,9 @@ function attrCapFor(run) {
         if (!item) return
         if (!msLevelFor(stage, age)) { item.active = false; return }
         item.active = true
-        fee += item.fee || 0
+        fee += Math.round((item.fee || 0) * eraFeeMul(run))
       })
+      eraStep(run)
       // 学业积累
       ;['kindergarten', 'primary', 'middle', 'high'].forEach(stage => {
         const item = msSchoolAt(ms, stage)
@@ -38065,7 +38073,7 @@ function attrCapFor(run) {
       const job = JOBS.find(item => item.id === ms.job)
       if (job && age >= 22 && age < 62) {
         const seniority = Math.min(1.6, 1 + Math.max(0, age - 22) * 0.012)
-        const income = Math.round(msSalaryOf(job) * seniority * 0.9)
+        const income = Math.round(msSalaryOf(job) * seniority * 0.9 * eraIncomeMul(run))
         run.wealth = Math.max(-50, run.wealth + income)
         if (run.wealth > run.peakWealth) { run.peakWealth = run.wealth; run.peakWealthAge = age }
         if (job.health && age % 3 === 0) run.health = clamp(run.health + Math.round(job.health / 3), 0, 100)
@@ -38266,6 +38274,163 @@ function attrCapFor(run) {
       return null
     }
     // END MODERN_LOGIC
+
+    // BEGIN DYNASTY_LAYER
+    // ── v1.59.0：家族编年史 / 事件余波 / 舒适节奏 / 极简数值 / 家族卡 / 年代趋势 ──
+    const DYNASTY_ERAS = [
+      { name: '萧条', desc: '街上关了不少店，工资涨得比物价慢。' },
+      { name: '平淡', desc: '日子没什么波澜，一年一年地过。' },
+      { name: '回暖', desc: '招工的多了，饭馆晚上又要排队。' },
+      { name: '景气', desc: '钱开始流动，人人都在谈机会。' },
+      { name: '过热', desc: '什么都贵，什么都在涨，谁也不敢先停。' },
+    ]
+
+    function dynastyRoot(record) {
+      // 引擎段没有 UI 的 state，必须由调用方把 record 传进来
+      if (!record || typeof record !== 'object') return { gen: 0, members: [] }
+      if (!record.dynasty) record.dynasty = { gen: 0, members: [] }
+      if (!Array.isArray(record.dynasty.members)) record.dynasty.members = []
+      return record.dynasty
+    }
+
+    function dynastyAppend(run, record) {
+      if (!run || !run.ending) return
+      const d = dynastyRoot(record)
+      const ms = run.flags && run.flags.ms
+      const gen = (d.gen || 0) + 1
+      d.gen = gen
+      d.members.push({
+        gen,
+        name: (run.flags && run.flags.heirName) || (ms && ms.family && ms.family.surname ? ms.family.surname + '家第' + gen + '代' : '第' + gen + '代'),
+        world: worldOf(run).name,
+        age: run.age,
+        ending: run.ending.title,
+        job: (ms && ms.jobName) || (run.flags && run.flags.job) || '',
+        degree: (ms && ms.degree) || '',
+        score: run.ending.score || 0,
+        epitaph: run.ending.epitaph || '',
+      })
+      if (d.members.length > 60) d.members = d.members.slice(-60)
+    }
+
+    function dynastyHtml(record) {
+      const d = dynastyRoot(record)
+      if (!d.members.length) {
+        return '<p class="panel-note">还没有编年史。走完一生，这里就会记下第一位。</p>'
+      }
+      const rows = d.members.slice().reverse().map(m => '<div class="review-row">'
+        + '<div class="review-age">第 ' + m.gen + ' 代</div>'
+        + '<div class="review-body"><p><b>' + esc(m.name) + '</b> · ' + esc(m.world) + ' · ' + esc(m.ending) + '</p>'
+        + '<p class="panel-note">' + esc(String(m.age)) + ' 岁 · ' + esc(m.job || '—') + (m.degree ? ' · ' + esc(m.degree) : '') + ' · ' + esc(String(m.score)) + ' 分</p>'
+        + (m.epitaph ? '<p class="panel-note">' + esc(m.epitaph) + '</p>' : '')
+        + '</div></div>').join('')
+      return '<p class="panel-note">共 ' + d.members.length + ' 代 · 最新第 ' + d.gen + ' 代</p>' + rows
+    }
+
+    // ── 事件余波：一次抉择在 5–15 年后回响 ────────────────────────────────
+    const ECHO_TEMPLATES = {
+      good: [
+        '你还记得当年「%s」那件事。今天有人找上门来道谢，说当年那句话他一直记着。',
+        '当年「%s」结下的善缘，绕了一圈回来：一个旧识替你说了句话，事情就顺了。',
+        '多年前「%s」的决定，如今开出了一点花——不轰轰烈烈，但确实是你的。',
+      ],
+      bad: [
+        '当年「%s」留下的尾巴，今天找上门来了。你处理完，坐在椅子上发了会儿呆。',
+        '你以为「%s」那件事已经过去了。今天它又翻出来，利息不轻。',
+        '多年前「%s」的选择，如今有人拿来问你一句：你当时到底怎么想的？',
+      ],
+      normal: [
+        '你忽然想起当年「%s」的那个下午。那时你以为只是普通的一天。',
+        '「%s」之后，有些东西悄悄变了。你到今天才发现。',
+      ],
+    }
+
+    function echoSchedule(run, option, result) {
+      if (!run || !option || !result) return
+      if (String(result.text || '').length < 24) return
+      const chance = 0.26 + ((run.flags.ms && run.flags.ms.echoBoost) || 0)
+      if (Math.random() > chance) return
+      const echoes = Array.isArray(run.flags._echoes) ? run.flags._echoes : []
+      if (echoes.length >= 6) return
+      const tone = result.tone === 'good' || result.tone === 'great' || result.tone === 'legend'
+        ? 'good'
+        : (result.tone === 'bad' || result.tone === 'tragic' ? 'bad' : 'normal')
+      echoes.push({ at: run.age + 5 + Math.floor(Math.random() * 11), label: String(option.label || '').slice(0, 12), tone })
+      run.flags._echoes = echoes
+    }
+
+    function echoFire(run) {
+      if (!run || !Array.isArray(run.flags._echoes) || !run.flags._echoes.length) return false
+      const due = run.flags._echoes.filter(e => e.at <= run.age)
+      if (!due.length) return false
+      const echo = due[0]
+      run.flags._echoes = run.flags._echoes.filter(e => e !== echo)
+      const pool = ECHO_TEMPLATES[echo.tone] || ECHO_TEMPLATES.normal
+      const text = pool[Math.floor(Math.random() * pool.length)].replace('%s', echo.label)
+      const effects = echo.tone === 'good'
+        ? { mood: 4, wealth: 6 }
+        : echo.tone === 'bad'
+          ? { mood: -4, health: -2 }
+          : { mood: 1, int: 1 }
+      pushEntry(run, { kind: 'event', age: run.age, tone: echo.tone === 'good' ? 'good' : echo.tone === 'bad' ? 'bad' : 'strange', text: '【余波】' + text, effects })
+      applyEffects(run, effects)
+      return true
+    }
+
+    // ── 舒适节奏 / 极简数值 ─────────────────────────────────────────────
+    function cozyOn() {
+      try { return window.localStorage.getItem('dsh.life-restart.cozy') === '1' } catch { return false }
+    }
+
+    function minimalOn() {
+      try { return window.localStorage.getItem('dsh.life-restart.minimal') === '1' } catch { return false }
+    }
+
+    function autoPlayMs() {
+      return cozyOn() ? Math.round(AUTO_PLAY_MS * 1.7) : AUTO_PLAY_MS
+    }
+
+    // ── 家族卡（可复制） ────────────────────────────────────────────────
+    function familyCardText(run, record) {
+      const d = dynastyRoot(record)
+      const ms = run && run.flags && run.flags.ms
+      const name = (run && run.flags && run.flags.heirName) || (ms && ms.family && ms.family.surname ? ms.family.surname + '家' : '这一代')
+      const lines = [
+        '【人生重开模拟器 · 家族卡】',
+        '第 ' + (d.gen || 1) + ' 代 · ' + name,
+        run ? worldOf(run).name + ' · ' + run.age + ' 岁 · ' + (run.ending ? run.ending.title : '—') : '',
+        run && run.ending ? '评分 ' + run.ending.score + '（' + run.ending.grade.grade + '）' : '',
+        ms && ms.jobName ? '职业：' + ms.jobName + (ms.degree ? ' · ' + ms.degree : '') : '',
+        run && run.ending && run.ending.epitaph ? '墓志铭：' + run.ending.epitaph : '',
+        '家族共 ' + (d.members.length || 1) + ' 代',
+      ].filter(Boolean)
+      return lines.join('\n')
+    }
+
+    // ── 时代趋势 ────────────────────────────────────────────────────────
+    function eraEnsure(run) {
+      if (!run.flags.era) run.flags.era = { level: 2, name: DYNASTY_ERAS[2].name }
+      return run.flags.era
+    }
+
+    function eraStep(run) {
+      const era = eraEnsure(run)
+      const drift = Math.random() < 0.5 ? 0 : (Math.random() < 0.5 ? -1 : 1)
+      era.level = clamp((era.level == null ? 2 : era.level) + drift, 0, 4)
+      era.name = DYNASTY_ERAS[era.level].name
+      return era
+    }
+
+    function eraIncomeMul(run) {
+      const era = eraEnsure(run)
+      return 0.7 + era.level * 0.16
+    }
+
+    function eraFeeMul(run) {
+      const era = eraEnsure(run)
+      return 0.85 + era.level * 0.1
+    }
+    // END DYNASTY_LAYER
 
     // __LOGIC_END__
 (function () {
@@ -39221,7 +39386,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.58.0';
+  const APP_VERSION = '1.59.0';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -39278,6 +39443,32 @@ function attrCapFor(run) {
         .catch(() => {});
     } catch (err) {}
   }
+  function copyFamilyCard() {
+    const text = familyCardText(state.run, state.record)
+    const ok = () => { if (typeof showToast === 'function') showToast('家族卡已复制') }
+    const fallback = () => {
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.setAttribute('readonly', 'readonly')
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        ok()
+      } catch (err) {
+        if (typeof showToast === 'function') showToast('复制失败，长按文字手动复制')
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok).catch(fallback)
+    } else {
+      fallback()
+    }
+  }
+
   // 人生回望：把这一世的关键节点挑出来（抉择 / 里程碑 / 转折 / 死亡）
   function reviewEntries(run) {
     if (!run || !Array.isArray(run.log)) return []
@@ -39330,6 +39521,7 @@ function attrCapFor(run) {
     else if (state.run && state.run.pendingScene) overlay = sceneHtml()
     else if (state.run && state.run.pendingChoice) overlay = choiceHtml()
     app.innerHTML = (entering ? html.replace('<div class="screen', '<div data-enter="1" class="screen') : html) + overlay
+    document.body.classList.toggle('minimal-metrics', minimalOn())
     document.body.classList.toggle('modal-open', Boolean(state.reviewOpen || state.homePanel || state.showKits || state.showTracks || state.replay || (state.run && (state.run.pendingScene || state.run.pendingChoice))))
     updateMusicMood(state.run)
     scrollAfterRender();
@@ -39431,6 +39623,10 @@ function attrCapFor(run) {
       + '<p class="panel-note">结局、成就与回放按模式独立记录。</p>'
       + '<p class="panel-note">记录只存在这台设备的浏览器里（换端口、清缓存、无痕模式都会丢）。长按复制下面的文本可留底，换设备后粘回来点「导入」。</p>'
       + '<textarea class="save-box" id="save-box" spellcheck="false" autocomplete="off" placeholder="点「导出」在这里生成存档文本；或粘贴存档文本后点「导入」"></textarea>'
+      + '<div class="play-mode-switch" role="group" aria-label="阅读体验">'
+      + '<button data-action="set-cozy" data-active="' + (cozyOn() ? 'true' : 'false') + '"><b>舒适节奏</b><span>自动播放更慢，危机少一些</span></button>'
+      + '<button data-action="set-minimal" data-active="' + (minimalOn() ? 'true' : 'false') + '"><b>简洁数值</b><span>只留四个关键数字，其余收进回望</span></button>'
+      + '</div>'
       + '<div class="save-actions"><button class="btn btn-ghost btn-small" data-action="export-save">导出</button><button class="btn btn-ghost btn-small" data-action="import-save">导入</button></div>';
   }
 
@@ -39438,13 +39634,14 @@ function attrCapFor(run) {
     const panel = state.homePanel;
     if (!panel) return '';
     const bucket = modeRecord(state.record, state.playMode);
-    const titles = { ach: '成就收藏', endings: '结局图鉴', replay: '上一世回放', save: '设置与存档' };
-    const kicks = { ach: 'ACHIEVEMENTS', endings: 'ENDINGS', replay: 'LAST LIFE', save: 'SAVE & SETTINGS' };
+    const titles = { ach: '成就收藏', endings: '结局图鉴', replay: '上一世回放', save: '设置与存档', dynasty: '家族编年史' };
+    const kicks = { ach: 'ACHIEVEMENTS', endings: 'ENDINGS', replay: 'LAST LIFE', save: 'SAVE & SETTINGS', dynasty: 'DYNASTY' };
     let body = '';
     if (panel === 'ach') body = achievementsPanelHtml(bucket);
     else if (panel === 'endings') body = endingGalleryHtml(bucket);
     else if (panel === 'replay') body = replayPanelHtml(bucket);
     else if (panel === 'save') body = settingsPanelHtml();
+    else if (panel === 'dynasty') body = dynastyHtml(state.record);
     return '<div class="modal home-modal" role="dialog" aria-modal="true" aria-label="' + titles[panel] + '">'
       + '<section class="home-sheet">'
       + '<div class="home-sheet-head"><div><span class="modal-kicker">' + kicks[panel] + '</span><h2>' + titles[panel] + '</h2></div>'
@@ -39454,6 +39651,7 @@ function attrCapFor(run) {
   }
 
   function homeMenuHtml(bucket) {
+    // 家族编年史入口在菜单里单独一行（见下方 dynastyBtn）
     const unlockedAch = new Set(bucket.unlockedAchievements || []);
     const achCount = ALL_ACHIEVEMENTS.filter(item => unlockedAch.has(item.id)).length;
     const endingCount = Array.isArray(bucket.unlocked) ? bucket.unlocked.length : 0;
@@ -39462,6 +39660,7 @@ function attrCapFor(run) {
       ['ach', '成就', achCount + ' / ' + ACHIEVEMENT_TOTAL],
       ['endings', '结局图鉴', endingCount + ' / ' + TOTAL_ENDINGS],
       ['replay', '回放', hasReplay ? (bucket.replay.age || 0) + ' 岁' : '还没有'],
+      ['dynasty', '家族编年史', (state.record.dynasty && state.record.dynasty.gen ? '第 ' + state.record.dynasty.gen + ' 代' : '还没有')],
       ['save', '设置与存档', state.playMode === 'text' ? '纯文本' : '互动'],
     ];
     return '<div class="home-menu">' + items.map(item =>
@@ -39482,7 +39681,7 @@ function attrCapFor(run) {
       + '<div class="hero-copy">'
       + '<p class="hero-kicker">云墨入卷 · 重开一世</p>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.58.0 · 2026-11-28</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.59.0 · 2026-11-28</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界 · ' + TOTAL_ENDINGS + ' 个结局 · ' + ACHIEVEMENT_TOTAL + ' 个成就</p>'
       + legacyHtml
       + '</div>'
@@ -39621,6 +39820,9 @@ const AI_AVATARS = {
     'art/avatars/modern-male-2.webp',
     'art/avatars/modern-male-3.webp',
     'art/avatars/modern-male-4.webp',
+    'art/avatars/modern-male-5.webp',
+    'art/avatars/modern-male-6.webp',
+    'art/avatars/modern-male-7.webp',
   ],
   'modern-male-teen': [
     'art/avatars/modern-male-teen-1.webp',
@@ -39637,6 +39839,10 @@ const AI_AVATARS = {
     'art/avatars/modern-female-2.webp',
     'art/avatars/modern-female-3.webp',
     'art/avatars/modern-female-4.webp',
+    'art/avatars/modern-female-5.webp',
+    'art/avatars/modern-female-6.webp',
+    'art/avatars/modern-female-7.webp',
+    'art/avatars/modern-female-8.webp',
   ],
   'modern-female-teen': [
     'art/avatars/modern-female-teen-1.webp',
@@ -39653,6 +39859,9 @@ const AI_AVATARS = {
     'art/avatars/cultivation-male-2.webp',
     'art/avatars/cultivation-male-3.webp',
     'art/avatars/cultivation-male-4.webp',
+    'art/avatars/cultivation-male-5.webp',
+    'art/avatars/cultivation-male-6.webp',
+    'art/avatars/cultivation-male-7.webp',
   ],
   'cultivation-male-teen': [
     'art/avatars/cultivation-male-teen-1.webp',
@@ -39669,6 +39878,10 @@ const AI_AVATARS = {
     'art/avatars/cultivation-female-2.webp',
     'art/avatars/cultivation-female-3.webp',
     'art/avatars/cultivation-female-4.webp',
+    'art/avatars/cultivation-female-5.webp',
+    'art/avatars/cultivation-female-6.webp',
+    'art/avatars/cultivation-female-7.webp',
+    'art/avatars/cultivation-female-8.webp',
   ],
   'cultivation-female-teen': [
     'art/avatars/cultivation-female-teen-1.webp',
@@ -39685,6 +39898,9 @@ const AI_AVATARS = {
     'art/avatars/wasteland-male-2.webp',
     'art/avatars/wasteland-male-3.webp',
     'art/avatars/wasteland-male-4.webp',
+    'art/avatars/wasteland-male-5.webp',
+    'art/avatars/wasteland-male-6.webp',
+    'art/avatars/wasteland-male-7.webp',
   ],
   'wasteland-male-teen': [
     'art/avatars/wasteland-male-teen-1.webp',
@@ -39701,6 +39917,10 @@ const AI_AVATARS = {
     'art/avatars/wasteland-female-2.webp',
     'art/avatars/wasteland-female-3.webp',
     'art/avatars/wasteland-female-4.webp',
+    'art/avatars/wasteland-female-5.webp',
+    'art/avatars/wasteland-female-6.webp',
+    'art/avatars/wasteland-female-7.webp',
+    'art/avatars/wasteland-female-8.webp',
   ],
   'wasteland-female-teen': [
     'art/avatars/wasteland-female-teen-1.webp',
@@ -39717,6 +39937,9 @@ const AI_AVATARS = {
     'art/avatars/magic-male-2.webp',
     'art/avatars/magic-male-3.webp',
     'art/avatars/magic-male-4.webp',
+    'art/avatars/magic-male-5.webp',
+    'art/avatars/magic-male-6.webp',
+    'art/avatars/magic-male-7.webp',
   ],
   'magic-male-teen': [
     'art/avatars/magic-male-teen-1.webp',
@@ -39733,6 +39956,10 @@ const AI_AVATARS = {
     'art/avatars/magic-female-2.webp',
     'art/avatars/magic-female-3.webp',
     'art/avatars/magic-female-4.webp',
+    'art/avatars/magic-female-5.webp',
+    'art/avatars/magic-female-6.webp',
+    'art/avatars/magic-female-7.webp',
+    'art/avatars/magic-female-8.webp',
   ],
   'magic-female-teen': [
     'art/avatars/magic-female-teen-1.webp',
@@ -39749,6 +39976,9 @@ const AI_AVATARS = {
     'art/avatars/cyber-male-2.webp',
     'art/avatars/cyber-male-3.webp',
     'art/avatars/cyber-male-4.webp',
+    'art/avatars/cyber-male-5.webp',
+    'art/avatars/cyber-male-6.webp',
+    'art/avatars/cyber-male-7.webp',
   ],
   'cyber-male-teen': [
     'art/avatars/cyber-male-teen-1.webp',
@@ -39765,6 +39995,10 @@ const AI_AVATARS = {
     'art/avatars/cyber-female-2.webp',
     'art/avatars/cyber-female-3.webp',
     'art/avatars/cyber-female-4.webp',
+    'art/avatars/cyber-female-5.webp',
+    'art/avatars/cyber-female-6.webp',
+    'art/avatars/cyber-female-7.webp',
+    'art/avatars/cyber-female-8.webp',
   ],
   'cyber-female-teen': [
     'art/avatars/cyber-female-teen-1.webp',
@@ -39781,6 +40015,9 @@ const AI_AVATARS = {
     'art/avatars/starship-male-2.webp',
     'art/avatars/starship-male-3.webp',
     'art/avatars/starship-male-4.webp',
+    'art/avatars/starship-male-5.webp',
+    'art/avatars/starship-male-6.webp',
+    'art/avatars/starship-male-7.webp',
   ],
   'starship-male-teen': [
     'art/avatars/starship-male-teen-1.webp',
@@ -39797,6 +40034,10 @@ const AI_AVATARS = {
     'art/avatars/starship-female-2.webp',
     'art/avatars/starship-female-3.webp',
     'art/avatars/starship-female-4.webp',
+    'art/avatars/starship-female-5.webp',
+    'art/avatars/starship-female-6.webp',
+    'art/avatars/starship-female-7.webp',
+    'art/avatars/starship-female-8.webp',
   ],
   'starship-female-teen': [
     'art/avatars/starship-female-teen-1.webp',
@@ -39813,6 +40054,9 @@ const AI_AVATARS = {
     'art/avatars/jianghu-male-2.webp',
     'art/avatars/jianghu-male-3.webp',
     'art/avatars/jianghu-male-4.webp',
+    'art/avatars/jianghu-male-5.webp',
+    'art/avatars/jianghu-male-6.webp',
+    'art/avatars/jianghu-male-7.webp',
   ],
   'jianghu-male-teen': [
     'art/avatars/jianghu-male-teen-1.webp',
@@ -39829,6 +40073,10 @@ const AI_AVATARS = {
     'art/avatars/jianghu-female-2.webp',
     'art/avatars/jianghu-female-3.webp',
     'art/avatars/jianghu-female-4.webp',
+    'art/avatars/jianghu-female-5.webp',
+    'art/avatars/jianghu-female-6.webp',
+    'art/avatars/jianghu-female-7.webp',
+    'art/avatars/jianghu-female-8.webp',
   ],
   'jianghu-female-teen': [
     'art/avatars/jianghu-female-teen-1.webp',
@@ -39884,7 +40132,9 @@ function aiPortraitFor(run) {
   }
   return pickAiAvatar(run, key + '-' + stage)
 }
+
 // END AI_AVATARS
+
 
     function realmText(run) {
       if (run.worldId === 'cultivation') return run.flags.realmName || '凡人';
@@ -40446,7 +40696,9 @@ function aiPortraitFor(run) {
       + '<button class="btn btn-primary" data-action="inherit">继承模式</button>'
       + '<button class="btn btn-ghost" data-action="restart">重开模式</button>'
       + '<button class="btn btn-ghost" data-action="open-replay">回放这一生</button>'
+      + '<button class="btn btn-ghost" data-action="copy-card">复制家族卡</button>'
       + '<button class="btn btn-ghost" data-action="home">开始界面</button>'
+      + '<button class="btn btn-ghost" data-action="open-dynasty">家族编年史</button>'
       + '</div>'
       + '<p class="ending-note">继承模式会把这些带进下一世：' + esc(legacySummary(legacyFromRun(run))) + '</p>'
       + (run.flags && run.flags.ms && Array.isArray(run.flags.ms.children) && run.flags.ms.children.length
@@ -40476,6 +40728,7 @@ function aiPortraitFor(run) {
       + '<span class="run-chip">劫难 ★' + (run.challenge || 3) + '</span>'
       + '<span class="run-chip">目标 ' + (run.objectives || []).filter(item => item.done).length + ' / ' + ((run.objectives || []).length || 3) + '</span>'
       + '<span class="run-chip world-state-chip" data-tone="' + esc(run.worldState ? run.worldState.tone : 'normal') + '">世界：' + esc(run.worldState ? run.worldState.name : '风平浪静') + '</span>'
+      + '<span class="run-chip era-chip">年代：' + esc((run.flags && run.flags.era) ? run.flags.era.name : '平淡') + '</span>'
       + '<span class="run-chip">性别：' + esc(run.genderLabel || '未知') + '</span>'
       + '<span class="run-chip">' + esc(world.dossier[0]) + '：' + esc(educationLabel(run)) + '</span><span class="run-chip">' + esc(world.dossier[1]) + '：' + esc(jobLabel(run)) + '</span>'
       + '</div>'
@@ -40619,7 +40872,7 @@ function aiPortraitFor(run) {
         return;
       }
       advanceLife();
-    }, AUTO_PLAY_MS);
+    }, autoPlayMs());
   }
 
   function advanceLife(focusId) {
@@ -40677,6 +40930,7 @@ function aiPortraitFor(run) {
       replay: buildReplaySnapshot(run),
     };
     state.record = withModeRecord(state.record, mode, nextBucket);
+    dynastyAppend(run, state.record);
     writeRecord(state.record);
     run._recorded = true;
   }
@@ -40967,6 +41221,10 @@ function aiPortraitFor(run) {
       case 'inherit': inheritLife(); break;
     case 'inherit-child': inheritChild(); break;
     case 'review': state.reviewRun = state.run; state.reviewOpen = true; render(); break;
+    case 'open-dynasty': state.homePanel = 'dynasty'; render(); break;
+    case 'set-cozy': try { window.localStorage.setItem('dsh.life-restart.cozy', cozyOn() ? '0' : '1') } catch {} render(); break;
+    case 'set-minimal': try { window.localStorage.setItem('dsh.life-restart.minimal', minimalOn() ? '0' : '1') } catch {} render(); break;
+    case 'copy-card': copyFamilyCard(); break;
     case 'close-review': state.reviewOpen = false; render(); break;
       case 'start-over': state.legacy = null; startSetup(); break;
       case 'check-update': forceReload(); break;
