@@ -418,6 +418,23 @@
   .minimal-metrics .avatar-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .minimal-metrics .deltas { display: none; }
   .era-chip { opacity: .82; }
+  .mode-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; width: min(560px, calc(100vw - 22px)); margin: 14px auto 10px; }
+  .mode-bar button { display: flex; flex-direction: column; gap: 2px; padding: 9px 8px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; }
+  .mode-bar button b { font-size: 11.5px; }
+  .mode-bar button span { font-size: 8.5px; opacity: .55; line-height: 1.35; }
+  .mode-bar button[data-active="true"] { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, transparent); }
+  .coop-count { display: flex; align-items: center; gap: 6px; width: min(560px, calc(100vw - 22px)); margin: 0 auto 8px; font-size: 10px; color: var(--muted); }
+  .coop-count button { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 10px; }
+  .coop-count button[data-active="true"] { border-color: var(--brand); color: var(--brand); }
+  .turn-note { margin: 4px 0 0; font-size: 10px; color: var(--muted); }
+  .turn-note b { color: var(--brand); }
+  .multi-summary { margin: 10px 0 0; padding: 10px; border: 1px dashed var(--line); border-radius: 12px; }
+  .multi-summary b { font-size: 11px; }
+  .multi-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .multi-chip { font-size: 9px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); }
+  .challenge-card { width: min(560px, calc(100vw - 22px)); margin: 0 auto 10px; padding: 10px 12px; border: 1px solid var(--brand); border-radius: 12px; }
+  .challenge-card p { margin: 4px 0 0; font-size: 11px; }
+  .challenge-actions { display: flex; gap: 8px; margin-top: 8px; }
   .review-row { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
 .home-sheet { width: min(560px, calc(100vw - 22px)); max-height: 86vh; overflow-y: auto; padding: 16px 16px 22px; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); }
     .home-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
@@ -38366,6 +38383,12 @@ function attrCapFor(run) {
       ],
     }
 
+    const ECHO_PEOPLE = ['老陈', '阿岚', '许老师', '隔壁的张姨', '当年的同事', '一个姓周的旧识', '巷口修车的', '高中同桌']
+
+    function echoPickPerson() {
+      return ECHO_PEOPLE[Math.floor(Math.random() * ECHO_PEOPLE.length)]
+    }
+
     function echoSchedule(run, option, result) {
       if (!run || !option || !result) return
       if (String(result.text || '').length < 24) return
@@ -38376,7 +38399,7 @@ function attrCapFor(run) {
       const tone = result.tone === 'good' || result.tone === 'great' || result.tone === 'legend'
         ? 'good'
         : (result.tone === 'bad' || result.tone === 'tragic' ? 'bad' : 'normal')
-      echoes.push({ at: run.age + 5 + Math.floor(Math.random() * 11), label: String(option.label || '').slice(0, 12), tone })
+      echoes.push({ at: run.age + 5 + Math.floor(Math.random() * 11), label: String(option.label || '').slice(0, 12), tone, person: echoPickPerson() })
       run.flags._echoes = echoes
     }
 
@@ -38393,7 +38416,8 @@ function attrCapFor(run) {
         : echo.tone === 'bad'
           ? { mood: -4, health: -2 }
           : { mood: 1, int: 1 }
-      pushEntry(run, { kind: 'event', age: run.age, tone: echo.tone === 'good' ? 'good' : echo.tone === 'bad' ? 'bad' : 'strange', text: '【余波】' + text, effects })
+      const who = echo.person || '一个故人'
+      pushEntry(run, { kind: 'event', age: run.age, tone: echo.tone === 'good' ? 'good' : echo.tone === 'bad' ? 'bad' : 'strange', text: '【余波 · ' + who + '】' + text, effects })
       applyEffects(run, effects)
       return true
     }
@@ -39407,7 +39431,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.59.0';
+  const APP_VERSION = '1.60.0';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -39523,6 +39547,195 @@ function attrCapFor(run) {
       }).join('')
       : '<p class="panel-note">还没有可以回望的节点。</p>'
     return head + '<div class="home-sheet-body">' + body + '</div></section></div>'
+  }
+
+    // BEGIN MULTI_LAYER
+    // ── v1.60.0：单机 / 联机（本地接力 + 同起点挑战） ─────────────────────
+    const MULTI_DEFAULT_NAMES = ['玩家一', '玩家二', '玩家三', '玩家四']
+
+    function multiActive() {
+      return state.mode === 'coop' || state.mode === 'duel'
+    }
+
+    function multiTurnName() {
+      const players = state.players || []
+      if (!players.length) return ''
+      return players[state.turn % players.length] || players[0]
+    }
+
+    function multiStartPlayers(count) {
+      state.players = MULTI_DEFAULT_NAMES.slice(0, count)
+      state.turn = 0
+      state.playerPicks = state.players.map(() => 0)
+      state.mode = 'coop'
+    }
+
+    function multiAdvanceTurn() {
+      const players = state.players || []
+      if (!players.length) return
+      const i = state.turn % players.length
+      if (!Array.isArray(state.playerPicks)) state.playerPicks = players.map(() => 0)
+      state.playerPicks[i] = (state.playerPicks[i] || 0) + 1
+      state.turn = (i + 1) % players.length
+    }
+
+    function multiSummaryHtml() {
+      const players = state.players || []
+      if (!players.length) return ''
+      const picks = state.playerPicks || []
+      const rows = players.map((name, i) => '<span class="multi-chip">' + esc(name) + ' · ' + (picks[i] || 0) + ' 次抉择</span>').join('')
+      return '<div class="multi-summary"><b>这一世由 ' + players.length + ' 个人轮流决定</b><div class="multi-chips">' + rows + '</div></div>'
+    }
+
+    // ── 同起点挑战：把起点与成绩编码进链接，不需要服务器 ────────────────
+    function challengeEncode(payload) {
+      try {
+        const json = JSON.stringify(payload)
+        return btoa(unescape(encodeURIComponent(json))).replace(/=+$/, '')
+      } catch (err) {
+        return ''
+      }
+    }
+
+    function challengeDecode(code) {
+      try {
+        const json = decodeURIComponent(escape(atob(code)))
+        const data = JSON.parse(json)
+        if (!data || !data.w) return null
+        return data
+      } catch (err) {
+        return null
+      }
+    }
+
+    function challengeUrl(run) {
+      const code = challengeEncode({
+        w: run.worldId,
+        a: state.draft.alloc,
+        t: selectedTalents().map(item => item.id),
+        g: state.draft.gender,
+        s: run.ending ? run.ending.score : 0,
+        n: (state.players && state.players[0]) || '某个人',
+      })
+      const base = location.origin + location.pathname
+      return base + '?c=' + code
+    }
+
+    function challengeCardHtml() {
+      const ch = state.challenge
+      if (!ch) return ''
+      return '<div class="challenge-card">'
+        + '<span class="modal-kicker">CHALLENGE</span>'
+        + '<p><b>' + esc(ch.n || '朋友') + '</b> 从同一个起点出发，拿了 <b>' + (ch.s || 0) + '</b> 分。</p>'
+        + '<div class="challenge-actions"><button class="btn btn-primary btn-small" data-action="accept-challenge">接受挑战</button>'
+        + '<button class="btn btn-ghost btn-small" data-action="dismiss-challenge">先不了</button></div></div>'
+    }
+
+    // ── 家族卡：可保存的 SVG（不依赖 canvas） ───────────────────────────
+    function familyCardSvg(run) {
+      const d = dynastyRoot(state.record)
+      const ms = run && run.flags && run.flags.ms
+      const name = (run && run.flags && run.flags.heirName) || (ms && ms.family && ms.family.surname ? ms.family.surname + '家' : '这一代')
+      const lines = [
+        ['人生重开模拟器', 15],
+        ['家族卡 · 第 ' + (d.gen || 1) + ' 代', 12],
+        [name, 11],
+        [run ? worldOf(run).name + ' · ' + run.age + ' 岁' : '', 10],
+        [run && run.ending ? run.ending.title : '', 12],
+        [run && run.ending ? '评分 ' + run.ending.score + ' · ' + run.ending.grade.grade : '', 10],
+        [ms && ms.jobName ? '职业 ' + ms.jobName : '', 9],
+        [run && run.ending && run.ending.epitaph ? '「' + run.ending.epitaph + '」' : '', 9],
+        ['家族共 ' + (d.members.length || 1) + ' 代', 9],
+      ].filter(item => item[0])
+      const esc2 = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      const body = lines.map((item, i) => '<text x="40" y="' + (78 + i * 38) + '" font-size="' + item[1] + '" fill="#2c2a26" font-family="serif">' + esc2(item[0]) + '</text>').join('')
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="360" height="520" viewBox="0 0 360 520">'
+        + '<rect width="360" height="520" fill="#f3eee2"/>'
+        + '<rect x="12" y="12" width="336" height="496" fill="none" stroke="#b09a72" stroke-width="1.5"/>'
+        + '<text x="40" y="46" font-size="9" fill="#8a7a5c" font-family="serif" letter-spacing="3">A LIFE, RESTARTED</text>'
+        + body
+        + '<text x="40" y="486" font-size="8" fill="#9a8a6c" font-family="serif">life-restart · ' + new Date().toISOString().slice(0, 10) + '</text>'
+        + '</svg>'
+    }
+
+    function downloadFamilyCard() {
+      const svg = familyCardSvg(state.run)
+      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'life-restart-family-card.svg'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 3000)
+      if (typeof showToast === 'function') showToast('家族卡已保存')
+    }
+
+    // ── 年代 × 家族：出生那年的年景影响起点 ─────────────────────────────
+    function eraAtBirthBonus(run) {
+      const era = eraEnsure(run)
+      const table = {
+        0: { wealth: -6, health: -4, mood: -4, text: '那年正赶上萧条，家里连奶粉都要算计。' },
+        1: { wealth: 0, health: 0, mood: 0, text: '那年世道平平，日子不好也不坏。' },
+        2: { wealth: 4, health: 1, mood: 2, text: '那年街上新开了几家店，父母说日子在往好里走。' },
+        3: { wealth: 8, health: 2, mood: 3, text: '那年正景气，家里换了一台新电视。' },
+        4: { wealth: 6, health: -2, mood: 1, text: '那年什么都贵，父母总在算账，但机会也多。' },
+      }
+      return table[era.level] || table[1]
+    }
+
+    // ── 故人记忆：余波里会带一个具体的人，多年后还会再来一次 ────────────
+    const ECHO_PEOPLE = ['老陈', '阿岚', '许老师', '隔壁的张姨', '当年的同事', '一个姓周的旧识', '巷口修车的', '高中同桌']
+
+    function echoPickPerson() {
+      return ECHO_PEOPLE[Math.floor(Math.random() * ECHO_PEOPLE.length)]
+    }
+    // END MULTI_LAYER
+
+
+  function applyChallenge() {
+    const ch = state.challenge
+    if (!ch) return
+    const worldId = ch.w || 'modern'
+    const world = WORLD_BY_ID[worldId] || WORLDS[0]
+    state.mode = 'duel'
+    state.draft = newDraft(worldId, null)
+    if (ch.a) Object.keys(ch.a).forEach(k => { if (k in state.draft.alloc) state.draft.alloc[k] = Number(ch.a[k]) || 0 })
+    if (ch.g) state.draft.gender = ch.g
+    const ids = Array.isArray(ch.t) ? ch.t : []
+    const picked = ids.map(id => (world.talents || []).find(item => item.id === id)).filter(Boolean).slice(0, 5)
+    if (picked.length === 5) {
+      state.draft.choices = picked
+      state.draft.selectedIds = picked.map(item => item.id)
+    }
+    state.view = 'setup'
+    state.pendingScroll = 'top'
+    render()
+  }
+
+  function copyText(text, okMsg) {
+    const ok = () => { if (typeof showToast === 'function') showToast(okMsg) }
+    const fallback = () => {
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        ok()
+      } catch (err) { if (typeof showToast === 'function') showToast('复制失败，请长按文字手动复制') }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok).catch(fallback)
+    else fallback()
+  }
+
+  function copyChallengeLink() {
+    if (!state.run) { if (typeof showToast === 'function') showToast('先走完一生再生成挑战'); return }
+    copyText(challengeUrl(state.run), '挑战链接已复制，发给朋友吧')
   }
 
   function render() {
@@ -39696,13 +39909,26 @@ function attrCapFor(run) {
       ? '<div class="legacy-note">继承待用 · ' + esc(legacySummary(state.legacy)) + ' <button type="button" class="legacy-clear" data-action="clear-legacy">改成从零</button></div>'
       : '';
 
+    const modeBar = '<div class="mode-bar" role="group" aria-label="游戏模式">'
+      + '<button data-action="set-game-mode" data-game-mode="solo" data-active="' + ((state.mode || 'solo') === 'solo' ? 'true' : 'false') + '"><b>单机版</b><span>一个人，慢慢过完一生</span></button>'
+      + '<button data-action="set-game-mode" data-game-mode="coop" data-active="' + (state.mode === 'coop' ? 'true' : 'false') + '"><b>联机 · 接力</b><span>2–4 人轮流替同一个人做选择</span></button>'
+      + '<button data-action="set-game-mode" data-game-mode="duel" data-active="' + (state.mode === 'duel' ? 'true' : 'false') + '"><b>联机 · 挑战</b><span>同起点，比谁走得更远</span></button>'
+      + '</div>'
+      + (state.mode === 'coop'
+        ? '<div class="coop-count"><span>人数</span>'
+          + [2, 3, 4].map(n => '<button data-action="set-coop-count" data-count="' + n + '" data-active="' + ((state.coopCount || 2) === n ? 'true' : 'false') + '">' + n + ' 人</button>').join('')
+          + '</div>'
+        : '')
+      + challengeCardHtml()
+
     return '<div class="screen no-bottom">'
+      + modeBar
       + '<header class="hero">'
       + '<div class="hero-top"><div class="eyebrow">LIFE RESTART · 山水一程</div>' + musicControls() + '</div>'
       + '<div class="hero-copy">'
       + '<p class="hero-kicker">云墨入卷 · 重开一世</p>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.59.0 · 2026-11-28</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.60.0 · 2026-11-28</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界 · ' + TOTAL_ENDINGS + ' 个结局 · ' + ACHIEVEMENT_TOTAL + ' 个成就</p>'
       + legacyHtml
       + '</div>'
@@ -40153,6 +40379,7 @@ function aiPortraitFor(run) {
   }
   return pickAiAvatar(run, key + '-' + stage)
 }
+
 
 // END AI_AVATARS
 
@@ -40709,6 +40936,8 @@ function aiPortraitFor(run) {
       + (run.flags.careerSport ? '<p class="ending-desc career-line">' + esc(careerSummaryLine(run)) + '</p>' : '')
       + '<div class="grade-line"><span class="grade-badge" data-grade="' + esc(grade.grade) + '">' + esc(grade.grade) + '</span><strong>' + esc(grade.label) + '</strong><span class="grade-cause">终局：' + esc(run.cause) + '</span></div>'
       + '<div class="ending-stats">' + stats + '</div>'
+      + (state.mode === 'coop' ? multiSummaryHtml() : '')
+      + (state.challenge ? '<div class="challenge-card"><span class="modal-kicker">CHALLENGE RESULT</span><p>' + esc(state.challenge.n || '对手') + ' 同起点拿了 <b>' + (state.challenge.s || 0) + '</b> 分，你 <b>' + (ending.score || 0) + '</b> 分 —— ' + ((ending.score || 0) >= (state.challenge.s || 0) ? '<b>你赢了</b>' : '这次差一点') + '。</p></div>' : '')
       + '<div class="ending-ach">' + achievements + '</div>'
       + '<div class="ending-actions">'
       + (run.flags && run.flags.ms && Array.isArray(run.flags.ms.children) && run.flags.ms.children.some(k => (k.age || 0) >= 6)
@@ -40718,6 +40947,8 @@ function aiPortraitFor(run) {
       + '<button class="btn btn-ghost" data-action="restart">重开模式</button>'
       + '<button class="btn btn-ghost" data-action="open-replay">回放这一生</button>'
       + '<button class="btn btn-ghost" data-action="copy-card">复制家族卡</button>'
+      + '<button class="btn btn-ghost" data-action="save-card">保存家族卡图片</button>'
+      + '<button class="btn btn-ghost" data-action="copy-challenge">复制挑战链接</button>'
       + '<button class="btn btn-ghost" data-action="home">开始界面</button>'
       + '<button class="btn btn-ghost" data-action="open-dynasty">家族编年史</button>'
       + '</div>'
@@ -40765,6 +40996,7 @@ function aiPortraitFor(run) {
     const pending = run && run.pendingChoice;
     if (!pending) return '';
     const isQuest = pending.kind === 'quest';
+    const turnNote = state.mode === 'coop' ? '<p class="turn-note">轮到 <b>' + esc(multiTurnName()) + '</b> 决定</p>' : '';
     const options = pending.options.map(option => {
       const requirements = choiceRequirementEntries(run, option);
       const available = canChooseOption(run, option);
@@ -40784,7 +41016,7 @@ function aiPortraitFor(run) {
       : '';
     return '<div class="modal choice-modal" role="presentation">'
       + '<section class="choice-sheet" data-kind="' + (isQuest ? 'quest' : 'choice') + '" role="dialog" aria-modal="true" aria-label="' + esc(pending.title) + '">'
-      + '<div class="choice-head"><div><span class="choice-kicker">' + (isQuest ? 'QUEST · ' : 'CHOICE · ') + run.age + ' 岁</span><h2>' + esc(pending.title) + '</h2><p>' + esc(pending.prompt) + '</p></div><span class="mode-chip">' + (isQuest ? '任务委托' : '命运岔路') + '</span></div>'
+      + turnNote + '<div class="choice-head"><div><span class="choice-kicker">' + (isQuest ? 'QUEST · ' : 'CHOICE · ') + run.age + ' 岁</span><h2>' + esc(pending.title) + '</h2><p>' + esc(pending.prompt) + '</p></div><span class="mode-chip">' + (isQuest ? '任务委托' : '命运岔路') + '</span></div>'
       + toolbar
       + '<div class="choice-options">' + options + '</div>'
       + '<p class="choice-note">' + (isQuest ? '任务有成功与失败两种结果。刷新会换一批任务，但不会增加年份。' : '选择会立刻改变这一生。灰掉的项目代表当前属性或资源还不够。') + '</p>'
@@ -40913,6 +41145,7 @@ function aiPortraitFor(run) {
   function chooseOption(optionId) {
     if (!state.run || !state.run.pendingChoice) return;
     stopAuto();
+    if (state.mode === 'coop') multiAdvanceTurn();
     state.run = resolveChoice(state.run, optionId);
     if (!state.run.alive) finalizeRecord();
     state.pendingScroll = 'bottom';
@@ -41024,6 +41257,14 @@ function aiPortraitFor(run) {
     const legacy = state.legacy;
     state.run = createRun(state.draft.alloc, selectedTalents(), state.draft.worldId, nextNumber, legacy, state.draft.gender, state.storyMode);
     state.run.playMode = mode;
+    if (state.mode === 'coop') multiStartPlayers(state.coopCount || 2)
+    {
+      const bonus = eraAtBirthBonus(state.run)
+      state.run.wealth = Math.max(0, state.run.wealth + bonus.wealth)
+      state.run.health = clamp(state.run.health + bonus.health, 1, 100)
+      state.run.mood = clamp(state.run.mood + bonus.mood, 0, 100)
+      pushEntry(state.run, { kind: 'event', age: 0, tone: bonus.wealth >= 0 ? 'good' : 'bad', text: bonus.text })
+    }
     state.legacy = null;
     state.view = 'game';
     stopAuto();
@@ -41246,6 +41487,12 @@ function aiPortraitFor(run) {
     case 'set-cozy': try { window.localStorage.setItem('dsh.life-restart.cozy', cozyOn() ? '0' : '1') } catch {} render(); break;
     case 'set-minimal': try { window.localStorage.setItem('dsh.life-restart.minimal', minimalOn() ? '0' : '1') } catch {} render(); break;
     case 'copy-card': copyFamilyCard(); break;
+    case 'save-card': downloadFamilyCard(); break;
+    case 'set-game-mode': state.mode = target.dataset.gameMode || 'solo'; if (state.mode === 'coop' && !state.coopCount) state.coopCount = 2; render(); break;
+    case 'set-coop-count': state.coopCount = Number(target.dataset.count) || 2; render(); break;
+    case 'accept-challenge': applyChallenge(); break;
+    case 'dismiss-challenge': state.challenge = null; render(); break;
+    case 'copy-challenge': copyChallengeLink(); break;
     case 'close-review': state.reviewOpen = false; render(); break;
       case 'start-over': state.legacy = null; startSetup(); break;
       case 'check-update': forceReload(); break;
@@ -41335,6 +41582,13 @@ function aiPortraitFor(run) {
     });
   }
 
+  try {
+    const code = new URLSearchParams(window.location.search).get('c')
+    if (code) {
+      const parsed = challengeDecode(code)
+      if (parsed) state.challenge = parsed
+    }
+  } catch (err) { /* 挑战码坏了就当没有 */ }
   render();
   checkAppUpdate();
 })();
