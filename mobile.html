@@ -3299,7 +3299,7 @@ function attrCapFor(run) {
             parts.push('【上任】' + club + '把一线队交给你，合同两年。');
           }
           const level = c.level;
-          const matches = 30 + level * 8;
+          const matches = 30 + level * 8 + (Math.floor(Math.random() * 3) - 1);
           const winRate = fbClamp(0.32 + level * 0.06 + rep * 0.008 + ((inner.attrs && inner.attrs.int) || 10) * 0.004, 0.2, 0.68);
           const wins = Math.round(matches * winRate);
           const draws = Math.round((matches - wins) * fbRnd(0.2, 0.45));
@@ -13025,7 +13025,7 @@ function attrCapFor(run) {
         title: '义体暴走',
         description: '你的义体比你更想活下去。最后一声系统警告响完，街上只剩下一个还在移动的影子。',
         tone: 'tragic',
-        when: run => run.cause === '义体排斥' || (run.flags.cyberPsycho && run.mood <= 40),
+        when: run => (run.cause === '义体排斥' && run.age < 72) || (run.flags.cyberPsycho && run.mood <= 40),
       },
       {
         id: 'cyber_street',
@@ -33123,9 +33123,11 @@ function attrCapFor(run) {
       if (!Array.isArray(used)) used = []
       let fresh = pool.filter(text => !used.includes(text))
       if (!fresh.length) {
-        used = []
-        fresh = pool.slice()
+        // 长寿命世界（修仙几千年）会整池用完：只保留最近用过的十几句，别立刻循环
+        used = used.slice(-30)
+        fresh = pool.filter(text => !used.includes(text))
       }
+      if (!fresh.length) fresh = pool.slice()
       const text = pick(fresh)
       run.flags._fillerSeen = used.concat(text).slice(-240)
       return text
@@ -33589,6 +33591,7 @@ function attrCapFor(run) {
       next.flags._choiceTitleSeen = (next.flags._choiceTitleSeen || []).concat(pending.title || '').slice(-80)
       next.flags.lastChoice = option.id
       next.flags.lastChoiceAge = next.age
+      if (/^ms_/.test(String(pending.id || ''))) next.flags.lastChoiceAge = next.age - 2
       next.flags.choicesMade = (next.flags.choicesMade || 0) + 1
       next.pendingChoice = null
       pushEntry(next, {
@@ -35910,7 +35913,9 @@ function attrCapFor(run) {
       if (!run || !run.alive || run.age < 16) return null
       if (run.flags.lastCrisisAge && run.age - run.flags.lastCrisisAge < 5) return null
       const pool = CRISES[run.worldId] || []
-      const eligible = pool.filter(item => run.age >= (item.minAge || 0))
+      const seenTexts = run.flags._textCounts || {}
+      const eligible = pool.filter(item => run.age >= (item.minAge || 0) && (seenTexts[item.text] || 0) < 2)
+      if (!eligible.length) return null
       if (!eligible.length) return null
       if (Math.random() > crisisChance(run)) return null
       const crisis = pick(eligible)
@@ -36357,6 +36362,11 @@ function attrCapFor(run) {
       const span = entry.kind === 'event' && (run.lastYears || 1) > 1 ? run.lastYears : null
       run.log = run.log.concat({ ...entry, span, id: run.seq })
       if (entry.text) run.recentTexts = (run.recentTexts || []).concat(entry.text).slice(-40)
+      if (entry.text && entry.kind === 'event' && !entry.isChoice) {
+        const textCounts = run.flags._textCounts || {}
+        textCounts[entry.text] = (textCounts[entry.text] || 0) + 1
+        run.flags._textCounts = textCounts
+      }
       run.seq += 1
     }
 
@@ -36371,6 +36381,9 @@ function attrCapFor(run) {
       }
       if (event.when && !event.when(run)) return false
       if (!event.repeatable && run.seen.includes(event.id)) return false
+      // 同一句文本一条命里最多出现两次（事件 / 转折 / 危机共用）
+      const textCounts = run.flags._textCounts || {}
+      if (event.text && (textCounts[event.text] || 0) >= 2) return false
       return true
     }
 
@@ -36399,6 +36412,9 @@ function attrCapFor(run) {
         return chooseWeighted(rarePool, run)
       }
       let pool = eligible.filter(event => !event.rare)
+      const seenTexts = run.flags._textCounts || {}
+      const freshPool = pool.filter(event => (seenTexts[event.text] || 0) < 2)
+      if (freshPool.length) pool = freshPool
       if (pool.length > 1) {
         const recent = run.recentEventIds || []
         const recentTexts = run.recentTexts || []
@@ -36728,6 +36744,11 @@ function attrCapFor(run) {
     }
 
     function makeDecadeChoice(run) {
+      const stageLine = run.age < 60
+        ? '这十年你还觉得自己有大把时间。'
+        : run.age < 70
+          ? '这十年你开始算剩下的日子。'
+          : '这十年你只想把日子过慢一点。'
       const from = Math.max(0, run.age - 10)
       const recent = run.log.filter(entry => entry.age > from && entry.age <= run.age)
       const decisions = recent.filter(entry => entry.isChoice).length
@@ -37507,7 +37528,7 @@ function attrCapFor(run) {
           : run.worldId === 'cyber'
             ? run.cause === '数据删除'
               ? 'cyber_formatted'
-              : run.cause === '义体排斥'
+              : run.cause === '义体排斥' && (run.flags.cyberPsycho || run.age < 55)
                 ? 'cyber_psycho'
                 : null
             : null
@@ -38848,7 +38869,7 @@ function attrCapFor(run) {
     });
   }
 
-  const APP_VERSION = '1.57.0';
+  const APP_VERSION = '1.57.1';
 
   function forceReload() {
     const url = location.pathname + '?v=' + Date.now();
@@ -39109,7 +39130,7 @@ function attrCapFor(run) {
       + '<div class="hero-copy">'
       + '<p class="hero-kicker">云墨入卷 · 重开一世</p>'
       + '<h1>人生<em>重开</em></h1>'
-      + '<p class="ver-line"><span>v1.57.0 · 2026-11-27</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
+      + '<p class="ver-line"><span>v1.57.1 · 2026-11-28</span><button type="button" class="ver-link" data-action="check-update">检查更新</button></p>'
       + '<p class="sub">' + WORLDS.length + ' 个世界 · ' + TOTAL_ENDINGS + ' 个结局 · ' + ACHIEVEMENT_TOTAL + ' 个成就</p>'
       + legacyHtml
       + '</div>'
